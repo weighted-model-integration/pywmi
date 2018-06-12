@@ -9,5 +9,6 @@ setup(
     author_email='samuel.kolb@me.com',
     license='MIT',
     packages=['pywmi'],
-    zip_safe=False
+    zip_safe=False,
+    install_requires=['pysmt', 'numpy']
 )
