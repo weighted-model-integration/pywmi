@@ -69,8 +69,8 @@ class SmtBatchChecker(SmtWalker):
     def __init__(self, domain, boolean_values, real_values):
         self.boolean_values = boolean_values
         self.real_values = real_values
-        self.length = self.boolean_values.size[0]
-        if self.length != self.real_values.size[0]:
+        self.length = self.boolean_values.size[0] if len(domain.bool_vars) > 0 else self.real_values.size[0]
+        if len(domain.bool_vars) > 0 and len(domain.real_vars) > 0 and self.length != self.real_values.size[0]:
             raise ValueError("Boolean and real values must contain an equal number of rows (was {} and {})"
                              .format(self.boolean_values.size[0], self.real_values.size[0]))
         self.boolean_indices = {v: i for i, v in enumerate(domain.bool_vars)}
@@ -210,6 +210,7 @@ def test_assignment(formula, assignment):
 
 
 def test(domain, formula, boolean_values, real_values):
-    if boolean_values.ndim == 1 and real_values.ndim == 1:  # TODO Test if which dimension, but is tough
+    if (len(domain.bool_vars) > 1 and boolean_values.ndim == 1)\
+            or (len(domain.real_vars) > 1 and real_values.ndim == 1):
         return SmtSingleChecker(domain, boolean_values, real_values).walk_smt(formula)
     return SmtBatchChecker(domain, boolean_values, real_values).walk_smt(formula)
