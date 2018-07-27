@@ -1,5 +1,7 @@
 from setuptools import setup
 
+# Distribute: python setup.py sdist upload
+
 setup(
     name='pywmi',
     version='0.1.4',
