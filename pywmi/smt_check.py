@@ -210,6 +210,6 @@ def test_assignment(formula, assignment):
 
 
 def test(domain, formula, boolean_values, real_values):
-    if boolean_values.ndim == 1:
+    if boolean_values.ndim == 1 and real_values.ndim == 1:  # TODO Test if which dimension, but is tough
         return SmtSingleChecker(domain, boolean_values, real_values).walk_smt(formula)
     return SmtBatchChecker(domain, boolean_values, real_values).walk_smt(formula)
