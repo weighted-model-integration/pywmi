@@ -69,10 +69,10 @@ class SmtBatchChecker(SmtWalker):
     def __init__(self, domain, boolean_values, real_values):
         self.boolean_values = boolean_values
         self.real_values = real_values
-        self.length = self.boolean_values.size[0] if len(domain.bool_vars) > 0 else self.real_values.size[0]
-        if len(domain.bool_vars) > 0 and len(domain.real_vars) > 0 and self.length != self.real_values.size[0]:
+        self.length = self.boolean_values.shape[0] if len(domain.bool_vars) > 0 else self.real_values.shape[0]
+        if len(domain.bool_vars) > 0 and len(domain.real_vars) > 0 and self.length != self.real_values.shape[0]:
             raise ValueError("Boolean and real values must contain an equal number of rows (was {} and {})"
-                             .format(self.boolean_values.size[0], self.real_values.size[0]))
+                             .format(self.boolean_values.shape[0], self.real_values.shape[0]))
         self.boolean_indices = {v: i for i, v in enumerate(domain.bool_vars)}
         self.real_indices = {v: i for i, v in enumerate(domain.real_vars)}
 
