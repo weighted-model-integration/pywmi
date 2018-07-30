@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='pywmi',
-    version='0.2.2',
+    version='0.2.3',
     description='Essential tools and interfaces for WMI',
     url='http://github.com/samuelkolb/pywmi',
     author='Samuel Kolb',
