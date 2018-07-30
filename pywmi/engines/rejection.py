@@ -33,7 +33,7 @@ def weighted_sample(weights, values, n):
 
 class RejectionEngine(Engine):
     def __init__(self, domain, support, weight, extra_sample_ratio):
-        super().__init__(domain, support, weight)
+        Engine.__init__(self, domain, support, weight)
         self.extra_sample_ratio = extra_sample_ratio
 
     def compute_volume(self):
