@@ -3,15 +3,17 @@ from random import random
 import numpy
 
 from pywmi import test
-from engine import Engine
+from pywmi.engine import Engine
 
 
 def sample(bounds, n):
-    samples = numpy.random.random((n, len(bounds)))
+    real_samples = numpy.random.random((n, len(bounds)))
     for d in range(len(bounds)):
         a, b = bounds[d]
-        samples[:, d] = a[0] + samples[:, d] * (b[0] - a[0])
-    return samples
+        real_samples[:, d] = a[0] + real_samples[:, d] * (b[0] - a[0])
+
+    boolean_samples = numpy.array([v == 0 for v in numpy.random.randint(0, 2, n)])
+    return real_samples, boolean_samples
 
 
 def weighted_sample(weights, values, n):
@@ -52,8 +54,8 @@ class RejectionEngine(Engine):
 
     def get_samples(self, n):
         bounds = self.bound_tuples()
-        samples = sample(bounds, n * self.extra_sample_ratio)
-        labels = test(self.domain, self.support, None, samples)
+        real_samples, boolean_samples = sample(bounds, n * self.extra_sample_ratio)
+        labels = test(self.domain, self.support, boolean_samples, real_samples)
 
         if self.weight is not None:
             sample_weights = test(self.domain, self.weight, numpy.array([]), samples[labels])
