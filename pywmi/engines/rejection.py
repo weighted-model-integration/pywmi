@@ -1,18 +1,18 @@
-from random import random
-
 import numpy
 
 from pywmi import test
 from pywmi.engine import Engine
 
 
-def sample(bounds, n):
+def sample(bounds, n_boolean_vars, n):
     real_samples = numpy.random.random((n, len(bounds)))
     for d in range(len(bounds)):
         a, b = bounds[d]
         real_samples[:, d] = a[0] + real_samples[:, d] * (b[0] - a[0])
 
-    boolean_samples = numpy.array([v == 0 for v in numpy.random.randint(0, 2, n)])
+    boolean_samples = numpy.array(
+        [[v == 0 for v in numpy.random.randint(0, 2, n_boolean_vars)]
+         for _ in xrange(n)])
     return real_samples, boolean_samples
 
 
@@ -22,7 +22,7 @@ def weighted_sample(weights, values, n):
     i = 0
     w, v = weights[0], values[0]
     while n:
-        x = total * (1 - random.random() ** (1.0 / n))
+        x = total * (1 - numpy.random.random() ** (1.0 / n))
         total -= x
         while x > w:
             x -= w
@@ -34,8 +34,9 @@ def weighted_sample(weights, values, n):
 
 
 class RejectionEngine(Engine):
-    def __init__(self, domain, support, weight, extra_sample_ratio):
+    def __init__(self, domain, support, weight, extra_sample_ratio, seed):
         Engine.__init__(self, domain, support, weight)
+        numpy.random.seed(seed)
         self.extra_sample_ratio = extra_sample_ratio
 
     def compute_volume(self):
@@ -54,7 +55,12 @@ class RejectionEngine(Engine):
 
     def get_samples(self, n):
         bounds = self.bound_tuples()
-        real_samples, boolean_samples = sample(bounds, n * self.extra_sample_ratio)
+        real_samples, boolean_samples = sample(bounds,
+                                               len(self.domain.bool_vars),
+                                               n * self.extra_sample_ratio)
+
+        samples = numpy.concatenate((real_samples, boolean_samples), axis=1)
+        
         labels = test(self.domain, self.support, boolean_samples, real_samples)
 
         if self.weight is not None:
