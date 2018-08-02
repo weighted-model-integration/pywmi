@@ -38,7 +38,7 @@ class Domain(object):
             real_names = []
             bounds = dict()
         elif real_variables is not None and real_variable_bounds is None:
-            real_names = real_variables.keys()
+            real_names = list(real_variables.keys())
             bounds = real_variables
         else:
             real_names = real_variables
