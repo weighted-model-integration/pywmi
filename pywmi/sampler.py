@@ -108,7 +108,7 @@ class Node(object):
     def get_weighted_volume(self, domain, weight_function):
         if self.is_leaf:
             if not self.empty:
-                weighted_count = pywmi.test(domain, weight_function, numpy.array([]), self.samples[self.labels])
+                weighted_count = pywmi.evaluate(domain, weight_function, numpy.array([]), self.samples[self.labels])
                 return sum(weighted_count) / len(self.samples) * (self.volume / self.builder.volume)
             return 0
         else:
@@ -145,7 +145,7 @@ class SmtOracle(Oracle):
         # for i in range(len(samples)):
         #     if test(self.formula, {v: samples[i][j] for j, v in enumerate(self.domain.real_vars)}):
         #         array[i] = 1
-        array = pywmi.test(self.domain, self.formula, None, samples)
+        array = pywmi.evaluate(self.domain, self.formula, None, samples)
         return array
 
     def get_accepted_sample(self):
@@ -315,7 +315,7 @@ def compare_methods(domain, support, weights, queries, file_name, n_build=1000, 
         rejection_samples = sample(bounds, n_total)
         labels = oracle.check(rejection_samples)
         if weights is not None:
-            sample_weights = pywmi.test(domain, weights, numpy.array([]), rejection_samples[labels])
+            sample_weights = pywmi.evaluate(domain, weights, numpy.array([]), rejection_samples[labels])
             rejection_volume = sum(sample_weights) / len(labels) * builder.volume
         else:
             rejection_volume = sum(labels) / len(labels) * builder.volume

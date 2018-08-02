@@ -198,11 +198,11 @@ class SmtSingleChecker(SmtWalker):
         return self.walk_smt(formula)
 
 
-def test_assignment(formula, assignment):
+def evaluate_assignment(formula, assignment):
     return SmtChecker(assignment).walk_smt(formula)
 
 
-def test(domain, formula, values):
+def evaluate(domain, formula, values):
     if len(domain.variables) > 1 and values.ndim == 1:
         return SmtSingleChecker(domain, values).walk_smt(formula)
     return SmtBatchChecker(domain, values).walk_smt(formula)

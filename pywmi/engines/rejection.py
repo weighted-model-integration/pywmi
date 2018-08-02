@@ -1,7 +1,7 @@
 import numpy
 
 from builtins import range
-from pywmi import test
+from pywmi import evaluate
 from pywmi.engine import Engine
 
 
@@ -58,10 +58,10 @@ class RejectionEngine(Engine):
     def get_samples(self, n):
         bounds = self.bound_tuples()
         samples = sample(len(self.domain.bool_vars), bounds, n * self.extra_sample_ratio)
-        labels = test(self.domain, self.support, samples)
+        labels = evaluate(self.domain, self.support, samples)
 
         if self.weight is not None:
-            sample_weights = test(self.domain, self.weight, samples[labels])
+            sample_weights = evaluate(self.domain, self.weight, samples[labels])
             return numpy.array(list(weighted_sample(sample_weights, samples, n)))
         else:
             raise NotImplementedError()
