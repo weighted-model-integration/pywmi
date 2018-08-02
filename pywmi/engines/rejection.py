@@ -59,10 +59,11 @@ class RejectionEngine(Engine):
         bounds = self.bound_tuples()
         samples = sample(len(self.domain.bool_vars), bounds, n * self.extra_sample_ratio)
         labels = evaluate(self.domain, self.support, samples)
+        pos_samples = samples[labels]
 
         if self.weight is not None:
-            sample_weights = evaluate(self.domain, self.weight, samples[labels])
-            return numpy.array(list(weighted_sample(sample_weights, samples, n)))
+            sample_weights = evaluate(self.domain, self.weight, pos_samples)
+            return numpy.array(list(weighted_sample(sample_weights, pos_samples, n)))
         else:
             raise NotImplementedError()
 
