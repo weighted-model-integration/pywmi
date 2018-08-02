@@ -14,7 +14,7 @@ def test_simple():
 
 
 class TestCheckingBatch(object):
-    domain = Domain.make(["a", "b"], {"x": (0, 100), "y": (0, 50)})
+    domain = Domain.make(["a", "b"], ["x", "y"], [(0, 100), (0, 50)])
     a = domain.get_symbol("a")
     b = domain.get_symbol("b")
     x = domain.get_symbol("x")
@@ -105,7 +105,7 @@ class TestCheckingBatch(object):
 
 
 class TestCheckingSingle(object):
-    domain = Domain.make(["a", "b"], {"x": (0, 100), "y": (0, 50)})
+    domain = Domain.make(["a", "b"], ["x", "y"], [(0, 100), (0, 50)])
     a = domain.get_symbol("a")
     b = domain.get_symbol("b")
     x = domain.get_symbol("x")

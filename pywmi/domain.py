@@ -31,14 +31,21 @@ class Domain(object):
         return fm.And(*bounds)
 
     @staticmethod
-    def make(boolean_variables=None, real_variable_bounds=None):
+    def make(boolean_variables=None, real_variables=None, real_variable_bounds=None):
         if boolean_variables is None:
             boolean_variables = []
-        if real_variable_bounds is None:
-            real_variable_bounds = dict()
+        if real_variables is None and real_variable_bounds is None:
+            real_names = []
+            bounds = dict()
+        elif real_variables is not None and real_variable_bounds is None:
+            real_names = real_variables.keys()
+            bounds = real_variables
+        else:
+            real_names = real_variables
+            bounds = dict(zip(real_variables, real_variable_bounds))
         types = {v: smt.BOOL for v in boolean_variables}
-        types.update({v: smt.REAL for v in real_variable_bounds})
-        return Domain(boolean_variables + list(real_variable_bounds.keys()), types, real_variable_bounds)
+        types.update({v: smt.REAL for v in bounds})
+        return Domain(boolean_variables + real_names, types, bounds)
 
     def __str__(self):
         return "({})".format(", ".join(
