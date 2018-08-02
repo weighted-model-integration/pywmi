@@ -1,19 +1,19 @@
 import numpy
 
+from builtins import range
 from pywmi import test
 from pywmi.engine import Engine
 
 
 def sample(bounds, n_boolean_vars, n):
+    boolean_samples = numpy.random.random((n, n_boolean_vars)) < 0.5
+
     real_samples = numpy.random.random((n, len(bounds)))
     for d in range(len(bounds)):
         a, b = bounds[d]
         real_samples[:, d] = a[0] + real_samples[:, d] * (b[0] - a[0])
 
-    boolean_samples = numpy.array(
-        [[v == 0 for v in numpy.random.randint(0, 2, n_boolean_vars)]
-         for _ in xrange(n)])
-    return real_samples, boolean_samples
+    return boolean_samples, real_samples
 
 
 def weighted_sample(weights, values, n):
@@ -36,7 +36,9 @@ def weighted_sample(weights, values, n):
 class RejectionEngine(Engine):
     def __init__(self, domain, support, weight, extra_sample_ratio, seed):
         Engine.__init__(self, domain, support, weight)
-        numpy.random.seed(seed)
+        if seed is not None:
+            numpy.random.seed(seed)
+        self.seed = seed
         self.extra_sample_ratio = extra_sample_ratio
 
     def compute_volume(self):
@@ -70,5 +72,5 @@ class RejectionEngine(Engine):
             raise NotImplementedError()
 
     def copy(self, support, weight):
-        return RejectionEngine(self.domain, support, weight, self.extra_sample_ratio)
+        return RejectionEngine(self.domain, support, weight, self.extra_sample_ratio, self.seed)
 

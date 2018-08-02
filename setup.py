@@ -12,5 +12,7 @@ setup(
     license='MIT',
     packages=['pywmi'],
     zip_safe=False,
-    install_requires=['pysmt', 'numpy']
+    install_requires=['pysmt', 'numpy'],
+    setup_requires=['pytest-runner'],
+    tests_require=["pytest"],
 )

@@ -1,7 +1,7 @@
 import numpy as np
 import pysmt.shortcuts as smt
 
-from smt_walk import SmtWalker
+from pywmi.smt_walk import SmtWalker
 
 
 class SmtChecker(SmtWalker):
