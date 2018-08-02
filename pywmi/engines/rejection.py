@@ -5,15 +5,15 @@ from pywmi import test
 from pywmi.engine import Engine
 
 
-def sample(bounds, n_boolean_vars, n):
-    boolean_samples = numpy.random.random((n, n_boolean_vars)) < 0.5
+def sample(n_boolean_vars, bounds, n):
+    samples = numpy.random.random((n, n_boolean_vars + len(bounds)))
+    samples[:, 0:n_boolean_vars] = samples[:, 0:n_boolean_vars] < 0.5
 
-    real_samples = numpy.random.random((n, len(bounds)))
     for d in range(len(bounds)):
         a, b = bounds[d]
-        real_samples[:, d] = a[0] + real_samples[:, d] * (b[0] - a[0])
+        samples[:, n_boolean_vars + d] = a[0] + samples[:, n_boolean_vars + d] * (b[0] - a[0])
 
-    return boolean_samples, real_samples
+    return samples
 
 
 def weighted_sample(weights, values, n):
@@ -34,7 +34,7 @@ def weighted_sample(weights, values, n):
 
 
 class RejectionEngine(Engine):
-    def __init__(self, domain, support, weight, extra_sample_ratio, seed):
+    def __init__(self, domain, support, weight, extra_sample_ratio, seed=None):
         Engine.__init__(self, domain, support, weight)
         if seed is not None:
             numpy.random.seed(seed)
@@ -57,16 +57,11 @@ class RejectionEngine(Engine):
 
     def get_samples(self, n):
         bounds = self.bound_tuples()
-        real_samples, boolean_samples = sample(bounds,
-                                               len(self.domain.bool_vars),
-                                               n * self.extra_sample_ratio)
-
-        samples = numpy.concatenate((real_samples, boolean_samples), axis=1)
-        
-        labels = test(self.domain, self.support, boolean_samples, real_samples)
+        samples = sample(len(self.domain.bool_vars), bounds, n * self.extra_sample_ratio)
+        labels = test(self.domain, self.support, samples)
 
         if self.weight is not None:
-            sample_weights = test(self.domain, self.weight, numpy.array([]), samples[labels])
+            sample_weights = test(self.domain, self.weight, samples[labels])
             return numpy.array(list(weighted_sample(sample_weights, samples, n)))
         else:
             raise NotImplementedError()

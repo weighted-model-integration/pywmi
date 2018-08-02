@@ -66,15 +66,11 @@ class SmtChecker(SmtWalker):
 
 
 class SmtBatchChecker(SmtWalker):
-    def __init__(self, domain, boolean_values, real_values):
-        self.boolean_values = boolean_values
-        self.real_values = real_values
-        self.length = self.boolean_values.shape[0] if len(domain.bool_vars) > 0 else self.real_values.shape[0]
-        if len(domain.bool_vars) > 0 and len(domain.real_vars) > 0 and self.length != self.real_values.shape[0]:
-            raise ValueError("Boolean and real values must contain an equal number of rows (was {} and {})"
-                             .format(self.boolean_values.shape[0], self.real_values.shape[0]))
-        self.boolean_indices = {v: i for i, v in enumerate(domain.bool_vars)}
-        self.real_indices = {v: i for i, v in enumerate(domain.real_vars)}
+    def __init__(self, domain, values):
+        self.values = values
+        self.length = self.values.shape[0]
+        self.indices = {v: i for i, v in enumerate(domain.bool_vars)}
+        self.indices.update({v: len(domain.bool_vars) + i for i, v in enumerate(domain.real_vars)})
 
     def walk_ite(self, if_arg, then_arg, else_arg):
         if_samples, then_samples, else_samples = self.walk_smt_multiple([if_arg, then_arg, else_arg])
@@ -114,7 +110,7 @@ class SmtBatchChecker(SmtWalker):
 
     def walk_times(self, args):
         if len(args) > 0:
-            aggregate = 1
+            aggregate = 1.0
             for res in self.walk_smt_multiple(args):
                 aggregate *= res
             return aggregate
@@ -124,11 +120,10 @@ class SmtBatchChecker(SmtWalker):
         return self.walk_smt(base) ** self.walk_smt(exponent)
 
     def walk_symbol(self, name, v_type):
+        column = self.values[:, self.indices[name]]
         if v_type == smt.BOOL:
-            return self.boolean_values[:, self.boolean_indices[name]]
-        elif v_type == smt.REAL:
-            return self.real_values[:, self.real_indices[name]]
-        raise RuntimeError("Unsupported type {}".format(v_type))
+            column = column.astype(bool)
+        return column
 
     def walk_constant(self, value, v_type):
         if v_type == smt.BOOL:
@@ -142,11 +137,10 @@ class SmtBatchChecker(SmtWalker):
 
 
 class SmtSingleChecker(SmtWalker):
-    def __init__(self, domain, boolean_values, real_values):
-        self.boolean_values = boolean_values
-        self.real_values = real_values
-        self.boolean_indices = {v: i for i, v in enumerate(domain.bool_vars)}
-        self.real_indices = {v: i for i, v in enumerate(domain.real_vars)}
+    def __init__(self, domain, values):
+        self.values = values
+        self.indices = {v: i for i, v in enumerate(domain.bool_vars)}
+        self.indices.update({v: len(domain.bool_vars) + i for i, v in enumerate(domain.real_vars)})
 
     def walk_ite(self, if_arg, then_arg, else_arg):
         if_val, then_val, else_val = self.walk_smt_multiple([if_arg, then_arg, else_arg])
@@ -162,19 +156,19 @@ class SmtSingleChecker(SmtWalker):
         return all(self.walk_smt_multiple(args))
 
     def walk_lt(self, left, right):
-        return self.walk_smt(left) < self.walk_smt(right)
+        return bool(self.walk_smt(left) < self.walk_smt(right))
 
     def walk_lte(self, left, right):
-        return self.walk_smt(left) <= self.walk_smt(right)
+        return bool(self.walk_smt(left) <= self.walk_smt(right))
 
     def walk_equals(self, left, right):
-        return self.walk_smt(left) == self.walk_smt(right)
+        return bool(self.walk_smt(left) == self.walk_smt(right))
 
     def walk_plus(self, args):
-        return sum(self.walk_smt_multiple(args))
+        return float(sum(self.walk_smt_multiple(args)))
 
     def walk_minus(self, left, right):
-        return self.walk_smt(left) - self.walk_smt(right)
+        return float(self.walk_smt(left) - self.walk_smt(right))
 
     def walk_times(self, args):
         if len(args) > 0:
@@ -188,11 +182,10 @@ class SmtSingleChecker(SmtWalker):
         return self.walk_smt(base) ** self.walk_smt(exponent)
 
     def walk_symbol(self, name, v_type):
+        value = self.values[self.indices[name]]
         if v_type == smt.BOOL:
-            return self.boolean_values[self.boolean_indices[name]]
-        elif v_type == smt.REAL:
-            return self.real_values[self.real_indices[name]]
-        raise RuntimeError("Unsupported type {}".format(v_type))
+            value = bool(value)
+        return value
 
     def walk_constant(self, value, v_type):
         if v_type == smt.BOOL:
@@ -209,8 +202,7 @@ def test_assignment(formula, assignment):
     return SmtChecker(assignment).walk_smt(formula)
 
 
-def test(domain, formula, boolean_values, real_values):
-    if (len(domain.bool_vars) > 1 and boolean_values.ndim == 1)\
-            or (len(domain.real_vars) > 1 and real_values.ndim == 1):
-        return SmtSingleChecker(domain, boolean_values, real_values).walk_smt(formula)
-    return SmtBatchChecker(domain, boolean_values, real_values).walk_smt(formula)
+def test(domain, formula, values):
+    if len(domain.variables) > 1 and values.ndim == 1:
+        return SmtSingleChecker(domain, values).walk_smt(formula)
+    return SmtBatchChecker(domain, values).walk_smt(formula)
