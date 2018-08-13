@@ -34,26 +34,27 @@ def weighted_sample(weights, values, n):
 
 
 class RejectionEngine(Engine):
-    def __init__(self, domain, support, weight, extra_sample_ratio, seed=None):
+    def __init__(self, domain, support, weight, sample_count, extra_sample_ratio, seed=None):
         Engine.__init__(self, domain, support, weight)
         if seed is not None:
             numpy.random.seed(seed)
         self.seed = seed
+        self.sample_count = sample_count
         self.extra_sample_ratio = extra_sample_ratio
 
     def compute_volume(self):
-        # bounds = self.bound_tuples()
-        # bound_volume = self.bound_volume(bounds)
-        # samples = sample(bounds, n * self.extra_sample_ratio)
-        # labels = test(self.domain, self.support, None, samples)
-        #
-        # if self.weight is not None:
-        #     sample_weights = test(self.domain, self.weight, numpy.array([]), samples[labels])
-        #     rejection_volume = sum(sample_weights) / len(labels) * bound_volume
-        # else:
-        #     rejection_volume = sum(labels) / len(labels) * bound_volume
-        # return rejection_volume
-        raise NotImplementedError()
+        bounds = self.bound_tuples()
+        bound_volume = self.bound_volume(bounds)
+        samples = sample(len(self.domain.bool_vars), bounds, self.sample_count)
+        labels = evaluate(self.domain, self.support, samples)
+        pos_samples = samples[labels]
+
+        if self.weight is not None:
+            sample_weights = evaluate(self.domain, self.weight, pos_samples)
+            rejection_volume = sum(sample_weights) / len(labels) * bound_volume
+        else:
+            rejection_volume = sum(labels) / len(labels) * bound_volume
+        return rejection_volume
 
     def get_samples(self, n):
         bounds = self.bound_tuples()
@@ -68,5 +69,5 @@ class RejectionEngine(Engine):
             raise NotImplementedError()
 
     def copy(self, support, weight):
-        return RejectionEngine(self.domain, support, weight, self.extra_sample_ratio, self.seed)
+        return RejectionEngine(self.domain, support, weight, self.sample_count, self.extra_sample_ratio, self.seed)
 
