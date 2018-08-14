@@ -9,7 +9,7 @@ def test_simple():
     # noinspection SpellCheckingInspection
     a, b, x, y = (domain.get_symbol(n) for n in "abxy")
     support = (a & (20 <= x) & (y <= 30) & (x <= 2 * y)) | ((0 <= x) & (y <= 40) & (x <= 2 * y))
-    engine = RejectionEngine(domain, support, Real(1.0), 1000, 10)
+    engine = RejectionEngine(domain, support, Real(1.0), 1000)
     engine.get_samples(100)
 
 
