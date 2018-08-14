@@ -34,18 +34,18 @@ def weighted_sample(weights, values, n):
 
 
 class RejectionEngine(Engine):
-    def __init__(self, domain, support, weight, sample_count, extra_sample_ratio, seed=None):
+    def __init__(self, domain, support, weight, sample_count, seed=None):
         Engine.__init__(self, domain, support, weight)
         if seed is not None:
             numpy.random.seed(seed)
         self.seed = seed
         self.sample_count = sample_count
-        self.extra_sample_ratio = extra_sample_ratio
 
-    def compute_volume(self):
+    def compute_volume(self, sample_count=None):
+        sample_count = sample_count if sample_count is not None else self.sample_count
         bounds = self.bound_tuples()
         bound_volume = self.bound_volume(bounds)
-        samples = sample(len(self.domain.bool_vars), bounds, self.sample_count)
+        samples = sample(len(self.domain.bool_vars), bounds, sample_count)
         labels = evaluate(self.domain, self.support, samples)
         pos_samples = samples[labels]
 
@@ -56,9 +56,10 @@ class RejectionEngine(Engine):
             rejection_volume = sum(labels) / len(labels) * bound_volume
         return rejection_volume
 
-    def get_samples(self, n):
+    def get_samples(self, n, extra_sample_ratio=None):
+        sample_count = n * extra_sample_ratio if extra_sample_ratio is not None else self.sample_count
         bounds = self.bound_tuples()
-        samples = sample(len(self.domain.bool_vars), bounds, n * self.extra_sample_ratio)
+        samples = sample(len(self.domain.bool_vars), bounds, sample_count)
         labels = evaluate(self.domain, self.support, samples)
         pos_samples = samples[labels]
 
@@ -69,5 +70,5 @@ class RejectionEngine(Engine):
             raise NotImplementedError()
 
     def copy(self, support, weight):
-        return RejectionEngine(self.domain, support, weight, self.sample_count, self.extra_sample_ratio, self.seed)
+        return RejectionEngine(self.domain, support, weight, self.sample_count, self.seed)
 
