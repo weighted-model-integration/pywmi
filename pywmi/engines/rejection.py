@@ -3,7 +3,7 @@ import numpy
 from builtins import range
 from pywmi import evaluate
 from pywmi.engine import Engine
-
+from pywmi.exceptions import SamplingException
 
 def sample(n_boolean_vars, bounds, n):
     samples = numpy.random.random((n, n_boolean_vars + len(bounds)))
@@ -56,18 +56,22 @@ class RejectionEngine(Engine):
             rejection_volume = sum(labels) / len(labels) * bound_volume
         return rejection_volume
 
-    def get_samples(self, n, extra_sample_ratio=None):
+    def get_samples(self, n, extra_sample_ratio=None, weighted=True):
         sample_count = n * extra_sample_ratio if extra_sample_ratio is not None else self.sample_count
         bounds = self.bound_tuples()
         samples = sample(len(self.domain.bool_vars), bounds, sample_count)
         labels = evaluate(self.domain, self.support, samples)
         pos_samples = samples[labels]
 
-        if self.weight is not None:
+        if len(pos_samples) < n:
+            msg = "Sampled points {}, needed {}"
+            raise SamplingException(msg.format(len(pos_samples), n))
+
+        if weighted and self.weight is not None:
             sample_weights = evaluate(self.domain, self.weight, pos_samples)
             return numpy.array(list(weighted_sample(sample_weights, pos_samples, n)))
         else:
-            raise NotImplementedError()
+            return numpy.array(list(pos_samples))
 
     def copy(self, support, weight):
         return RejectionEngine(self.domain, support, weight, self.sample_count, self.seed)
