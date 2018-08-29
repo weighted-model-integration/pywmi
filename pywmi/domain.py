@@ -33,6 +33,12 @@ class Domain(object):
     def domain_size(self, variable):
         return self.var_domains[variable][1] - self.var_domains[variable][0]
 
+    def is_bool(self, variable):
+        return self.var_types[variable] == smt.BOOL
+
+    def is_real(self, variable):
+        return self.var_types[variable] == smt.REAL
+
     @staticmethod
     def make(boolean_variables=None, real_variables=None, real_variable_bounds=None):
         if boolean_variables is None:
