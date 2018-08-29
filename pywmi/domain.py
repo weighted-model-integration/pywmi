@@ -30,6 +30,9 @@ class Domain(object):
         bounds = [(sym(v, smt.REAL) >= b[0]) & (sym(v, smt.REAL) <= b[1]) for v, b in self.var_domains.items()]
         return fm.And(*bounds)
 
+    def domain_size(self, variable):
+        return self.var_domains[variable][1] - self.var_domains[variable][0]
+
     @staticmethod
     def make(boolean_variables=None, real_variables=None, real_variable_bounds=None):
         if boolean_variables is None:
