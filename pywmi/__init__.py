@@ -3,3 +3,6 @@ from .parse import nested_to_smt, smt_to_nested, combined_nested_to_wmi
 from .smt_check import evaluate, evaluate_assignment
 from .smt_walk import SmtWalker
 from .engines.rejection import RejectionEngine
+from .engines.pa import PredicateAbstraction
+from .engine import Engine
+

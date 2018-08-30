@@ -5,6 +5,7 @@ from pywmi import evaluate
 from pywmi.engine import Engine
 from pywmi.exceptions import SamplingException
 
+
 def sample(n_boolean_vars, bounds, n):
     samples = numpy.random.random((n, n_boolean_vars + len(bounds)))
     samples[:, 0:n_boolean_vars] = samples[:, 0:n_boolean_vars] < 0.5
@@ -35,7 +36,7 @@ def weighted_sample(weights, values, n):
 
 class RejectionEngine(Engine):
     def __init__(self, domain, support, weight, sample_count, seed=None):
-        Engine.__init__(self, domain, support, weight)
+        Engine.__init__(self, domain, support, weight, exact=False)
         if seed is not None:
             numpy.random.seed(seed)
         self.seed = seed
@@ -44,7 +45,7 @@ class RejectionEngine(Engine):
     def compute_volume(self, sample_count=None):
         sample_count = sample_count if sample_count is not None else self.sample_count
         bounds = self.bound_tuples()
-        bound_volume = self.bound_volume(bounds)
+        bound_volume = self.bound_volume(bounds) * 2**len(self.domain.bool_vars)
         samples = sample(len(self.domain.bool_vars), bounds, sample_count)
         labels = evaluate(self.domain, self.support, samples)
         pos_samples = samples[labels]
@@ -76,3 +77,5 @@ class RejectionEngine(Engine):
     def copy(self, support, weight):
         return RejectionEngine(self.domain, support, weight, self.sample_count, self.seed)
 
+    def __str__(self):
+        return "Rejection" + (":n{}".format(self.sample_count))
