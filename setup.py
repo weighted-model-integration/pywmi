@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pywmi',
-    version='0.2.11',
+    version='0.2.12',
     description='Essential tools and interfaces for WMI',
     url='http://github.com/samuelkolb/pywmi',
     author='Samuel Kolb',
@@ -12,7 +12,7 @@ setup(
     license='MIT',
     packages=find_packages(),
     zip_safe=False,
-    install_requires=['pysmt', 'numpy', 'future'],
+    install_requires=['pysmt', 'numpy', 'future', 'typing'],
     setup_requires=['pytest-runner'],
     tests_require=["pytest"],
 )
