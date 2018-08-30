@@ -11,7 +11,7 @@ from pysmt.fnode import FNode
 from pysmt.typing import REAL, BOOL
 
 from pywmi import nested_to_smt, import_domain, Domain, export_domain, smt_to_nested, RejectionEngine, \
-    PredicateAbstraction, Engine
+    PredicateAbstractionEngine, XaddEngine, Engine
 from pysmt.shortcuts import read_smtlib, Real
 
 logger = logging.getLogger(__name__)
@@ -25,8 +25,10 @@ def parse_options(option_strings, *whitelist):
     for option_string in option_strings:
         if option_string.startswith("t"):
             n, v = "timeout", int(option_string[1:])
-        if option_string.startswith("n"):
+        elif option_string.startswith("n"):
             n, v = "sample_count", int(option_string[1:])
+        elif option_string.startswith("m"):
+            n, v = "mode", option_string[1:]
         else:
             raise ValueError("Unknown option {}".format(option_string))
         if n in whitelist:
@@ -42,10 +44,13 @@ def get_engine(description, domain, support, weight):
 
     if parts[0].lower() == "pa":
         options = parse_options(parts[1:], "timeout")
-        return PredicateAbstraction(domain, support, weight, **options)
+        return PredicateAbstractionEngine(domain, support, weight, **options)
     if parts[0].lower() == "rej":
         options = parse_options(parts[1:], "sample_count")
         return RejectionEngine(domain, support, weight, **options)
+    if parts[0].lower() == "xadd":
+        options = parse_options(parts[1:], "mode")
+        return XaddEngine(domain, support, weight, **options)
 
 
 def compare(engines):
