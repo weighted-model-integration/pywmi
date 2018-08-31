@@ -49,19 +49,23 @@ def get_engine(description, domain, support, weight):
         options = parse_options(parts[1:], "sample_count")
         return RejectionEngine(domain, support, weight, **options)
     if parts[0].lower() == "xadd":
-        options = parse_options(parts[1:], "mode")
+        options = parse_options(parts[1:], "mode", "timeout")
         return XaddEngine(domain, support, weight, **options)
 
 
 def compare(engines):
     def mean(sequence):
+        if any(e is None for e in sequence):
+            return None
         return sum(sequence) / len(sequence)
 
     def std(sequence):
+        if any(e is None for e in sequence):
+            return None
         return np.std(np.array(sequence))
 
     def error(_exact_volume, _volume):
-        if _exact_volume is None:
+        if _exact_volume is None or _volume is None:
             return "-"
         return "{:.4f}".format(abs(_volume - _exact_volume) / abs(_exact_volume) if _exact_volume != 0 else 0)
 
@@ -71,10 +75,10 @@ def compare(engines):
         return "{:.2f}".format(_duration / _reference_time if _reference_time != 0 else 0)
 
     def d_string(_d):
-        return "{:.2f}s".format(_d) if _d is not None else ""
+        return "{:.2f}s".format(_d) if _d is not None else "-"
 
     def vol_string(_v):
-        return "{:.4f}".format(_v) if _v is not None else ""
+        return "{:.4f}".format(_v) if _v is not None else "-"
 
     exact_volumes = []
     exact_durations = []
@@ -85,7 +89,6 @@ def compare(engines):
     for i, engine in enumerate(engines):
         print("Running engine {} of {}: {: <70}".format(i + 1, len(engines), str(engine)), end="\r", flush=True)
 
-        results = []
         durations = []
         volumes = []
 
@@ -94,7 +97,7 @@ def compare(engines):
             volumes.append(engine.compute_volume())
             durations.append(time.time() - start_time)
 
-            if engine.exact:
+            if engine.exact and volumes[-1] is not None:
                 exact_volumes.append((i, volumes[-1]))
                 exact_durations.append((i, durations[-1]))
 
