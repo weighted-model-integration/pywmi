@@ -12,7 +12,7 @@ setup(
     license='MIT',
     packages=find_packages(),
     zip_safe=False,
-    install_requires=['pysmt', 'numpy', 'future', 'typing'],
+    install_requires=['pysmt', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope'],
     setup_requires=['pytest-runner'],
     tests_require=["pytest"],
 )

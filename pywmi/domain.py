@@ -1,8 +1,17 @@
 from __future__ import print_function
 
 import json
+import logging
+import os
+import tempfile
+from typing import Optional, List, Tuple
 
 import pysmt.shortcuts as smt
+from pysmt.fnode import FNode
+
+from .parse import smt_to_nested, nested_to_smt
+
+logger = logging.getLogger(__name__)
 
 
 class Domain(object):
@@ -38,6 +47,9 @@ class Domain(object):
 
     def is_real(self, variable):
         return self.var_types[variable] == smt.REAL
+
+    def var_index_map(self):
+        return {v: i for i, v in enumerate(self.variables)}
 
     @staticmethod
     def make(boolean_variables=None, real_variables=None, real_variable_bounds=None):
@@ -98,3 +110,59 @@ def import_domain(flat):
     var_types = {str(v): import_type(str(t)) for v, t in flat["var_types"].items()}
     var_domains = {str(v): t for v, t in flat["var_domains"].items()}
     return Domain(variables, var_types, var_domains)
+
+
+class TemporaryDensityFile(object):
+    def __init__(self, domain, support, weight, queries=None, directory=None):
+        self.domain = domain
+        self.support = support
+        self.weight = weight
+        self.queries = queries
+        self.directory = directory
+        self.tmp_filename = None
+
+    def __enter__(self):
+        tmp_file = tempfile.mkstemp(suffix=".json", dir=self.directory)
+        self.tmp_filename = tmp_file[1]
+        logger.info("Created tmp file: {}".format(self.tmp_filename))
+
+        # noinspection PyBroadException
+        try:
+            export_density(self.tmp_filename, self.domain, self.support, self.weight, self.queries)
+        except Exception:
+            os.remove(self.tmp_filename)
+
+        return self.tmp_filename
+
+    def __exit__(self, type, value, traceback):
+        if os.path.exists(self.tmp_filename):
+            os.remove(self.tmp_filename)
+
+
+def export_density(filename, domain, support, weight, queries=None):
+    # type: (str, Domain, FNode, FNode, Optional[List[FNode]]) -> None
+    queries = queries if queries else [smt.TRUE()]
+
+    flat = {
+        "domain": export_domain(domain, False),
+        "queries": [smt_to_nested(query) for query in queries],
+        "formula": smt_to_nested(support),
+        "weights": smt_to_nested(weight)
+    }
+
+    with open(filename, "w") as f:
+        json.dump(flat, f)
+
+
+def import_density(filename):
+    # type: (str) -> Tuple[Domain, List[FNode], FNode, FNode]
+
+    with open(filename) as f:
+        flat = json.load(f)
+
+    domain = import_domain(flat["domain"])
+    queries = [nested_to_smt(query) for query in flat["queries"]]
+    support = nested_to_smt(flat["formula"])
+    weight = nested_to_smt(flat["weights"])
+
+    return domain, queries, support, weight

@@ -78,4 +78,4 @@ class RejectionEngine(Engine):
         return RejectionEngine(self.domain, support, weight, self.sample_count, self.seed)
 
     def __str__(self):
-        return "Rejection" + (":n{}".format(self.sample_count))
+        return "rej" + (":n{}".format(self.sample_count))

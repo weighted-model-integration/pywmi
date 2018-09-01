@@ -5,6 +5,8 @@ import tempfile
 from typing import List, TYPE_CHECKING, Tuple, Optional
 
 from pysmt.shortcuts import TRUE
+
+from .domain import TemporaryDensityFile
 from pywmi import Domain, export_domain, smt_to_nested
 from pysmt.fnode import FNode
 import numpy as np
@@ -60,6 +62,9 @@ class Engine(object):
         for lb_bound, ub_bound in bounds:
             volume *= ub_bound[0] - lb_bound[0]
         return volume
+
+    def temp_file(self, queries=None, directory=None):
+        return TemporaryDensityFile(self.domain, self.support, self.weight, queries, directory)
 
     def wmi_to_file(self, queries=None, dir=None):
         # type: (Optional[List[FNode]], Optional[str]) -> str

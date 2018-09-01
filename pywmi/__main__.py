@@ -11,9 +11,10 @@ from pysmt.fnode import FNode
 from pysmt.typing import REAL, BOOL
 from typing import Optional
 
+from .domain import import_density
 from pywmi import nested_to_smt, import_domain, Domain, export_domain, smt_to_nested, RejectionEngine, \
-    PredicateAbstractionEngine, XaddEngine, Engine
-from pysmt.shortcuts import read_smtlib, Real, TRUE
+    PredicateAbstractionEngine, XaddEngine, Engine, plot
+from pysmt.shortcuts import read_smtlib, Real, TRUE, Iff
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +153,17 @@ def parse():
     compare_p = task_parsers.add_parser("compare")
     compare_p.add_argument("engines", help="The engines to compare (see engine input format)", nargs="+")
 
+    normalize_p = task_parsers.add_parser("normalize")
+    normalize_p.add_argument("new_support", type=str, help="The new support")
+    normalize_p.add_argument("output_path", type=str, help="Output path for normalized xadd")
+    normalize_p.add_argument("-t", "--total", action="store_true", help="Dump total model instead of paths")
+
+    plot_p = task_parsers.add_parser("plot")
+    plot_p.add_argument("-o", "--output", type=str, help="Output path", default=None)
+    plot_p.add_argument("-x", "--feat_x", type=str, help="Feature x", default=None)
+    plot_p.add_argument("-y", "--feat_y", type=str, help="Feature y", default=None)
+    plot_p.add_argument("-d", "--difference", type=str, help="Path to density to compute difference for", default=None)
+
     parser.add_argument("-d", "--dialect", default=None, type=str, help="The dialect to use for import")
     args = parser.parse_args()
 
@@ -180,12 +192,19 @@ def parse():
         variables = queries[0].get_free_variables() | support.get_free_variables() | weights.get_free_variables()
         domain = Domain.make(real_variable_bounds={v.symbol_name(): [-100, 100] for v in variables})
 
-    elif args.dialect == "xadd":
-        domain = Domain.build("A_0", "A_1", "A_2", x_0=(-100, 100), x_1=(-100, 100))
+    elif args.dialect == "xadd_mspn":
+        name = os.path.basename(args.file)
+        parts = name.split("_")
+        real_vars = int(parts[1])
+        bool_vars = int(parts[2])
+
+        domain = Domain.make(["A_{}".format(i) for i in range(bool_vars)],
+                             {"x_{}".format(i): [-100, 100] for i in range(real_vars)})
+
         support = TRUE()
         with open(args.file) as f:
             weights = nested_to_smt(f.readlines()[0])
-        queries = []
+        queries = [TRUE()]
 
     elif args.dialect == "wmi_mspn":
         q_file, s_file, w_file = ("{}.{}".format(args.file, ext) for ext in ["query", "support", "weight"])
@@ -195,12 +214,13 @@ def parse():
             weights = read_smtlib(w_file)
         else:
             weights = Real(1)
-        variables = support.get_free_variables() | weights.get_free_variables()  # type: Set[FNode]
-        for query in queries:
-            variables |= query.get_free_variables()
-        # TODO Future work: detect bounds
-        domain = Domain.make([v.symbol_name() for v in variables if v.get_type() == BOOL],
-                             {v.symbol_name(): [-100, 100] for v in variables if v.get_type() == REAL})
+        name = os.path.basename(args.file)
+        parts = name.split("_")
+        real_vars = int(parts[1])
+        bool_vars = int(parts[2])
+
+        domain = Domain.make(["A_{}".format(i) for i in range(bool_vars)],
+                             {"x_{}".format(i): [-100, 100] for i in range(real_vars)})
     else:
         raise ValueError("Invalid conversion: {}".format(args.dialect))
 
@@ -224,6 +244,17 @@ def parse():
 
     elif args.task == "compare":
         compare([get_engine(d, domain, support, weights) for d in args.engines])
+
+    elif args.task == "normalize":
+        engine = XaddEngine(domain, support, weights, "original")
+        engine.normalize(import_density(args.new_support)[2], args.output_path, not args.total)
+
+    elif args.task == "plot":
+        if args.difference:
+            other = import_density(args.difference)
+            plot.plot_formula(args.output, domain, (support & ~other[2] | ~support & other[2]), (args.feat_x, args.feat_y))
+        else:
+            plot.plot_formula(args.output, domain, support, (args.feat_x, args.feat_y))
 
 
 if __name__ == "__main__":

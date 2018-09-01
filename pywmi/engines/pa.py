@@ -57,4 +57,4 @@ class PredicateAbstractionEngine(Engine):
         return PredicateAbstractionEngine(self.domain, support, weight)
 
     def __str__(self):
-        return "PA" + ("" if self.timeout is None else ":t{}".format(self.timeout))
+        return "pa" + ("" if self.timeout is None else ":t{}".format(self.timeout))
