@@ -58,7 +58,7 @@ def combined_nested_to_wmi(string):
 
 
 class SmtParser(object):
-    operators = ["ite", "^", "~", "&", "|", "*", "+", "-", "<=", "<", "->", "=", "const", "var"]
+    operators = ["ite", "^", "~", "&", "|", "*", "+", "-", "<=", "<", ">", ">=", "->", "=", "const", "var"]
 
     def __init__(self):
         self.vars = dict()

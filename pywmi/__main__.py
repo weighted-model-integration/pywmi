@@ -9,10 +9,11 @@ import numpy as np
 import tabulate
 from pysmt.fnode import FNode
 from pysmt.typing import REAL, BOOL
+from typing import Optional
 
 from pywmi import nested_to_smt, import_domain, Domain, export_domain, smt_to_nested, RejectionEngine, \
     PredicateAbstractionEngine, XaddEngine, Engine
-from pysmt.shortcuts import read_smtlib, Real
+from pysmt.shortcuts import read_smtlib, Real, TRUE
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,22 @@ def get_engine(description, domain, support, weight):
     if parts[0].lower() == "xadd":
         options = parse_options(parts[1:], "mode", "timeout")
         return XaddEngine(domain, support, weight, **options)
+
+
+def get_volume(engines, print_status=None):
+    # type: (List[Engine], Optional[bool]) -> Optional[float]
+
+    for engine in engines:
+        if print_status:
+            print("Trying engine: {: <64}".format(str(engine)), end="\r", flush=True)
+        volume = engine.compute_volume()
+        if volume is not None:
+            if print_status:
+                print(" " * 80, end="\r", flush=True)
+            return volume
+    if print_status:
+        print(" " * 80, end="\r", flush=True)
+    return None
 
 
 def compare(engines):
@@ -92,7 +109,7 @@ def compare(engines):
         durations = []
         volumes = []
 
-        for i in range(1 if engine.exact else 10):
+        for i in range(1 if engine.exact else 1):
             start_time = time.time()
             volumes.append(engine.compute_volume())
             durations.append(time.time() - start_time)
@@ -126,10 +143,11 @@ def parse():
     task_parsers = parser.add_subparsers(dest="task", help="Which task to run")
 
     vp = task_parsers.add_parser("volume")
-    vp.add_argument("engine", help="The engine to use, e.g., pa:t<timeout>, rej:n<samples>")
+    vp.add_argument("engines", help="One or more engines (later engines are used if earlier engines fail)", nargs="+")
+    vp.add_argument("-s", "--status", help="Print current status", action="store_true")
 
     cp = task_parsers.add_parser("convert")
-    cp.add_argument("json_file", help="The output path for the json file", default=None)
+    cp.add_argument("-o", "--json_file", help="The output path for the json file", default=None)
 
     compare_p = task_parsers.add_parser("compare")
     compare_p.add_argument("engines", help="The engines to compare (see engine input format)", nargs="+")
@@ -162,11 +180,21 @@ def parse():
         variables = queries[0].get_free_variables() | support.get_free_variables() | weights.get_free_variables()
         domain = Domain.make(real_variable_bounds={v.symbol_name(): [-100, 100] for v in variables})
 
+    elif args.dialect == "xadd":
+        domain = Domain.build("A_0", "A_1", "A_2", x_0=(-100, 100), x_1=(-100, 100))
+        support = TRUE()
+        with open(args.file) as f:
+            weights = nested_to_smt(f.readlines()[0])
+        queries = []
+
     elif args.dialect == "wmi_mspn":
         q_file, s_file, w_file = ("{}.{}".format(args.file, ext) for ext in ["query", "support", "weight"])
         queries = [] if not os.path.exists(q_file) else [read_smtlib(q_file)]
         support = read_smtlib(s_file)
-        weights = read_smtlib(w_file)
+        if os.path.exists(w_file):
+            weights = read_smtlib(w_file)
+        else:
+            weights = Real(1)
         variables = support.get_free_variables() | weights.get_free_variables()  # type: Set[FNode]
         for query in queries:
             variables |= query.get_free_variables()
@@ -192,7 +220,7 @@ def parse():
             json.dump(flat, f)
 
     elif args.task == "volume":
-        print(get_engine(args.engine, domain, support, weights).compute_volume())
+        print(get_volume([get_engine(d, domain, support, weights) for d in args.engines], args.status))
 
     elif args.task == "compare":
         compare([get_engine(d, domain, support, weights) for d in args.engines])

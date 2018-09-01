@@ -43,6 +43,8 @@ class Domain(object):
     def make(boolean_variables=None, real_variables=None, real_variable_bounds=None):
         if boolean_variables is None:
             boolean_variables = []
+        else:
+            boolean_variables = list(boolean_variables)
         if real_variables is None and real_variable_bounds is None:
             real_names = []
             bounds = dict()
@@ -55,6 +57,10 @@ class Domain(object):
         types = {v: smt.BOOL for v in boolean_variables}
         types.update({v: smt.REAL for v in bounds})
         return Domain(boolean_variables + real_names, types, bounds)
+
+    @staticmethod
+    def build(*args, **kwargs):
+        return Domain.make(args, kwargs)
 
     def __str__(self):
         return "({})".format(", ".join(
