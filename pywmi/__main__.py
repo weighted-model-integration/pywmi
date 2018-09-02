@@ -8,9 +8,8 @@ import tabulate
 from pysmt.fnode import FNode
 from typing import Optional
 
-from convert import Import
-from domain import export_density
-from .domain import import_density
+from .convert import Import
+from .domain import import_density, export_density
 from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, Engine, plot
 
 logger = logging.getLogger(__name__)

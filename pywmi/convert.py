@@ -4,7 +4,7 @@ from typing import Tuple, List
 
 from pysmt.fnode import FNode
 
-from domain import import_density, import_domain
+from .domain import import_density, import_domain
 from pywmi import Domain, nested_to_smt
 from pysmt import shortcuts as smt
 
@@ -80,7 +80,7 @@ class Import(object):
         "wmi_generate_tree": import_wmi_generate_tree,
     }
 
-    dialects = sorted(_dialects.keys())
+    dialects = sorted(k for k in _dialects.keys() if k is not None)
 
     @staticmethod
     def import_density(filename, dialect=None):
