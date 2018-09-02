@@ -139,6 +139,22 @@ class TemporaryDensityFile(object):
             os.remove(self.tmp_filename)
 
 
+class Density(object):
+    def __init__(self, domain, support, weight, queries=None):
+        self.domain = domain
+        self.support = support
+        self.weight = weight
+        self.queries = queries if queries else [smt.TRUE()]
+
+    def export_to(self, filename):
+        # type: (str) -> None
+        export_density(filename, self.domain, self.support, self.weight, self.queries)
+
+    @staticmethod
+    def import_from(filename):
+        return Density(*import_density(filename))
+
+
 def export_density(filename, domain, support, weight, queries=None):
     # type: (str, Domain, FNode, FNode, Optional[List[FNode]]) -> None
     queries = queries if queries else [smt.TRUE()]
