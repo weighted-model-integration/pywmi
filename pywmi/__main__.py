@@ -1,20 +1,17 @@
 import argparse
-import json
 import logging
-import os
 import time
-from typing import Set, Tuple, Any, List, Dict
+from typing import Any, List, Dict
 
 import numpy as np
 import tabulate
 from pysmt.fnode import FNode
-from pysmt.typing import REAL, BOOL
 from typing import Optional
 
+from convert import Import
+from domain import export_density
 from .domain import import_density
-from pywmi import nested_to_smt, import_domain, Domain, export_domain, smt_to_nested, RejectionEngine, \
-    PredicateAbstractionEngine, XaddEngine, Engine, plot
-from pysmt.shortcuts import read_smtlib, Real, TRUE, Iff
+from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, Engine, plot
 
 logger = logging.getLogger(__name__)
 
@@ -167,86 +164,23 @@ def parse():
     parser.add_argument("-d", "--dialect", default=None, type=str, help="The dialect to use for import")
     args = parser.parse_args()
 
-    if args.dialect is None:
-        with open(args.file) as f:
-            flat = json.load(f)
-
-        domain = import_domain(flat["domain"])
-        queries = [nested_to_smt(query) for query in flat["queries"]]
-        support = nested_to_smt(flat["formula"])
-        weights = nested_to_smt(flat["weights"]) if "weights" in flat else None
-
-    elif args.dialect == "smt_synthetic":
-        with open(args.file) as f:
-            flat = json.load(f)
-
-        domain = import_domain(flat["synthetic_problem"]["problem"]["domain"])
-        queries = [nested_to_smt(flat["synthetic_problem"]["problem"]["theory"])]
-        support = domain.get_bounds()
-        weights = Real(1)
-
-    elif args.dialect == "wmi_generate_tree":
-        queries = [read_smtlib(args.file + "_0.query")]
-        support = read_smtlib(args.file + "_0.support")
-        weights = read_smtlib(args.file + "_0.weights")
-        variables = queries[0].get_free_variables() | support.get_free_variables() | weights.get_free_variables()
-        domain = Domain.make(real_variable_bounds={v.symbol_name(): [-100, 100] for v in variables})
-
-    elif args.dialect == "xadd_mspn":
-        name = os.path.basename(args.file)
-        parts = name.split("_")
-        real_vars = int(parts[1])
-        bool_vars = int(parts[2])
-
-        domain = Domain.make(["A_{}".format(i) for i in range(bool_vars)],
-                             {"x_{}".format(i): [-100, 100] for i in range(real_vars)})
-
-        support = TRUE()
-        with open(args.file) as f:
-            weights = nested_to_smt(f.readlines()[0])
-        queries = [TRUE()]
-
-    elif args.dialect == "wmi_mspn":
-        q_file, s_file, w_file = ("{}.{}".format(args.file, ext) for ext in ["query", "support", "weight"])
-        queries = [] if not os.path.exists(q_file) else [read_smtlib(q_file)]
-        support = read_smtlib(s_file)
-        if os.path.exists(w_file):
-            weights = read_smtlib(w_file)
-        else:
-            weights = Real(1)
-        name = os.path.basename(args.file)
-        parts = name.split("_")
-        real_vars = int(parts[1])
-        bool_vars = int(parts[2])
-
-        domain = Domain.make(["A_{}".format(i) for i in range(bool_vars)],
-                             {"x_{}".format(i): [-100, 100] for i in range(real_vars)})
-    else:
-        raise ValueError("Invalid conversion: {}".format(args.dialect))
+    domain, support, weight, queries = Import.import_density(args.file, args.dialect)
 
     if args.task == "convert":
         json_file = args.json_file
         if json_file is None:
             json_file = args.file + ".converted.json"
 
-        flat = {
-            "domain": export_domain(domain, False),
-            "queries": [smt_to_nested(query) for query in queries],
-            "formula": smt_to_nested(support),
-            "weights": smt_to_nested(weights)
-        }
-
-        with open(json_file, "w") as f:
-            json.dump(flat, f)
+        export_density(json_file, domain, support, weight, queries)
 
     elif args.task == "volume":
-        print(get_volume([get_engine(d, domain, support, weights) for d in args.engines], args.status))
+        print(get_volume([get_engine(d, domain, support, weight) for d in args.engines], args.status))
 
     elif args.task == "compare":
-        compare([get_engine(d, domain, support, weights) for d in args.engines])
+        compare([get_engine(d, domain, support, weight) for d in args.engines])
 
     elif args.task == "normalize":
-        engine = XaddEngine(domain, support, weights, "original")
+        engine = XaddEngine(domain, support, weight, "original")
         engine.normalize(import_density(args.new_support)[2], args.output_path, not args.total)
 
     elif args.task == "plot":
