@@ -55,25 +55,26 @@ class XaddEngine(Engine):
     def get_samples(self, n):
         raise NotImplementedError()
 
-    def normalize(self, new_support, output_path, paths=True):
+    def normalize(self, new_support, paths=True):
         # type: (FNode, str, bool) -> bool
 
         with self.temp_file() as f:
             with TemporaryDensityFile(self.domain, new_support, Real(1.0)) as f2:
-                try:
-                    cmd_args = ["java", "-jar", XaddEngine.path, "normalize", f, f2, "-p" if paths else "-t", output_path]
-                    logger.info("> {}".format(" ".join(cmd_args)))
-                    output = subprocess.check_output(cmd_args, timeout=self.timeout).decode(sys.stdout.encoding)
-                    return True
-                except subprocess.CalledProcessError as e:
-                    logger.warning(e.output)
-                    raise
-                except subprocess.TimeoutExpired:
-                    logger.warning("Timeout")
-                except ValueError:
-                    logger.warning(output)
-                    raise
-        return False
+                with TemporaryDensityFile(self.domain, TRUE, Real(1.0)) as f3:
+                    try:
+                        cmd_args = ["java", "-jar", XaddEngine.path, "normalize", f, f2, "-p" if paths else "-t", f3]
+                        logger.info("> {}".format(" ".join(cmd_args)))
+                        output = subprocess.check_output(cmd_args, timeout=self.timeout).decode(sys.stdout.encoding)
+                        return import_xadd_mspn(f3)[2]
+                    except subprocess.CalledProcessError as e:
+                        logger.warning(e.output)
+                        raise
+                    except subprocess.TimeoutExpired:
+                        logger.warning("Timeout")
+                    except ValueError:
+                        logger.warning(output)
+                        raise
+        return None
 
     def __str__(self):
         result = "xadd:m{}".format(self.mode)
