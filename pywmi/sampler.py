@@ -401,7 +401,7 @@ if __name__ == "__main__":
         support = read_smtlib(args.file + "_0.support")
         weights = read_smtlib(args.file + "_0.weights")
         variables = queries[0].get_free_variables() | support.get_free_variables() | weights.get_free_variables()
-        domain = pywmi.Domain.make(real_variable_bounds={v.symbol_name(): [-100, 100] for v in variables})
+        domain = pywmi.Domain.make(real_variable_bounds={v.symbol_name(): [0, 1] for v in variables})
 
     elif args.convert == "wmi_mspn":
         q_file, s_file, w_file = ("{}.{}".format(args.file, ext) for ext in ["query", "support", "weights"])
@@ -412,7 +412,7 @@ if __name__ == "__main__":
         for query in queries:
             variables |= query.get_free_variables()
         # TODO Future work: detect bounds
-        domain = pywmi.Domain.make(real_variable_bounds={v.symbol_name(): [-100, 100] for v in variables})
+        domain = pywmi.Domain.make(real_variable_bounds={v.symbol_name(): [0, 1] for v in variables})
     else:
         raise ValueError("Invalid conversion: {}".format(args.convert))
 

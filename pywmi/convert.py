@@ -17,7 +17,7 @@ def import_xadd_mspn(filename):
     bool_vars = int(parts[2])
 
     domain = Domain.make(["A_{}".format(i) for i in range(bool_vars)],
-                         {"x_{}".format(i): [-100, 100] for i in range(real_vars)})
+                         {"x_{}".format(i): [0, 1] for i in range(real_vars)})
 
     support = smt.TRUE()
     with open(filename) as f:
@@ -42,7 +42,7 @@ def import_wmi_mspn(filename):
     bool_vars = int(parts[2])
 
     domain = Domain.make(["A_{}".format(i) for i in range(bool_vars)],
-                         {"x_{}".format(i): [-100, 100] for i in range(real_vars)})
+                         {"x_{}".format(i): [0, 1] for i in range(real_vars)})
 
     return domain, support, weights, queries
 
@@ -67,7 +67,7 @@ def import_wmi_generate_tree(filename):
     support = smt.read_smtlib(filename + "_0.support")
     weights = smt.read_smtlib(filename + "_0.weights")
     variables = queries[0].get_free_variables() | support.get_free_variables() | weights.get_free_variables()
-    domain = Domain.make(real_variable_bounds={v.symbol_name(): [-100, 100] for v in variables})
+    domain = Domain.make(real_variable_bounds={v.symbol_name(): [0, 1] for v in variables})
     return domain, support, weights, queries
 
 
