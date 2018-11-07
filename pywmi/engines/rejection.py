@@ -45,16 +45,18 @@ class RejectionEngine(Engine):
     def compute_volume(self, sample_count=None):
         sample_count = sample_count if sample_count is not None else self.sample_count
         bounds = self.bound_tuples()
-        bound_volume = self.bound_volume(bounds) * 2**len(self.domain.bool_vars)
         samples = sample(len(self.domain.bool_vars), bounds, sample_count)
         labels = evaluate(self.domain, self.support, samples)
         pos_samples = samples[labels]
+        bound_volume = self.bound_volume(bounds) * 2**len(self.domain.bool_vars)
+        approx_volume = bound_volume * sum(labels) / len(labels)
 
         if self.weight is not None:
             sample_weights = evaluate(self.domain, self.weight, pos_samples)
-            rejection_volume = sum(sample_weights) / len(labels) * bound_volume
+            rejection_volume = sum(sample_weights) / len(pos_samples) * approx_volume
         else:
-            rejection_volume = sum(labels) / len(labels) * bound_volume
+            rejection_volume = approx_volume
+
         return rejection_volume
 
     def get_samples(self, n, extra_sample_ratio=None, weighted=True):
@@ -68,11 +70,13 @@ class RejectionEngine(Engine):
             msg = "Sampled points {}, needed {}"
             raise SamplingException(msg.format(len(pos_samples), n))
 
+        pos_ratio = sum(labels) / len(labels)
+
         if weighted and self.weight is not None:
             sample_weights = evaluate(self.domain, self.weight, pos_samples)
-            return numpy.array(list(weighted_sample(sample_weights, pos_samples, n)))
+            return numpy.array(list(weighted_sample(sample_weights, pos_samples, n))), pos_ratio
         else:
-            return numpy.array(list(pos_samples))
+            return numpy.array(list(pos_samples)[:n]), pos_ratio
 
     def copy(self, support, weight):
         return RejectionEngine(self.domain, support, weight, self.sample_count, self.seed)
