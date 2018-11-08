@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class XaddEngine(Engine):
-    pattern = re.compile(r"\n(\d+\.\d+) (\d+\.\d+)\n")
+    pattern = re.compile(r"\n(-?\d+\.\d+E?\d*) (-?\d+\.\d+E?\d*)\n")
     path = os.path.join(os.path.dirname(__file__), "xadd.jar")
 
     def __init__(self, domain, support, weight, mode=None, timeout=None):
@@ -30,11 +30,12 @@ class XaddEngine(Engine):
 
         with self.temp_file(queries) as f:
             try:
-                cmd_args = ["java", "-jar", XaddEngine.path, "inference", f] + (self.mode if self.mode else [])
+                cmd_args = ["java", "-jar", XaddEngine.path, "inference", f] + ([self.mode] if self.mode else [])
                 logger.info("> {}".format(" ".join(cmd_args)))
                 output = subprocess.check_output(cmd_args, timeout=timeout).decode(sys.stdout.encoding)
-                return [(float(match[0]) if queries is not None else float(match[1]))
-                        for match in XaddEngine.pattern.findall(output)]
+                results = [(float(match[0]) if queries is not None else float(match[1]))
+                           for match in XaddEngine.pattern.findall(output)]
+                return results
             except subprocess.CalledProcessError as e:
                 logger.warning(e.output)
             except subprocess.TimeoutExpired:
@@ -47,7 +48,11 @@ class XaddEngine(Engine):
     def compute_volume(self, timeout=None):
         if timeout is None:
             timeout = self.timeout
-        return self.call_wmi(timeout=timeout)[0]
+        result = self.call_wmi(timeout=timeout)
+        if result is None or len(result) == 0:
+            return None
+        else:
+            return result[0]
 
     def copy(self, support, weight):
         return XaddEngine(self.domain, support, weight, self.mode, self.timeout)

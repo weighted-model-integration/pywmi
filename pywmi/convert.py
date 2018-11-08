@@ -68,13 +68,18 @@ def import_wmi_generate_tree(filename):
     weights = smt.read_smtlib(filename + "_0.weights")
     variables = queries[0].get_free_variables() | support.get_free_variables() | weights.get_free_variables()
     domain = Domain.make(real_variables={v.symbol_name(): [0, 1] for v in variables if v.symbol_type() == smt.REAL},
-                         boolean_variables=[v for v in variables if v.symbol_type() == smt.BOOL])
+                         boolean_variables=[v.symbol_name() for v in variables if v.symbol_type() == smt.BOOL])
     return domain, support, weights, queries
+
+
+def import_wrap(fn):
+    domain, queries, support, weight = import_density(fn)
+    return domain, support, weight, queries
 
 
 class Import(object):
     _dialects = {
-        None: import_density,
+        None: import_wrap,
         "xadd_mspn": import_xadd_mspn,
         "wmi_mspn": import_wmi_mspn,
         "smt_synthetic": import_smt_synthetic,
