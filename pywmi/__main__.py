@@ -183,11 +183,15 @@ def parse():
         engine.normalize(import_density(args.new_support)[2], args.output_path, not args.total)
 
     elif args.task == "plot":
+        if args.output is not None and args.output == "*":
+            output_file = args.file + ".png"
+        else:
+            output_file = args.output
         if args.difference:
             other = import_density(args.difference)
-            plot.plot_formula(args.output, domain, (support & ~other[2] | ~support & other[2]), (args.feat_x, args.feat_y))
+            plot.plot_formula(output_file, domain, (support & ~other[2] | ~support & other[2]), (args.feat_x, args.feat_y))
         else:
-            plot.plot_formula(args.output, domain, support, (args.feat_x, args.feat_y))
+            plot.plot_formula(output_file, domain, support, (args.feat_x, args.feat_y))
 
 
 if __name__ == "__main__":

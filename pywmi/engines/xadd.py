@@ -60,7 +60,7 @@ class XaddEngine(Engine):
 
         with self.temp_file() as f:
             with TemporaryDensityFile(self.domain, new_support, Real(1.0)) as f2:
-                with TemporaryDensityFile(self.domain, TRUE, Real(1.0)) as f3:
+                with TemporaryDensityFile(self.domain, TRUE(), Real(1.0)) as f3:
                     try:
                         cmd_args = ["java", "-jar", XaddEngine.path, "normalize", f, f2, "-p" if paths else "-t", f3]
                         logger.info("> {}".format(" ".join(cmd_args)))

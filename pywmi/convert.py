@@ -54,8 +54,8 @@ def import_smt_synthetic(filename):
         flat = json.load(f)
 
     domain = import_domain(flat["synthetic_problem"]["problem"]["domain"])
-    queries = [nested_to_smt(flat["synthetic_problem"]["problem"]["theory"])]
-    support = domain.get_bounds()
+    queries = [smt.TRUE()]
+    support = nested_to_smt(flat["synthetic_problem"]["problem"]["theory"]) & domain.get_bounds()
     weights = smt.Real(1)
 
     return domain, support, weights, queries
