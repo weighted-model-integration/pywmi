@@ -51,13 +51,16 @@ def get_engine(description, domain, support, weight):
         return XaddEngine(domain, support, weight, **options)
 
 
-def get_volume(engines, print_status=None):
-    # type: (List[Engine], Optional[bool]) -> Optional[float]
+def get_volume(engines, queries=None, print_status=None):
+    # type: (List[Engine], Optional[List[FNode]], Optional[bool]) -> Optional[float]
 
     for engine in engines:
         if print_status:
             print("Trying engine: {: <64}".format(str(engine)), end="\r", flush=True)
-        volume = engine.compute_volume()
+        if queries is None:
+            volume = engine.compute_volume()
+        else:
+            volume = engine.compute_probabilities(queries)
         if volume is not None:
             if print_status:
                 print(" " * 80, end="\r", flush=True)
@@ -120,7 +123,8 @@ def compare(engines):
     disagree = False
     for i in range(len(exact_volumes) - 1):
         for j in range(i + 1, len(exact_volumes)):
-            if abs(exact_volumes[i][1] - exact_volumes[j][1]) > delta:
+            if abs(exact_volumes[i][1] - exact_volumes[j][1]) >\
+                    delta * min(abs(exact_volumes[i][1]), abs(exact_volumes[j][1])):
                 logger.warning("Exact solvers disagree on volume: {} ({}) vs {} ({})"
                                .format(engines[i], exact_volumes[i], engines[j], exact_volumes[j]))
                 disagree = True
@@ -142,6 +146,10 @@ def parse():
     vp = task_parsers.add_parser("volume")
     vp.add_argument("engines", help="One or more engines (later engines are used if earlier engines fail)", nargs="+")
     vp.add_argument("-s", "--status", help="Print current status", action="store_true")
+
+    pp = task_parsers.add_parser("prob")
+    pp.add_argument("engines", help="One or more engines (later engines are used if earlier engines fail)", nargs="+")
+    pp.add_argument("-s", "--status", help="Print current status", action="store_true")
 
     cp = task_parsers.add_parser("convert")
     cp.add_argument("-o", "--json_file", help="The output path for the json file", default=None)
@@ -173,7 +181,10 @@ def parse():
         export_density(json_file, domain, support, weight, queries)
 
     elif args.task == "volume":
-        print(get_volume([get_engine(d, domain, support, weight) for d in args.engines], args.status))
+        print(get_volume([get_engine(d, domain, support, weight) for d in args.engines], print_status=args.status))
+
+    elif args.task == "prob":
+        print(get_volume([get_engine(d, domain, support, weight) for d in args.engines], queries, args.status))
 
     elif args.task == "compare":
         compare([get_engine(d, domain, support, weight) for d in args.engines])
