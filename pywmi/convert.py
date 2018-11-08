@@ -67,7 +67,8 @@ def import_wmi_generate_tree(filename):
     support = smt.read_smtlib(filename + "_0.support")
     weights = smt.read_smtlib(filename + "_0.weights")
     variables = queries[0].get_free_variables() | support.get_free_variables() | weights.get_free_variables()
-    domain = Domain.make(real_variable_bounds={v.symbol_name(): [0, 1] for v in variables})
+    domain = Domain.make(real_variables={v.symbol_name(): [0, 1] for v in variables if v.symbol_type() == smt.REAL},
+                         boolean_variables=[v for v in variables if v.symbol_type() == smt.BOOL])
     return domain, support, weights, queries
 
 
