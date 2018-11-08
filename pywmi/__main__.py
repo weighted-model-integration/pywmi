@@ -70,7 +70,7 @@ def get_volume(engines, queries=None, print_status=None):
     return None
 
 
-def compare(engines):
+def compare(engines, query=None):
     def mean(sequence):
         if any(e is None for e in sequence):
             return None
@@ -111,7 +111,10 @@ def compare(engines):
 
         for i in range(1 if engine.exact else 1):
             start_time = time.time()
-            volumes.append(engine.compute_volume())
+            if query is None:
+                volumes.append(engine.compute_volume())
+            else:
+                volumes.append(engine.compute_probability(query))
             durations.append(time.time() - start_time)
 
             if engine.exact and volumes[-1] is not None:
@@ -156,6 +159,7 @@ def parse():
 
     compare_p = task_parsers.add_parser("compare")
     compare_p.add_argument("engines", help="The engines to compare (see engine input format)", nargs="+")
+    compare_p.add_argument("-q", "--query_index", help="The query index to check", default=None, type=int)
 
     normalize_p = task_parsers.add_parser("normalize")
     normalize_p.add_argument("new_support", type=str, help="The new support")
@@ -187,7 +191,10 @@ def parse():
         print(get_volume([get_engine(d, domain, support, weight) for d in args.engines], queries, args.status))
 
     elif args.task == "compare":
-        compare([get_engine(d, domain, support, weight) for d in args.engines])
+        query = None
+        if args.query_index is not None and args.query_index < len(queries):
+            query = queries[args.query_index]
+        compare([get_engine(d, domain, support, weight) for d in args.engines], query)
 
     elif args.task == "normalize":
         engine = XaddEngine(domain, support, weight, "original")
