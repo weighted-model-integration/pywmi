@@ -65,6 +65,8 @@ class Domain(object):
             bounds = real_variables
         else:
             real_names = real_variables
+            if isinstance(real_variable_bounds, dict):
+                raise ValueError("real_variable_bounds should be list or iterable")
             bounds = dict(zip(real_variables, real_variable_bounds))
         types = {v: smt.BOOL for v in boolean_variables}
         types.update({v: smt.REAL for v in bounds})
