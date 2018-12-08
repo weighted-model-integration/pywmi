@@ -74,9 +74,9 @@ def import_wmi_generate_tree(filename):
 
 def import_wmi_generate_100(filename):
     # type: (str) -> Tuple[Domain, FNode, FNode, List[FNode]]
-    queries = [smt.read_smtlib(filename + "_0.query")]
-    support = smt.read_smtlib(filename + "_0.support")
-    weights = smt.read_smtlib(filename + "_0.weights")
+    queries = [smt.read_smtlib(filename + ".query")]
+    support = smt.read_smtlib(filename + ".support")
+    weights = smt.read_smtlib(filename + ".weights")
     variables = queries[0].get_free_variables() | support.get_free_variables() | weights.get_free_variables()
     domain = Domain.make(real_variables={v.symbol_name(): [-100, 100] for v in variables if v.symbol_type() == smt.REAL},
                          boolean_variables=[v.symbol_name() for v in variables if v.symbol_type() == smt.BOOL])

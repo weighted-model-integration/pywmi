@@ -8,6 +8,7 @@ from .engines.rejection import RejectionEngine
 from .engines.pa import PredicateAbstractionEngine
 from .engines.xadd import XaddEngine
 from .engine import Engine
+from .engines.xsdd.xsdd import XsddEngine
 
 
 def _change_polytope():

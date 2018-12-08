@@ -10,7 +10,7 @@ from typing import Optional
 
 from .convert import Import
 from .domain import import_density, export_density
-from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, Engine, plot
+from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, XsddEngine, Engine, plot
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,9 @@ def get_engine(description, domain, support, weight):
     if parts[0].lower() == "xadd":
         options = parse_options(parts[1:], "mode", "timeout")
         return XaddEngine(domain, support, weight, **options)
+    if parts[0].lower() == "xsdd":
+        options = parse_options(parts[1:], "mode", "timeout")
+        return XsddEngine(domain, support, weight, **options)
 
 
 def get_volume(engines, queries=None, print_status=None):
