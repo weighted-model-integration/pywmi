@@ -173,13 +173,14 @@ def plot_combined(feat_x, feat_y, domain, formula, data, learned_labels, name, a
         def status(_i):
             return "active" if _i in active_indices else ("new_active" if _i in new_active_indices else "excluded")
 
-        if isinstance(data, np.ndarray):
+        if isinstance(data, tuple):
+            values, labels = data  # type: Tuple[np.ndarray, np.ndarray]
             var_index_map = domain.var_index_map()
-            feat_x, feat_y = (f if isinstance(f, str) else var_index_map[f] for f in (feat_x, feat_y))
-            for i in range(data.shape[0]):
-                row = data[i, :-1]
-                point = row[feat_x], row[feat_y]
-                label = data[i, len(domain.variables)] == 1
+            fx, fy = (f if isinstance(f, int) else var_index_map[f] for f in (feat_x, feat_y))
+            for i in range(values.shape[0]):
+                row = values[i, :]
+                point = row[fx], row[fy]
+                label = labels[i] == 1
                 correct = (learned_labels[i] == label) if learned_labels is not None else True
                 match = all(row[var_index_map[v]] == a for v, a in zip(domain.bool_vars, assignment))
                 if match and (condition is None or condition(row, label)):

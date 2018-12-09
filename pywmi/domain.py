@@ -33,6 +33,9 @@ class Domain(object):
             formula_manager = smt
         return formula_manager.Symbol(variable, self.var_types[variable])
 
+    def get_symbols(self, variables: List[str], formula_manager=None) -> List[FNode]:
+        return [self.get_symbol(v, formula_manager) for v in variables]
+
     def get_bounds(self, formula_manager=None):
         fm = smt if formula_manager is None else formula_manager
         sym = fm.Symbol
