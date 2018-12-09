@@ -12,10 +12,10 @@ from pywmi.domain import TemporaryDensityFile
 from pywmi.engine import Engine
 
 from .smt2pl import SMT2PL
+from .evaluator import SemiringWMIPSI
 
 
 from problog.cycles import break_cycles
-from problog.evaluator import Semiring
 
 import hal_problog.utils
 from hal_problog.solver import SumOperator, InferenceSolver
@@ -30,22 +30,20 @@ class XsddEngine(Engine, SMT2PL):
         Engine.__init__(self, domain, support, weight)
         SMT2PL.__init__(self, domain, support, weight)
         self.problog_program = hal_problog.utils.load_string(self.string_program)
+        self.solver = InferenceSolverWMI(abe="psi")
 
         self.mode = mode
         self.timeout = timeout
 
 
-        self.solver = InferenceSolver(abe="psi")
-
     def call_wmi(self, queries=None, timeout=None, **kwdargs):
         lf_hal, _, _, _ = self.solver.ground(self.problog_program, queries=None, **kwdargs)
         lf = break_cycles(lf_hal, LogicFormula(**kwdargs))
         operator = SumOperator()
-        semiring = SemiringWMI(operator.get_neutral(), self.solver.abe)
+        semiring = SemiringWMIPSI(operator.get_neutral(), self.solver.abe)
         diagram = self.solver.compile_formula(lf, **kwdargs)
         dde = diagram.get_evaluator(semiring=semiring, **kwdargs)
-        # dde.formula.density_values = density_values
-        # sdds = dde.get_sdds()
+        sdds = dde.get_sdds()
 
 
         return [1]
@@ -76,15 +74,6 @@ class XsddEngine(Engine, SMT2PL):
         return result
 
 
-
-class SemiringWMI(Semiring):
-    def __init__(self, neutral, abe):
-        self.neutral = neutral
-        self.abe = abe
-
-    def negate(self, a):
-        print(a)
-        return 0
-    def value(self,a):
-        # print(a)
-        return 1
+class InferenceSolverWMI(InferenceSolver):
+    def __init__(self, abe=None):
+        InferenceSolver.__init__(self, abe)
