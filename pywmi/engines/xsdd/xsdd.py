@@ -16,10 +16,10 @@ from .evaluator import SemiringWMIPSI
 
 
 from problog.cycles import break_cycles
+from problog.formula import LogicFormula
 
-import hal_problog.utils
+from hal_problog.utils import load_string
 from hal_problog.solver import SumOperator, InferenceSolver
-from hal_problog.formula import LogicFormula
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class XsddEngine(Engine, SMT2PL):
     def __init__(self, domain, support, weight, mode=None, timeout=None):
         Engine.__init__(self, domain, support, weight)
         SMT2PL.__init__(self, domain, support, weight)
-        self.problog_program = hal_problog.utils.load_string(self.string_program)
+        self.problog_program = load_string(self.string_program)
         self.solver = InferenceSolverWMI(abe="psi")
         self.real_variables = domain.real_vars
 
