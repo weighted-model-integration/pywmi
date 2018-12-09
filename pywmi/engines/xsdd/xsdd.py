@@ -31,9 +31,17 @@ class XsddEngine(Engine, SMT2PL):
         SMT2PL.__init__(self, domain, support, weight)
         self.problog_program = hal_problog.utils.load_string(self.string_program)
         self.solver = InferenceSolverWMI(abe="psi")
+        self.real_variables = domain.real_vars
 
         self.mode = mode
         self.timeout = timeout
+
+    def __str__(self):
+        result = "sadd:m{}".format(self.mode)
+        if self.timeout is not None:
+            result += ":t{}".format(self.timeout)
+        return result
+
 
 
     def call_wmi(self, queries=None, timeout=None, **kwdargs):
@@ -44,9 +52,43 @@ class XsddEngine(Engine, SMT2PL):
         diagram = self.solver.compile_formula(lf, **kwdargs)
         dde = diagram.get_evaluator(semiring=semiring, **kwdargs)
         sdds = dde.get_sdds()
+        sdds = self.sort_sdds(sdds, self.worldweight)
+
+        weight = self.calculate_weight(sdds, self.real_variables, semiring, dde, **kwdargs)
+        return [weight]
+
+    @staticmethod
+    def sort_sdds(sdds, worldweight):
+        sdds = sdds["qe"]
+        n_queries = len(sdds)
+        sdds_sorted = [{} for i in range(0,int(n_queries/2))]
+        for s in sdds:
+            if s.functor=="q":
+                sdds_sorted[s.args[0].functor]["qe"]=sdds[s]
+            else:
+                sdds_sorted[s.args[0].functor]["e"]=sdds[s]
+            sdds_sorted[s.args[0].functor]["ww"]=worldweight[s.args[0].functor]
+        return sdds_sorted
 
 
-        return [1]
+    @staticmethod
+    def calculate_weight(sdds, variables, semiring, dde, **kwdargs):
+        wmi_qe = semiring.zero().expression
+        wmi_e = semiring.zero().expression
+
+        for query in sdds:
+            ww = semiring.poly2expr(query["ww"])
+            e_evaluated = dde.evaluate_sdd(query["e"], semiring, normalization=False, evaluation_last=False)
+            w_e = semiring.integrate(ww, e_evaluated, variables)
+
+            qe_evaluated = dde.evaluate_sdd(query["qe"], semiring, normalization=False, evaluation_last=False)
+            w_qe = semiring.integrate(ww, qe_evaluated, variables)
+
+            wmi_e = semiring.algebra._add(wmi_e, w_e)
+            wmi_qe = semiring.algebra._add(wmi_qe, w_qe)
+
+        wmi = semiring.algebra._div(wmi_qe,wmi_e)
+        return wmi
 
 
     def compute_volume(self, timeout=None):
@@ -63,15 +105,9 @@ class XsddEngine(Engine, SMT2PL):
         return [volume for q in queries]
 
 
-    def copy(self, support, weight):
-        return XsddEngine(self.domain, support, weight, self.mode, self.timeout)
 
 
-    def __str__(self):
-        result = "sadd:m{}".format(self.mode)
-        if self.timeout is not None:
-            result += ":t{}".format(self.timeout)
-        return result
+
 
 
 class InferenceSolverWMI(InferenceSolver):

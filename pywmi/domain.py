@@ -132,7 +132,6 @@ class TemporaryDensityFile(object):
         try:
             export_density(self.tmp_filename, self.domain, self.support, self.weight, self.queries)
         except Exception as e:
-            print(e)
             os.remove(self.tmp_filename)
 
         return self.tmp_filename

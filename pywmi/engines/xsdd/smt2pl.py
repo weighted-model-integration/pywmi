@@ -6,6 +6,7 @@ class SMT2PL(object):
         problog_program = WMIPL(domain, support, weight, domain.bool_vars)
         self.string_program = problog_program.string_program
         self.weight_function = problog_program.weight_function
+        self.worldweight = problog_program.weight_literal2weight_function
 
 
 class WMIPL(object):
