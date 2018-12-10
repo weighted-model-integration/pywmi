@@ -29,7 +29,6 @@ class XsddEngine(Engine, SMT2PL):
     def __init__(self, domain, support, weight, mode=None, timeout=None):
         Engine.__init__(self, domain, support, weight)
         SMT2PL.__init__(self, domain, support, weight)
-        self.problog_program = load_string(self.string_program)
         self.solver = InferenceSolverWMI(abe="psi")
         self.real_variables = domain.real_vars
 
@@ -45,17 +44,24 @@ class XsddEngine(Engine, SMT2PL):
 
 
     def call_wmi(self, queries=None, timeout=None, **kwdargs):
-        lf_hal, _, _, _ = self.solver.ground(self.problog_program, queries=None, **kwdargs)
-        lf = break_cycles(lf_hal, LogicFormula(**kwdargs))
-        operator = SumOperator()
-        semiring = SemiringWMIPSI(operator.get_neutral(), self.solver.abe)
-        diagram = self.solver.compile_formula(lf, **kwdargs)
-        dde = diagram.get_evaluator(semiring=semiring, **kwdargs)
-        sdds = dde.get_sdds()
-        sdds = self.sort_sdds(sdds, self.worldweight)
+        weights = []
+        for q in queries:
+            self.problog_program.add_smt_query(q)
+            self.problog_program.add_free_bools()
+            program = load_string(self.problog_program.string_program)
 
-        weight = self.calculate_weight(sdds, self.real_variables, semiring, dde, **kwdargs)
-        return [weight]
+            lf_hal, _, _, _ = self.solver.ground(program, queries=None, **kwdargs)
+            lf = break_cycles(lf_hal, LogicFormula(**kwdargs))
+            operator = SumOperator()
+            semiring = SemiringWMIPSI(operator.get_neutral(), self.solver.abe)
+            diagram = self.solver.compile_formula(lf, **kwdargs)
+            dde = diagram.get_evaluator(semiring=semiring, **kwdargs)
+            sdds = dde.get_sdds()
+            sdds = self.sort_sdds(sdds, self.worldweight)
+
+            weight = self.calculate_weight(sdds, self.real_variables, semiring, dde, **kwdargs)
+            weights.append(weight)
+        return weights
 
     @staticmethod
     def sort_sdds(sdds, worldweight):
@@ -73,40 +79,35 @@ class XsddEngine(Engine, SMT2PL):
 
     @staticmethod
     def calculate_weight(sdds, variables, semiring, dde, **kwdargs):
-        wmi_qe = semiring.zero().expression
         wmi_e = semiring.zero().expression
-
+        wmi_qe = semiring.zero().expression
         for query in sdds:
             ww = semiring.poly2expr(query["ww"])
             e_evaluated = dde.evaluate_sdd(query["e"], semiring, normalization=False, evaluation_last=False)
-            w_e = semiring.integrate(ww, e_evaluated, variables)
-
             qe_evaluated = dde.evaluate_sdd(query["qe"], semiring, normalization=False, evaluation_last=False)
-            w_qe = semiring.integrate(ww, qe_evaluated, variables)
-
-            wmi_e = semiring.algebra._add(wmi_e, w_e)
-            wmi_qe = semiring.algebra._add(wmi_qe, w_qe)
+            if e_evaluated:
+                w_e = semiring.integrate(ww, e_evaluated, variables)
+                wmi_e = semiring.algebra._add(wmi_e, w_e)
+            if qe_evaluated:
+                w_qe = semiring.integrate(ww, qe_evaluated, variables)
+                wmi_qe = semiring.algebra._add(wmi_qe, w_qe)
 
         wmi = semiring.algebra._div(wmi_qe,wmi_e)
         return wmi
 
 
-    def compute_volume(self, timeout=None):
+    def compute_volume(self, queries, timeout=None):
         if timeout is None:
             timeout = self.timeout
-        result = self.call_wmi(timeout=timeout)
+        result = self.call_wmi(queries, timeout=timeout)
         if result is None or len(result) == 0:
             return None
         else:
             return result[0]
 
     def compute_probabilities(self, queries):
-        volume = self.compute_volume()
-        return [volume for q in queries]
-
-
-
-
+        volumes = self.compute_volume(queries)
+        return volumes
 
 
 

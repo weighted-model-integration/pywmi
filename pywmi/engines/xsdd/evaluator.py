@@ -71,7 +71,11 @@ class SemiringWMIPSI(SemiringHAL):
         return poly
 
 
-    def integrate(self, weight, integrant, variables):
-        result = psipy.mul(weight, integrant.expression)
-        result = psipy.integrate(variables, result)
+    def integrate(self, weight, integrand, variables):
+        # print(weight)
+        # print(integrand)
+        integrand = psipy.simplify(integrand.expression)
+
+        integrand = psipy.mul(weight, integrand)
+        result = psipy.integrate(variables, integrand)
         return result

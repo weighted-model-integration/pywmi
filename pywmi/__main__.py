@@ -56,7 +56,6 @@ def get_engine(description, domain, support, weight):
 
 def get_volume(engines, queries=None, print_status=None):
     # type: (List[Engine], Optional[List[FNode]], Optional[bool]) -> Optional[float]
-
     for engine in engines:
         if print_status:
             print("Trying engine: {: <64}".format(str(engine)), end="\r", flush=True)

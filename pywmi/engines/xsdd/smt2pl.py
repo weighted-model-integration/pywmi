@@ -3,19 +3,21 @@ from pysmt import shortcuts
 
 class SMT2PL(object):
     def __init__(self, domain, support, weight):
-        problog_program = WMIPL(domain, support, weight, domain.bool_vars)
-        self.string_program = problog_program.string_program
-        self.weight_function = problog_program.weight_function
-        self.worldweight = problog_program.weight_literal2weight_function
+        self.problog_program = WMIPL(domain, support, weight, domain.bool_vars)
+        self.weight_function = self.problog_program.weight_function
+        self.worldweight = self.problog_program.weight_literal2weight_function
 
 
 class WMIPL(object):
     def __init__(self, domain, support, weight, booleans):
-        self.string_program = ""
+
+
         self.literal_count = -1
         self.condition_count = -1
         self.weight_count = -1
         self.weight_condition_count = -1
+
+        self.booleans = booleans
 
         self.weight_function2weight_literal = {}
         self.weight_literal2weight_function = {}
@@ -23,33 +25,38 @@ class WMIPL(object):
         self.boolean_variables = []
         self.weight_function = self.logicalize_weight(weight)
 
+        self.string_program = ""
+        self.add_query("q(_)")
+        self.add_query("e(_)")
 
         self.add_weight(self.weight_function)
         self.string_program += "\n"
         self.string_program += "weight(X):-ww(X).\n"
+        self.add_smt_evidence(domain, support)
 
+
+    def add_smt_evidence(self, domain, support):
         self.string_program += "\n"
-        support = self._smt2pl(support)
-        rule = self.make_rule(head="e(X)", body=(support,"weight(X)"))
+        evidence = self._smt2pl(domain.get_bounds() & support)
+        rule = self.make_rule(head="e(X)", body=(evidence,"weight(X)"))
         self.add_rule(rule)
 
+    def add_smt_query(self, query):
         self.string_program += "\n"
-        domain_smt = self._smt2pl(domain.get_bounds())
-        rule = self.make_rule(head="q(X)", body=(domain_smt,"e(X)"))
+        query = self._smt2pl(query)
+        rule = self.make_rule(head="q(X)", body=(query,"e(X)"))
+        # not sure which one is better, conjoin here or only later the sdds?
+        # rule = self.make_rule(head="q(X)", body=(query,)
         self.add_rule(rule)
 
-        self.string_program += "\n"
-        self.add_query("q(_)")
-        self.add_query("e(_)")
-
-
-#
-        free_booleans = [f for f in booleans if f not in self.boolean_variables]
+    def add_free_bools(self):
+        free_booleans = [f for f in self.booleans if f not in self.boolean_variables]
 
         self.string_program += "\n"
         self.string_program += "a::"
         self.string_program += ".\na::".join(map(str.lower,free_booleans))
         self.string_program += "."
+
 
 
     def _smt2pl(self, expression):
