@@ -30,8 +30,9 @@ class WMIPL(object):
         self.add_query("e(_)")
 
         self.add_weight(self.weight_function)
-        self.string_program += "\n"
-        self.string_program += "weight(X):-ww(X).\n"
+        self.string_program += "\nweight(X):-ww(X).\n"
+        self.add_free_bools()
+
         self.add_smt_evidence(domain, support)
 
 
@@ -51,11 +52,10 @@ class WMIPL(object):
 
     def add_free_bools(self):
         free_booleans = [f for f in self.booleans if f not in self.boolean_variables]
-
         self.string_program += "\n"
         self.string_program += "a::"
         self.string_program += ".\na::".join(map(str.lower,free_booleans))
-        self.string_program += "."
+        self.string_program += ".\n"
 
 
 

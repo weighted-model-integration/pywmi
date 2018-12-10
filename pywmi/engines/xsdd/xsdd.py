@@ -47,7 +47,6 @@ class XsddEngine(Engine, SMT2PL):
         weights = []
         for q in queries:
             self.problog_program.add_smt_query(q)
-            self.problog_program.add_free_bools()
             program = load_string(self.problog_program.string_program)
 
             lf_hal, _, _, _ = self.solver.ground(program, queries=None, **kwdargs)
