@@ -69,8 +69,7 @@ class SmtBatchChecker(SmtWalker):
     def __init__(self, domain, values):
         self.values = values
         self.length = self.values.shape[0]
-        self.indices = {v: i for i, v in enumerate(domain.bool_vars)}
-        self.indices.update({v: len(domain.bool_vars) + i for i, v in enumerate(domain.real_vars)})
+        self.indices = {v: i for i, v in enumerate(domain.variables)}
 
     def walk_ite(self, if_arg, then_arg, else_arg):
         if_samples, then_samples, else_samples = self.walk_smt_multiple([if_arg, then_arg, else_arg])
