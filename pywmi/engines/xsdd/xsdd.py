@@ -86,12 +86,12 @@ class XsddEngine(Engine, SMT2PL):
             qe_evaluated = dde.evaluate_sdd(query["qe"], semiring, normalization=False, evaluation_last=False)
             if e_evaluated:
                 w_e = semiring.integrate(ww, e_evaluated, variables)
-                wmi_e = semiring.algebra._add(wmi_e, w_e)
+                wmi_e = semiring.algebra.add_simplify(wmi_e, w_e)
             if qe_evaluated:
                 w_qe = semiring.integrate(ww, qe_evaluated, variables)
-                wmi_qe = semiring.algebra._add(wmi_qe, w_qe)
+                wmi_qe = semiring.algebra.add_simplify(wmi_qe, w_qe)
 
-        wmi = semiring.algebra._div(wmi_qe,wmi_e)
+        wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
         return wmi
 
 
