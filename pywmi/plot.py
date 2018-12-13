@@ -135,9 +135,16 @@ def plot_data(name, domain, data, formula=None, features=None):
     plot_combined(features[0], features[1], domain, formula, data, None, name, set(), set(), None)
 
 
-def plot_combined(feat_x, feat_y, domain, formula, data, learned_labels, name, active_indices, new_active_indices,
-                  condition=None):
-    # type: (Union[str, int], Union[str, int], Domain, FNode, Union[np.ndarray, List[Tuple[Dict, bool]]], Optional[List[bool]], str, Set[int], Set[int], Optional[callable]) -> None
+def plot_combined(feat_x: Union[str, int],
+                  feat_y: Union[str, int],
+                  domain: Domain,
+                  formula: Optional[FNode],
+                  data: Union[np.ndarray, List[Tuple[Dict, bool]]],
+                  learned_labels: Optional[List[bool]],
+                  name: str,
+                  active_indices: Set[int],
+                  new_active_indices: Set[int],
+                  condition: Optional[callable]=None):
 
     row_vars = domain.bool_vars[:int(len(domain.bool_vars) / 2)]
     col_vars = domain.bool_vars[int(len(domain.bool_vars) / 2):]
