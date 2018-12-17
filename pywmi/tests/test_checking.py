@@ -1,5 +1,5 @@
 import numpy as np
-from pysmt.shortcuts import Real, Ite, Bool, Equals, Pow
+from pysmt.shortcuts import Real, Ite, Bool, Equals, Pow, REAL, BOOL
 
 from pywmi import Domain, RejectionEngine, evaluate
 
@@ -103,6 +103,14 @@ class TestCheckingBatch(object):
         assert self.evaluate(Bool(True)) == [True for _ in range(5)]
         assert self.evaluate(Real(5)) == [float(5) for _ in range(5)]
 
+    def test_order(self):
+        domain = Domain(["s1", "s2"], {"s1": REAL, "s2": BOOL}, {"s1": (0, 1)})
+        data = np.array([[1, 0], [0, 1]])
+
+        a, b = domain.get_symbols(["s1", "s2"])
+        f = (a >= 1) & ~b
+        assert all(evaluate(domain, f, data) == np.array([1, 0]))
+
 
 class TestCheckingSingle(object):
     domain = Domain.make(["a", "b"], ["x", "y"], [(0, 100), (0, 50)])
@@ -192,3 +200,14 @@ class TestCheckingSingle(object):
     def test_constant(self):
         assert self.evaluate(Bool(True)) is True
         assert self.evaluate(Real(5)) == 5
+
+    def test_order(self):
+        domain = Domain(["s1", "s2"], {"s1": REAL, "s2": BOOL}, {"s1": (0, 1)})
+        data1 = np.array([1, 0])
+        data2 = np.array([0, 1])
+
+        a, b = domain.get_symbols(["s1", "s2"])
+        f = (a >= 1) & ~b
+        assert evaluate(domain, f, data1) == np.array([1])
+        assert evaluate(domain, f, data2) == np.array([0])
+
