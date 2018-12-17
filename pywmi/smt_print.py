@@ -53,4 +53,4 @@ def pretty_print(formula):
 
 
 def pretty_print_instance(domain, values):
-    print(", ".join("{}: {}".format(var, values[i]) for i, var in enumerate(domain.variables)))
+    return ", ".join("{}: {}".format(var, values[i]) for i, var in enumerate(domain.variables))
