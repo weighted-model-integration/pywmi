@@ -50,3 +50,7 @@ class PrintWalker(SmtWalker):
 
 def pretty_print(formula):
     return PrintWalker().walk_smt(formula)
+
+
+def pretty_print_instance(domain, values):
+    print(", ".join("{}: {}".format(var, values[i]) for i, var in enumerate(domain.variables)))
