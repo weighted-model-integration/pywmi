@@ -70,7 +70,7 @@ class XaddEngine(Engine):
                         cmd_args = ["java", "-jar", XaddEngine.path, "normalize", f, f2, "-p" if paths else "-t", f3]
                         logger.info("> {}".format(" ".join(cmd_args)))
                         output = subprocess.check_output(cmd_args, timeout=self.timeout).decode(sys.stdout.encoding)
-                        return import_xadd_mspn(f3)[2]
+                        return XaddEngine.import_normalized(f3)
                     except subprocess.CalledProcessError as e:
                         logger.warning(e.output)
                         raise
@@ -80,6 +80,12 @@ class XaddEngine(Engine):
                         logger.warning(output)
                         raise
         return None
+
+    @staticmethod
+    def import_normalized(filename):
+        from pywmi import nested_to_smt
+        with open(filename) as f:
+            return nested_to_smt(f.readlines()[0])
 
     def __str__(self):
         result = "xadd:m{}".format(self.mode)
