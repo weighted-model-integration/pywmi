@@ -135,9 +135,16 @@ def plot_data(name, domain, data, formula=None, features=None):
     plot_combined(features[0], features[1], domain, formula, data, None, name, set(), set(), None)
 
 
-def plot_combined(feat_x, feat_y, domain, formula, data, learned_labels, name, active_indices, new_active_indices,
-                  condition=None):
-    # type: (Union[str, int], Union[str, int], Domain, FNode, Union[np.ndarray, List[Tuple[Dict, bool]]], Optional[List[bool]], str, Set[int], Set[int], Optional[callable]) -> None
+def plot_combined(feat_x: Union[str, int],
+                  feat_y: Union[str, int],
+                  domain: Domain,
+                  formula: Optional[FNode],
+                  data: Union[np.ndarray, List[Tuple[Dict, bool]]],
+                  learned_labels: Optional[List[bool]],
+                  name: str,
+                  active_indices: Set[int],
+                  new_active_indices: Set[int],
+                  condition: Optional[callable]=None):
 
     row_vars = domain.bool_vars[:int(len(domain.bool_vars) / 2)]
     col_vars = domain.bool_vars[int(len(domain.bool_vars) / 2):]
@@ -173,13 +180,14 @@ def plot_combined(feat_x, feat_y, domain, formula, data, learned_labels, name, a
         def status(_i):
             return "active" if _i in active_indices else ("new_active" if _i in new_active_indices else "excluded")
 
-        if isinstance(data, np.ndarray):
+        if isinstance(data, tuple):
+            values, labels = data  # type: Tuple[np.ndarray, np.ndarray]
             var_index_map = domain.var_index_map()
-            feat_x, feat_y = (f if isinstance(f, str) else var_index_map[f] for f in (feat_x, feat_y))
-            for i in range(data.shape[0]):
-                row = data[i, :-1]
-                point = row[feat_x], row[feat_y]
-                label = data[i, len(domain.variables)] == 1
+            fx, fy = (f if isinstance(f, int) else var_index_map[f] for f in (feat_x, feat_y))
+            for i in range(values.shape[0]):
+                row = values[i, :]
+                point = row[fx], row[fy]
+                label = labels[i] == 1
                 correct = (learned_labels[i] == label) if learned_labels is not None else True
                 match = all(row[var_index_map[v]] == a for v, a in zip(domain.bool_vars, assignment))
                 if match and (condition is None or condition(row, label)):

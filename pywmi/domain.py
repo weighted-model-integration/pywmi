@@ -33,6 +33,9 @@ class Domain(object):
             formula_manager = smt
         return formula_manager.Symbol(variable, self.var_types[variable])
 
+    def get_symbols(self, variables: List[str], formula_manager=None) -> List[FNode]:
+        return [self.get_symbol(v, formula_manager) for v in variables]
+
     def get_bounds(self, formula_manager=None):
         fm = smt if formula_manager is None else formula_manager
         sym = fm.Symbol
@@ -65,6 +68,8 @@ class Domain(object):
             bounds = real_variables
         else:
             real_names = real_variables
+            if isinstance(real_variable_bounds, dict):
+                raise ValueError("real_variable_bounds should be list or iterable")
             bounds = dict(zip(real_variables, real_variable_bounds))
         types = {v: smt.BOOL for v in boolean_variables}
         types.update({v: smt.REAL for v in bounds})
@@ -131,7 +136,6 @@ class TemporaryDensityFile(object):
         try:
             export_density(self.tmp_filename, self.domain, self.support, self.weight, self.queries)
         except Exception as e:
-            print(e)
             os.remove(self.tmp_filename)
 
         return self.tmp_filename
