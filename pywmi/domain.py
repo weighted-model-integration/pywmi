@@ -127,7 +127,8 @@ class TemporaryDensityFile(object):
         self.tmp_filename = None
 
     def __enter__(self):
-        tmp_file = tempfile.mkstemp(suffix=".json", dir=self.directory)
+        prefix = "{}_{}_".format(len(self.domain.real_vars), len(self.domain.bool_vars))
+        tmp_file = tempfile.mkstemp(prefix=prefix, suffix=".json", dir=self.directory)
         self.tmp_filename = tmp_file[1]
         logger.info("Created tmp file: {}".format(self.tmp_filename))
 

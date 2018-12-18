@@ -10,6 +10,7 @@ from pysmt.shortcuts import Real, TRUE
 
 from pywmi.domain import TemporaryDensityFile
 from pywmi.engine import Engine
+from pywmi.convert import import_xadd_mspn
 
 logger = logging.getLogger(__name__)
 
