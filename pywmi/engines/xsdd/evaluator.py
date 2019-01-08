@@ -72,10 +72,13 @@ class SemiringWMIPSI(SemiringHAL):
 
 
     def integrate(self, weight, integrand, variables):
-        # print(weight)
-        # print(integrand)
         integrand = psipy.simplify(integrand.expression)
 
         integrand = psipy.mul(weight, integrand)
         result = psipy.integrate(variables, integrand)
         return result
+
+
+class SemiringWMIPSIPint(SemiringWMIPSI):
+    def __init__(self, neutral, abe, **kwdargs):
+        SemiringWMIPSI.__init__(self, neutral, abe, **kwdargs)

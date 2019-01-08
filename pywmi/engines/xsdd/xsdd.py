@@ -12,7 +12,7 @@ from pywmi.domain import TemporaryDensityFile
 from pywmi.engine import Engine
 
 from .smt2pl import SMT2PL
-from .evaluator import SemiringWMIPSI
+from .evaluator import SemiringWMIPSI, SemiringWMIPSIPint
 
 
 from problog.cycles import break_cycles
@@ -26,11 +26,12 @@ logger = logging.getLogger(__name__)
 
 
 class XsddEngine(Engine, SMT2PL):
-    def __init__(self, domain, support, weight, mode=None, timeout=None):
+    def __init__(self, domain, support, weight, mode=None, timeout=None, pint=False):
         Engine.__init__(self, domain, support, weight)
         SMT2PL.__init__(self, domain, support, weight)
         self.solver = InferenceSolverWMI(abe="psi")
         self.real_variables = domain.real_vars
+        self.pint = pint
 
         self.mode = mode
         self.timeout = timeout
@@ -52,7 +53,10 @@ class XsddEngine(Engine, SMT2PL):
             lf_hal, _, _, _ = self.solver.ground(program, queries=None, **kwdargs)
             lf = break_cycles(lf_hal, LogicFormula(**kwdargs))
             operator = SumOperator()
-            semiring = SemiringWMIPSI(operator.get_neutral(), self.solver.abe)
+            if self.pint:
+                semiring = SemiringWMIPSIPint(operator.get_neutral(), self.solver.abe)
+            else:
+                semiring = SemiringWMIPSI(operator.get_neutral(), self.solver.abe)
             diagram = self.solver.compile_formula(lf, **kwdargs)
             dde = diagram.get_evaluator(semiring=semiring, **kwdargs)
             sdds = dde.get_sdds()
