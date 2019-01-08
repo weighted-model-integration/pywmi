@@ -1,7 +1,7 @@
 from problog.logic import term2list
 
 from hal_problog.algebra.psi import WeightPSI
-from hal_problog.evaluator import SemiringHAL
+from hal_problog.evaluator import SemiringHAL, SemiringStaticAnalysis, WeightSA
 import psipy
 
 
@@ -29,8 +29,9 @@ class SemiringWMIPSI(SemiringHAL):
         self.values_semiring[a] = result
         return result
 
-    def result(self, a, formula=None, normalization=False):
-        return a
+    def result(self, evaluator, index, formula=None, normalization=False):
+        a = evaluator.get_weight(index)
+        return self.algebra.result(a, formula=formula)
     def normalize(self,a,z):
         return a
 
@@ -81,4 +82,45 @@ class SemiringWMIPSI(SemiringHAL):
 
 class SemiringWMIPSIPint(SemiringWMIPSI):
     def __init__(self, neutral, abe, **kwdargs):
+        self.tags = ({},{})
         SemiringWMIPSI.__init__(self, neutral, abe, **kwdargs)
+
+
+class SemiringStaticAnalysisWMI(SemiringWMIPSI, SemiringStaticAnalysis):
+    def __init__(self, neutral, abe, **kwdargs):
+        SemiringWMIPSI.__init__(self, neutral, abe, **kwdargs)
+        SemiringStaticAnalysis.__init__(self, neutral, abe, [], [], [], **kwdargs)
+
+    def construct_condition(self, condition):
+        if ">=" in condition:
+            functor = ">="
+        elif "<=" in condition:
+            functor = "<="
+        elif ">" in condition:
+            functor = ">"
+        elif "<" in condition:
+            functor = "<"
+        lhs, rhs = condition.split(functor)
+        functor = "'{}'".format(functor)
+        lhs = self.poly2expr(lhs)
+        rhs = self.poly2expr(rhs)
+        comparor = self.pos_condition[functor]
+        ivs = comparor(lhs,rhs)
+        ivs = psipy.simplify(ivs)
+        return ivs
+
+    def value(self, a):
+        print("")
+        print(a)
+
+        # a = a.functor
+        if a.functor=="a":
+            result = self.one()
+        elif a.functor=="con":
+            condition = a.args[0].functor
+            condition = self.construct_condition(condition)
+            variables = set(a.args[1].args)
+
+            result = WeightSA(variables, variables)
+        self.values_semiring[a] = result
+        return result

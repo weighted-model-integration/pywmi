@@ -12,14 +12,14 @@ from pywmi.domain import TemporaryDensityFile
 from pywmi.engine import Engine
 
 from .smt2pl import SMT2PL
-from .evaluator import SemiringWMIPSI, SemiringWMIPSIPint
+from .evaluator import SemiringWMIPSI, SemiringWMIPSIPint, SemiringStaticAnalysisWMI
 
 
 from problog.cycles import break_cycles
 from problog.formula import LogicFormula
 
 from hal_problog.utils import load_string
-from hal_problog.solver import SumOperator, InferenceSolver
+from hal_problog.solver import SumOperator, InferenceSolver, InferenceSolverPINT
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,11 @@ class XsddEngine(Engine, SMT2PL):
     def __init__(self, domain, support, weight, mode=None, timeout=None, pint=False):
         Engine.__init__(self, domain, support, weight)
         SMT2PL.__init__(self, domain, support, weight)
-        self.solver = InferenceSolverWMI(abe="psi")
+        if pint:
+            self.solver = InferenceSolverWMIPint(abe="psi")
+        else:
+            self.solver = InferenceSolverWMI(abe="psi")
+
         self.real_variables = domain.real_vars
         self.pint = pint
 
@@ -54,15 +58,10 @@ class XsddEngine(Engine, SMT2PL):
             lf = break_cycles(lf_hal, LogicFormula(**kwdargs))
             operator = SumOperator()
             if self.pint:
-                semiring = SemiringWMIPSIPint(operator.get_neutral(), self.solver.abe)
+                weight = self.calculate_weight_pint(lf, operator, **kwdargs)
             else:
-                semiring = SemiringWMIPSI(operator.get_neutral(), self.solver.abe)
-            diagram = self.solver.compile_formula(lf, **kwdargs)
-            dde = diagram.get_evaluator(semiring=semiring, **kwdargs)
-            sdds = dde.get_sdds()
-            sdds = self.sort_sdds(sdds, self.worldweight)
+                weight = self.calculate_weight(lf, operator, **kwdargs)
 
-            weight = self.calculate_weight(sdds, self.real_variables, semiring, dde, **kwdargs)
             weights.append(weight)
         return weights
 
@@ -80,8 +79,14 @@ class XsddEngine(Engine, SMT2PL):
         return sdds_sorted
 
 
-    @staticmethod
-    def calculate_weight(sdds, variables, semiring, dde, **kwdargs):
+    def calculate_weight(self, lf, operator, **kwdargs):
+        diagram = self.solver.compile_formula(lf, **kwdargs)
+        semiring = SemiringWMIPSI(operator.get_neutral(), self.solver.abe)
+        dde = diagram.get_evaluator(semiring=semiring, **kwdargs)
+        sdds = dde.get_sdds()
+        sdds = self.sort_sdds(sdds, self.worldweight)
+
+
         wmi_e = semiring.zero().expression
         wmi_qe = semiring.zero().expression
         for query in sdds:
@@ -89,14 +94,48 @@ class XsddEngine(Engine, SMT2PL):
             e_evaluated = dde.evaluate_sdd(query["e"], semiring, normalization=False, evaluation_last=False)
             qe_evaluated = dde.evaluate_sdd(query["qe"], semiring, normalization=False, evaluation_last=False)
             if e_evaluated:
-                w_e = semiring.integrate(ww, e_evaluated, variables)
+                w_e = semiring.integrate(ww, e_evaluated, self.real_variables)
                 wmi_e = semiring.algebra.add_simplify(wmi_e, w_e)
             if qe_evaluated:
-                w_qe = semiring.integrate(ww, qe_evaluated, variables)
+                w_qe = semiring.integrate(ww, qe_evaluated, self.real_variables)
                 wmi_qe = semiring.algebra.add_simplify(wmi_qe, w_qe)
 
         wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
         return wmi
+
+    def calculate_weight_pint(self, lf, operator, **kwdargs):
+        diagram = self.solver.compile_formula(lf, **kwdargs)
+        #
+        semiring_tag = SemiringStaticAnalysisWMI(operator.get_neutral(), self.solver.abe, **kwdargs)
+        semiring = SemiringWMIPSIPint(operator.get_neutral(), self.solver.abe, **kwdargs)
+
+        dde = diagram.get_evaluator(semiring=semiring, **kwdargs)
+        sdds = dde.get_sdds()
+        tags = self.solver.get_tags(sdds, semiring_tag, dde, **kwdargs)
+        # sdds = self.sort_sdds(sdds, self.worldweight)
+        #
+        # wmi_e = semiring.zero().expression
+        wmi_qe = semiring.zero().expression
+        # for query in sdds:
+        #     ww = semiring.poly2expr(query["ww"])
+        #     e_tags = self.get_tags()
+        #     e_evaluated = dde.evaluate_sdd(query["e"], semiring, normalization=False, evaluation_last=False)
+        #     qe_evaluated = dde.evaluate_sdd(query["qe"], semiring, normalization=False, evaluation_last=False)
+        #     if e_evaluated:
+        #         w_e = semiring.integrate(ww, e_evaluated, self.real_variables)
+        #         wmi_e = semiring.algebra.add_simplify(wmi_e, w_e)
+        #     if qe_evaluated:
+        #         w_qe = semiring.integrate(ww, qe_evaluated, self.real_variables)
+        #         wmi_qe = semiring.algebra.add_simplify(wmi_qe, w_qe)
+        #
+        # wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
+        return wmi_qe
+        return wmi
+
+    # def get_tags(self, sdds, semiring_tag, dde, **kwdargs):
+    #
+    #     return ({},{})
+
 
 
     def compute_volume(self, queries, timeout=None):
@@ -117,3 +156,7 @@ class XsddEngine(Engine, SMT2PL):
 class InferenceSolverWMI(InferenceSolver):
     def __init__(self, abe=None):
         InferenceSolver.__init__(self, abe)
+
+class InferenceSolverWMIPint(InferenceSolverPINT):
+    def __init__(self, abe=None, **kwdargs):
+        InferenceSolverPINT.__init__(self, abe=abe, **kwdargs)
