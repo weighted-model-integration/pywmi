@@ -1,25 +1,22 @@
 import logging
-import os
-import re
-import subprocess
-import sys
-from typing import Optional, List
+from collections import OrderedDict
 
-from pysmt.fnode import FNode
-from pysmt.shortcuts import Real, TRUE
 
-from pywmi.domain import TemporaryDensityFile
+
+# from pywmi.domain import TemporaryDensityFile
 from pywmi.engine import Engine
-
-from .smt2pl import SMT2PL
-from .evaluator import SemiringWMIPSI, SemiringWMIPSIPint, SemiringStaticAnalysisWMI
-
 
 from problog.cycles import break_cycles
 from problog.formula import LogicFormula
 
 from hal_problog.utils import load_string
 from hal_problog.solver import SumOperator, InferenceSolver, InferenceSolverPINT
+
+from .smt2pl import SMT2PL
+from .evaluator import SemiringWMIPSI, SemiringWMIPSIPint, SemiringStaticAnalysisWMI, poly2expr
+
+
+
 
 
 logger = logging.getLogger(__name__)
@@ -66,16 +63,31 @@ class XsddEngine(Engine, SMT2PL):
         return weights
 
     @staticmethod
-    def sort_sdds(sdds, worldweight):
+    def sort_sdds(sdds, worldweight, tags={}):
         sdds = sdds["qe"]
         n_queries = len(sdds)
         sdds_sorted = [{} for i in range(0,int(n_queries/2))]
         for s in sdds:
+            if not "int_tags" in sdds_sorted[s.args[0].functor]:
+                sdds_sorted[s.args[0].functor]["int_tags"] = {}
+            if not "weight_tags" in sdds_sorted[s.args[0].functor]:
+                sdds_sorted[s.args[0].functor]["weight_tags"] = {}
+
             if s.functor=="q":
                 sdds_sorted[s.args[0].functor]["qe"]=sdds[s]
+                sdds_sorted[s.args[0].functor]["int_tags"]["qe"] = tags.get(s,({},{}))[0]
+                sdds_sorted[s.args[0].functor]["weight_tags"]["qe"] = tags.get(s,({},{}))[1]
+
             else:
                 sdds_sorted[s.args[0].functor]["e"]=sdds[s]
+                sdds_sorted[s.args[0].functor]["int_tags"]["e"] = tags.get(s,({},{}))[0]
+                sdds_sorted[s.args[0].functor]["weight_tags"]["e"] = tags.get(s,({},{}))[1]
+
+
             sdds_sorted[s.args[0].functor]["ww"]=worldweight[s.args[0].functor]
+            # sdds_sorted[s.args[0].functor]["int_tags"] = tags.get(s,({},{}))[0]
+            # sdds_sorted[s.args[0].functor]["weight_tags"] = tags.get(s,({},{}))[1]
+
         return sdds_sorted
 
 
@@ -90,7 +102,7 @@ class XsddEngine(Engine, SMT2PL):
         wmi_e = semiring.zero().expression
         wmi_qe = semiring.zero().expression
         for query in sdds:
-            ww = semiring.poly2expr(query["ww"])
+            ww = poly2expr(query["ww"])
             e_evaluated = dde.evaluate_sdd(query["e"], semiring, normalization=False, evaluation_last=False)
             qe_evaluated = dde.evaluate_sdd(query["qe"], semiring, normalization=False, evaluation_last=False)
             if e_evaluated:
@@ -111,30 +123,45 @@ class XsddEngine(Engine, SMT2PL):
 
         dde = diagram.get_evaluator(semiring=semiring, **kwdargs)
         sdds = dde.get_sdds()
-        tags = self.solver.get_tags(sdds, semiring_tag, dde, **kwdargs)
-        # sdds = self.sort_sdds(sdds, self.worldweight)
-        #
-        # wmi_e = semiring.zero().expression
-        wmi_qe = semiring.zero().expression
-        # for query in sdds:
-        #     ww = semiring.poly2expr(query["ww"])
-        #     e_tags = self.get_tags()
-        #     e_evaluated = dde.evaluate_sdd(query["e"], semiring, normalization=False, evaluation_last=False)
-        #     qe_evaluated = dde.evaluate_sdd(query["qe"], semiring, normalization=False, evaluation_last=False)
-        #     if e_evaluated:
-        #         w_e = semiring.integrate(ww, e_evaluated, self.real_variables)
-        #         wmi_e = semiring.algebra.add_simplify(wmi_e, w_e)
-        #     if qe_evaluated:
-        #         w_qe = semiring.integrate(ww, qe_evaluated, self.real_variables)
-        #         wmi_qe = semiring.algebra.add_simplify(wmi_qe, w_qe)
-        #
-        # wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
-        return wmi_qe
-        return wmi
 
-    # def get_tags(self, sdds, semiring_tag, dde, **kwdargs):
-    #
-    #     return ({},{})
+
+        tags = self.solver.get_tags(sdds, semiring_tag, dde, **kwdargs)
+        tags = tags["qe"]
+
+        sdds = self.sort_sdds(sdds, self.worldweight, tags=tags)
+
+
+        wmi_e = semiring.zero().expression
+        wmi_qe = semiring.zero().expression
+
+
+        for query in sdds:
+            ww = poly2expr(query["ww"])
+            int_tags_e = query["int_tags"]["e"]
+            weight_tags_e = query["weight_tags"]["e"]
+            int_tags_qe = query["int_tags"]["qe"]
+            weight_tags_qe = query["weight_tags"]["qe"]
+
+
+            semiring.ww = ww
+
+            semiring.tags = (int_tags_e, weight_tags_e)
+            semiring.normalization = True
+            e_evaluated = dde.evaluate_sdd(query["e"], semiring, normalization=False, evaluation_last=False)
+            semiring.ww = ww
+            semiring.tags = (int_tags_qe, weight_tags_qe)
+            semiring.normalization = False
+            qe_evaluated = dde.evaluate_sdd(query["qe"], semiring, normalization=False, evaluation_last=False)
+
+            if e_evaluated:
+                w_e = e_evaluated.expression
+                wmi_e = semiring.algebra.add_simplify(wmi_e, w_e)
+            if qe_evaluated:
+                w_qe = qe_evaluated.expression
+                wmi_qe = semiring.algebra.add_simplify(wmi_qe, w_qe)
+
+        wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
+        return wmi
 
 
 
@@ -160,3 +187,26 @@ class InferenceSolverWMI(InferenceSolver):
 class InferenceSolverWMIPint(InferenceSolverPINT):
     def __init__(self, abe=None, **kwdargs):
         InferenceSolverPINT.__init__(self, abe=abe, **kwdargs)
+
+
+    def get_tags(self, sdds, semiring_tag, dde_tag, **kwdargs):
+        tags = {}
+        e_int_tags, e_weight_tags = dde_tag.evaluate_sdd(sdds["e"], semiring_tag, normalization=True, evaluation_last=False)
+        e_weight_tags = self.weight_tags_val2key(e_weight_tags)
+        tags["e"] = (e_int_tags, e_weight_tags)
+
+        tags["qe"] = OrderedDict()
+
+        for q, qe_sdd in sdds["qe"].items():
+            qe_ev_result = dde_tag.evaluate_sdd(qe_sdd, semiring_tag, evaluation_last=False)
+            if isinstance(qe_ev_result,tuple):
+                # qe_int_tags, qe_weight_tags = dde_tag.evaluate_sdd(qe_sdd, semiring_tag, evaluation_last=False)
+                qe_int_tags, qe_weight_tags = qe_ev_result
+
+            else:
+                qe_int_tags, qe_weight_tags = ({},{})
+            qe_weight_tags = self.weight_tags_val2key(qe_weight_tags)
+
+            tags["qe"][q] = (qe_int_tags, qe_weight_tags)
+
+        return tags
