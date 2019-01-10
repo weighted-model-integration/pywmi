@@ -27,6 +27,9 @@ class XaddEngine(Engine):
     def call_wmi(self, queries=None, timeout=None):
         # type: (Optional[List[FNode]], Optional[int]) -> Optional[List[Optional[float]]]
 
+        if not os.path.exists(XaddEngine.path):
+            raise RuntimeError("The XADD engine requires the XADD library JAR file which is currently not installed.")
+
         timeout = timeout if timeout else self.timeout
 
         with self.temp_file(queries) as f:
@@ -63,6 +66,9 @@ class XaddEngine(Engine):
 
     def normalize(self, new_support, paths=True):
         # type: (FNode, str, bool) -> bool
+
+        if not os.path.exists(XaddEngine.path):
+            raise RuntimeError("The XADD engine requires the XADD library JAR file which is currently not installed.")
 
         with self.temp_file() as f:
             with TemporaryDensityFile(self.domain, new_support, Real(1.0)) as f2:

@@ -1,7 +1,7 @@
 import argparse
 import os
 import shutil
-import urllib
+import urllib.request
 
 
 def install_xadd(upgrade=False):
