@@ -29,6 +29,8 @@ def parse_options(option_strings, *whitelist):
             n, v = "mode", option_string[1:]
         elif option_string=="pint":
             n, v = "pint", True
+        elif option_string=="collapse":
+            n, v = "collapse", True
         else:
             raise ValueError("Unknown option {}".format(option_string))
         if n in whitelist:
@@ -52,7 +54,7 @@ def get_engine(description, domain, support, weight):
         options = parse_options(parts[1:], "mode", "timeout")
         return XaddEngine(domain, support, weight, **options)
     if parts[0].lower() == "xsdd":
-        options = parse_options(parts[1:], "mode", "timeout", "pint")
+        options = parse_options(parts[1:], "mode", "timeout", "pint", "collapse")
         return XsddEngine(domain, support, weight, **options)
 
 

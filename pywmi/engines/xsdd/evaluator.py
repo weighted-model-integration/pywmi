@@ -1,3 +1,5 @@
+import sympy
+
 from problog.logic import term2list
 
 from hal_problog.algebra.psi import WeightPSI
@@ -26,10 +28,19 @@ def construct_condition(condition):
     return ivs
 
 def poly2expr(poly):
-    # poly = poly.replace(".0","") #this his hacky should be replaced with actucal symbolic manipulation!
+    poly = poly.replace(".0","") #this his hacky should be replaced with actucal symbolic manipulation!
     poly = psipy.S(str(poly))
     poly = psipy.simplify(poly)
     return poly
+
+
+# def poly2expr(poly):
+#     poly = sympy.sympify(poly)
+#     poly = sympy.nsimplify(poly, rational=True)
+#     poly = str(poly).replace("·","*").replace("**","^")
+#     poly = psipy.S(poly)
+#     poly = psipy.simplify(poly)
+#     return poly
 
 
 class SemiringWMIPSI(SemiringHAL):
@@ -63,16 +74,23 @@ class SemiringWMIPSI(SemiringHAL):
         return a
 
     def pos_value(self, a, key, index=None):
-        return self.value(a)
+        result =  self.value(a)
+        return result
     def neg_value(self, a, key, index=None):
         a = a.functor
         if a.functor=="a":
-            return self.one()
+            result = self.one()
         else:
             value = self.values_semiring[a]
-            result = psipy.negate_condition(value.expression)
+            if psipy.is_zero(value.expression):
+                result = self.zero()
+            elif psipy.is_one(value.expression):
+                result = self.one()
+            else:
+                result = psipy.negate_condition(value.expression)
             result = WeightPSI(result, value.variables)
-            return result
+            result = result
+        return result
 
 
 
@@ -114,13 +132,18 @@ class SemiringWMIPSIPint(SemiringWMIPSI):
             return self.one()
         else:
             value = self.values_semiring[a]
-            result = psipy.negate_condition(value.expression)
+            if psipy.is_zero(value.expression):
+                result = self.zero()
+            elif psipy.is_one(value.expression):
+                result = self.one()
+            else:
+                result = psipy.negate_condition(value.expression)
+
             result = WeightPSI(result, value.variables)
             if index in self.tags[0]:
                 result = self.integrate_tagged_variables(result, self.tags[0][index], self.tags[1].get(index,[]), index)
             return result
 
-            return result
 
 
 
@@ -132,14 +155,17 @@ class SemiringWMIPSIPint(SemiringWMIPSI):
 
         for v in weight_tags:
             if v not in wvs:
-                integrand = psipy.mul(integrand, self.ww)
+                integrand = psipy.distribute_mul(integrand, self.ww)
                 wvs.add(v)
         for v in variables:
             if "poly" in wvs and (self.normalization or not self.is_free(v)):
+                # print("")
+                # print(index)
+                # print(integrand)
                 var  = v[0]
                 vs.remove(v)
+                # print(index)
                 integrand = psipy.integrate([var], integrand)
-                integrand = psipy.simplify(integrand)
 
         return WeightPSI(integrand, vs, weighted_variables=wvs.union(weight.weighted_variables))
 
