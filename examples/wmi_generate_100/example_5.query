@@ -1,0 +1,6 @@
+(set-logic QF_LRA)
+(declare-fun A_3 () Bool)
+(declare-fun x_0 () Real)
+(declare-fun x_1 () Real)
+(assert (not (or A_3 (<= (+ (* (- 1.0) x_0) (* 2.0 x_1)) (- 5.0)))))
+(check-sat)
