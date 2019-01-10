@@ -17,10 +17,10 @@ commands.
     pysmt-install --env
 
 ### XADD engine
-The XADD engine performs WMI using XADDs as described in [https://www.ijcai.org/proceedings/2018/698](Kolb et al., 2018).
-To use this engine you need Java, Gurobi ***LINK*** and the xadd library JAR file.
+The XADD engine performs WMI using XADDs as described in [Kolb et al., 2018](https://www.ijcai.org/proceedings/2018/698).
+To use this engine you need [Java](https://www.oracle.com/technetwork/java/javase/downloads/index.html), [Gurobi](https://www.gurobi.com) and the xadd library JAR file.
 The pywmi-install tool that comes with your pywmi installation can automatically download and install the JAR file,
-however, you need to install Java and Gurobi manually.
+however, you need to install Java and Gurobi manually. Once you did that, just call:
 
     pywmi-install xadd
 
