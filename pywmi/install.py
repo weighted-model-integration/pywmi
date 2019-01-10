@@ -9,7 +9,7 @@ def install_xadd(upgrade=False):
     if not upgrade and os.path.exists(file_name):
         print("XADD solver already installed")
     else:
-        url = "https://www.dropbox.com/s/e33axb83ftghrfb/xadd.jar?dl=0"
+        url = "https://www.dropbox.com/s/e33axb83ftghrfb/xadd.jar?dl=1"
         with urllib.request.urlopen(url) as response, open(file_name, 'wb') as out_file:
             shutil.copyfileobj(response, out_file)
 
