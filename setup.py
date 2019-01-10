@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pywmi',
-    version='0.2.18',
+    version='0.2.19',
     description='Essential tools and interfaces for WMI',
     url='http://github.com/samuelkolb/pywmi',
     author='Samuel Kolb',
@@ -15,4 +15,9 @@ setup(
     install_requires=['pysmt', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'problog'],
     setup_requires=['pytest-runner'],
     tests_require=["pytest"],
+    entry_points={
+        "console_scripts": [
+            "pywmi-install = pywmi.install:main"
+        ]
+    }
 )
