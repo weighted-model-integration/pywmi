@@ -52,10 +52,11 @@ class WMIPL(object):
 
     def add_free_bools(self):
         free_booleans = [f for f in self.booleans if f not in self.boolean_variables]
-        self.string_program += "\n"
-        self.string_program += "a::"
-        self.string_program += ".\na::".join(map(str.lower,free_booleans))
-        self.string_program += ".\n"
+        if free_booleans:
+            self.string_program += "\n"
+            self.string_program += "a::"
+            self.string_program += ".\na::".join(map(str.lower,free_booleans))
+            self.string_program += ".\n"
 
 
 
@@ -105,7 +106,8 @@ class WMIPL(object):
             self.add_rule(fact)
             return literal
         elif expression.is_symbol():
-            if shortcuts.serialize(expression).startswith("A_"):
+            # if shortcuts.serialize(expression).startswith("A_"):
+            if expression.is_bool_constant(shortcuts.TRUE):
                 literal = self.new_literal()
                 rule = self.make_rule(head=literal, body=(shortcuts.serialize(expression).lower(),))
                 self.add_rule(rule)
