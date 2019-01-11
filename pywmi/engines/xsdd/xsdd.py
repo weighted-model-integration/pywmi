@@ -104,8 +104,8 @@ class XsddEngine(Engine, SMT2PL):
         wmi_e = semiring.zero().expression
         wmi_qe = semiring.zero().expression
 
-        import time
-        t0 = time.time()
+        # import time
+        # t0 = time.time()
         for query in sdds:
             ww = poly2expr(query["ww"])
             e_evaluated = dde.evaluate_sdd(query["e"], semiring, normalization=False, evaluation_last=False)
@@ -113,13 +113,13 @@ class XsddEngine(Engine, SMT2PL):
             if e_evaluated:
                 w_e = semiring.integrate(ww, e_evaluated, self.real_variables)
                 wmi_e = semiring.algebra.add_simplify(wmi_e, w_e)
-                print(w_e)
+                # print(w_e)
             if qe_evaluated:
                 w_qe = semiring.integrate(ww, qe_evaluated, self.real_variables)
                 wmi_qe = semiring.algebra.add_simplify(wmi_qe, w_qe)
-                print(w_qe)
-        print("")
-        print("time: {}".format(time.time()-t0))
+                # print(w_qe)
+        # print("")
+        # print("time: {}".format(time.time()-t0))
 
         wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
         return wmi
@@ -164,23 +164,23 @@ class XsddEngine(Engine, SMT2PL):
         wmi_qe = semiring.zero().expression
 
 
-        t1 = time.time()
+        # t1 = time.time()
         for i in e_interval2weight:
-            print("")
-            print(e_interval2weight[i])
+            # print("")
+            # print(e_interval2weight[i])
             w_e = semiring.integrate(e_interval2weight[i][1], e_interval2weight[i][0], self.real_variables)
             wmi_e = semiring.algebra.add_simplify(wmi_e, w_e)
-            print(w_e)
+            # print(w_e)
         for i in qe_interval2weight:
-            print("")
-            print(qe_interval2weight[i])
+            # print("")
+            # print(qe_interval2weight[i])
 
             w_qe = semiring.integrate(qe_interval2weight[i][1], qe_interval2weight[i][0], self.real_variables)
             wmi_qe = semiring.algebra.add_simplify(wmi_qe, w_qe)
-            print(w_qe)
-        print("")
-        print("time: {}".format(time.time()-t1))
-        print("time: {}".format(time.time()-t0))
+        #     print(w_qe)
+        # print("")
+        # print("time: {}".format(time.time()-t1))
+        # print("time: {}".format(time.time()-t0))
 
         wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
         return wmi

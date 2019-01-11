@@ -1,6 +1,6 @@
-import sympy
-
+import re
 from problog.logic import term2list
+from fractions import Fraction
 
 from hal_problog.algebra.psi import WeightPSI
 from hal_problog.evaluator import SemiringHAL, SemiringStaticAnalysis, WeightSA, WorldWeightTags
@@ -28,10 +28,16 @@ def construct_condition(condition):
     return ivs
 
 def poly2expr(poly):
-    poly = poly.replace(".0","") #this his hacky should be replaced with actucal symbolic manipulation!
+    poly_numericals = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", str(poly))
+    for n in poly_numericals:
+        n_rational = str(Fraction.from_float(float(n)).limit_denominator(100))
+        poly = poly.replace(n, n_rational, 1)
     poly = psipy.S(str(poly))
     poly = psipy.simplify(poly)
     return poly
+
+# def numerical_to_rational(numerical):
+
 
 
 # def poly2expr(poly):
