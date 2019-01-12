@@ -1,6 +1,6 @@
 import logging
 from collections import OrderedDict
-
+from pysmt import shortcuts as smt
 
 
 # from pywmi.domain import TemporaryDensityFile
@@ -46,7 +46,7 @@ class XsddEngine(Engine, SMT2PL):
 
 
 
-    def call_wmi(self, queries=None, timeout=None, **kwdargs):
+    def call_wmi(self, queries=[], timeout=None, **kwdargs):
         weights = []
         for q in queries:
             self.problog_program.add_smt_query(q)
@@ -111,18 +111,20 @@ class XsddEngine(Engine, SMT2PL):
             e_evaluated = dde.evaluate_sdd(query["e"], semiring, normalization=False, evaluation_last=False)
             qe_evaluated = dde.evaluate_sdd(query["qe"], semiring, normalization=False, evaluation_last=False)
             if e_evaluated:
+                # print(e_evaluated)
                 w_e = semiring.integrate(ww, e_evaluated, self.real_variables)
                 wmi_e = semiring.algebra.add_simplify(wmi_e, w_e)
                 # print(w_e)
             if qe_evaluated:
+                # print(qe_evaluated)
                 w_qe = semiring.integrate(ww, qe_evaluated, self.real_variables)
                 wmi_qe = semiring.algebra.add_simplify(wmi_qe, w_qe)
                 # print(w_qe)
         # print("")
         # print("time: {}".format(time.time()-t0))
 
-        wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
-        return wmi
+        # wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
+        return wmi_qe, wmi_e
 
 
     def calculate_weight_collapse(self, lf, operator, **kwdargs):
@@ -182,8 +184,8 @@ class XsddEngine(Engine, SMT2PL):
         # print("time: {}".format(time.time()-t1))
         # print("time: {}".format(time.time()-t0))
 
-        wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
-        return wmi
+        # wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
+        return wmi_qe, wmi_e
 
 
     def calculate_weight_pint(self, lf, operator, **kwdargs):
@@ -231,22 +233,28 @@ class XsddEngine(Engine, SMT2PL):
                 wmi_qe = semiring.algebra.add_simplify(wmi_qe, w_qe)
 
             # print(wmi_qe)
-        wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
-        return wmi
+        # wmi = semiring.algebra.div_simplify(wmi_qe,wmi_e)
+        return wmi_qe, wmi_e
 
 
 
-    def compute_volume(self, queries, timeout=None):
+    def compute_volume(self, timeout=None, **kwdargs):
         if timeout is None:
             timeout = self.timeout
-        result = self.call_wmi(queries, timeout=timeout)
+        result = self.call_wmi(queries=[smt.TRUE()], timeout=timeout, **kwdargs)[0]
         if result is None or len(result) == 0:
             return None
         else:
             return result[0]
 
-    def compute_probabilities(self, queries):
-        volumes = self.compute_volume(queries)
+    def compute_probability(self, query, timeout=None):
+        result = self.compute_probabilities(queries=[query], timeout=timeout, **kwdargs)
+        return result[0]
+
+    def compute_probabilities(self, queries, timeout=None):
+        # results = [psipy.div_simplify(qe,e) for qe,e in self.call_wmi()  ]
+        for q in queries:
+            results = [psipy.div_simplify(qe,e) for qe,e in self.call_wmi(queries, timeout=None)]
         return volumes
 
 
