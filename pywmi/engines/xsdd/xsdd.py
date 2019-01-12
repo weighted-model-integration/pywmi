@@ -254,8 +254,8 @@ class XsddEngine(Engine, SMT2PL):
     def compute_probabilities(self, queries, timeout=None):
         # results = [psipy.div_simplify(qe,e) for qe,e in self.call_wmi()  ]
         for q in queries:
-            results = [psipy.div_simplify(qe,e) for qe,e in self.call_wmi(queries, timeout=None)]
-        return volumes
+            results = [psipy.simplify(psipy.div(qe,e)) for qe,e in self.call_wmi(queries, timeout=None)]
+        return results
 
 
 
