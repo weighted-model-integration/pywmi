@@ -158,7 +158,8 @@ class Density(object):
 
     @staticmethod
     def import_from(filename):
-        return Density(*import_density(filename))
+        domain, queries, support, weight = import_density(filename)
+        return Density(domain, support, weight, queries)
 
 
 def export_density(filename, domain, support, weight, queries=None):
