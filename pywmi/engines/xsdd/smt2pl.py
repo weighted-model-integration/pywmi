@@ -27,7 +27,7 @@ class WMIPL(object):
 
         self.string_program = ""
         self.add_query("q(_)")
-        self.add_query("e(_)")
+        self.add_query("support(_)")
 
         self.add_weight(self.weight_function)
         self.string_program += "\nweight(X):-ww(X).\n"
@@ -39,13 +39,13 @@ class WMIPL(object):
     def add_smt_evidence(self, domain, support):
         self.string_program += "\n"
         evidence = self._smt2pl(domain.get_bounds() & support)
-        rule = self.make_rule(head="e(X)", body=(evidence,"weight(X)"))
+        rule = self.make_rule(head="support(X)", body=(evidence,"weight(X)"))
         self.add_rule(rule)
 
-    def add_smt_query(self, query):
+    def add_smt_query(self, query, i):
         self.string_program += "\n"
         query = self._smt2pl(query)
-        rule = self.make_rule(head="q(X)", body=(query,"e(X)"))
+        rule = self.make_rule(head="q({})".format(i), body=(query,))
         # not sure which one is better, conjoin here or only later the sdds?
         # rule = self.make_rule(head="q(X)", body=(query,)
         self.add_rule(rule)
