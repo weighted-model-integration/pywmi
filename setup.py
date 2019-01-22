@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pywmi',
-    version='0.2.25',
+    version='0.2.26',
     description='Essential tools and interfaces for WMI',
     url='http://github.com/samuelkolb/pywmi',
     author='Samuel Kolb',
@@ -18,7 +18,8 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "pywmi-install = pywmi.install:main"
+            "pywmi-install = pywmi.install:main",
+            "pywmi-cli = pywmi.__main__:parse"
         ]
     }
 )
