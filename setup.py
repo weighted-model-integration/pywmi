@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pywmi',
-    version='0.2.26',
+    version='0.2.27',
     description='Essential tools and interfaces for WMI',
     url='http://github.com/samuelkolb/pywmi',
     author='Samuel Kolb',

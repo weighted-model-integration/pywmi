@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class XaddEngine(Engine):
-    pattern = re.compile(r"\n(-?\d+\.\d+E?\d*) (-?\d+\.\d+E?\d*)\n")
+    pattern = re.compile(r"\n(-?\d+\.\d+E?-?\d*) (-?\d+\.\d+E?-?\d*)\n")
     path = os.path.join(os.path.dirname(__file__), "xadd.jar")
 
     def __init__(self, domain, support, weight, mode=None, timeout=None):
