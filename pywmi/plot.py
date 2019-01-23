@@ -139,7 +139,7 @@ def plot_combined(feat_x: Union[str, int],
                   feat_y: Union[str, int],
                   domain: Domain,
                   formula: Optional[FNode],
-                  data: Union[np.ndarray, List[Tuple[Dict, bool]]],
+                  data: Union[Tuple[np.ndarray, np.ndarray], List[Tuple[Dict, bool]]],
                   learned_labels: Optional[List[bool]],
                   name: str,
                   active_indices: Set[int],
@@ -167,12 +167,15 @@ def plot_combined(feat_x: Union[str, int],
         if formula is not None:
             substitution = {domain.get_symbol(v): smt.Bool(a) for v, a in zip(domain.bool_vars, assignment)}
             substituted = formula.substitute(substitution)
-            region = RegionBuilder(domain).walk_smt(substituted)
             try:
-                if region.dim == 2:
-                    region.linestyle = None
-                    region.plot(ax=ax, color="green", alpha=0.2)
-            except IndexError:
+                region = RegionBuilder(domain).walk_smt(substituted)
+                try:
+                    if region.dim == 2:
+                        region.linestyle = None
+                        region.plot(ax=ax, color="green", alpha=0.2)
+                except IndexError:
+                    pass
+            except ValueError:
                 pass
 
         points = []
