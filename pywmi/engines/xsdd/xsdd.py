@@ -288,9 +288,17 @@ class XsddEngine(Engine, SMT2PL):
         result = self.compute_probabilities(queries=[query], timeout=timeout, **kwdargs)
         return result[0]
 
+    def to_float(self, psypi_expression):
+        string_representation = psipy.toString(psypi_expression)
+        parts = string_representation.split("/", 1)
+        if len(parts) > 1:
+            return float(parts[0]) / float(parts[1])
+        else:
+            return float(parts[0])
+
     def compute_probabilities(self, queries, timeout=None, **kwdargs):
         # results = [psipy.div_simplify(qe,e) for qe,e in self.call_wmi()  ]
-        results = [float(psipy.toString(psipy.simplify(psipy.div(qe,e)))) for qe,e in self.call_wmi(queries, timeout=None)]
+        results = [self.to_float(psipy.simplify(psipy.div(qe,e))) for qe,e in self.call_wmi(queries, timeout=None)]
         return results
 
 
