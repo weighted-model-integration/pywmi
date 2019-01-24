@@ -182,9 +182,13 @@ def parse():
     plot_p.add_argument("-d", "--difference", type=str, help="Path to density to compute difference for", default=None)
 
     parser.add_argument("-d", "--dialect", default=None, type=str, help="The dialect to use for import")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
 
     domain, support, weight, queries = Import.import_density(args.file, args.dialect)
+
+    if args.verbose:
+        logging.basicConfig(level=logging.INFO)
 
     if args.task == "convert":
         json_file = args.json_file
