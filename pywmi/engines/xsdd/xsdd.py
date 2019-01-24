@@ -290,7 +290,7 @@ class XsddEngine(Engine, SMT2PL):
 
     def compute_probabilities(self, queries, timeout=None, **kwdargs):
         # results = [psipy.div_simplify(qe,e) for qe,e in self.call_wmi()  ]
-        results = [psipy.simplify(psipy.div(qe,e)) for qe,e in self.call_wmi(queries, timeout=None)]
+        results = [float(psipy.toString(psipy.simplify(psipy.div(qe,e)))) for qe,e in self.call_wmi(queries, timeout=None)]
         return results
 
 
