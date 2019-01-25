@@ -50,9 +50,10 @@ class WMISemiring(Semiring):
 
 
 class NativeXsddEngine(Engine):
-    def __init__(self, domain, support, weight, manager=None):
+    def __init__(self, domain, support, weight, sample_count=100000, manager=None):
         super().__init__(domain, support, weight, False)
         self.manager = manager or SddManager()
+        self.sample_count = sample_count
 
     def get_samples(self, n):
         raise NotImplementedError()
@@ -60,7 +61,7 @@ class NativeXsddEngine(Engine):
     def integrate_convex(self, convex_support, polynomial_weight):
         try:
             domain = Domain(self.domain.real_vars, {v: REAL for v in self.domain.real_vars}, self.domain.var_domains)
-            result = RejectionEngine(domain, convex_support, polynomial_weight, 100000).compute_volume()
+            result = RejectionEngine(domain, convex_support, polynomial_weight, self.sample_count).compute_volume()
             return result
         except ZeroDivisionError:
             return 0

@@ -60,7 +60,7 @@ def get_engine(description, domain, support, weight):
         from pywmi import XsddEngine
         return XsddEngine(domain, support, weight, **options)
     if parts[0].lower() == "n-xsdd":
-        options = parse_options(parts[1:])
+        options = parse_options(parts[1:], "sample_count")
         from pywmi import NativeXsddEngine
         return NativeXsddEngine(domain, support, weight, **options)
 
