@@ -50,12 +50,12 @@ class WMISemiring(Semiring):
 
 
 class NativeXsddEngine(Engine):
+    def __init__(self, domain, support, weight, manager=None):
+        super().__init__(domain, support, weight, False)
+        self.manager = manager or SddManager()
+
     def get_samples(self, n):
         raise NotImplementedError()
-
-    def __init__(self, domain, support, weight, manager=None):
-        super().__init__(domain, support, weight)
-        self.manager = manager or SddManager()
 
     def integrate_convex(self, convex_support, polynomial_weight):
         try:
