@@ -10,7 +10,7 @@ from typing import Optional
 
 from .convert import Import
 from .domain import import_density, export_density
-from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, Engine, plot
+from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, plot
 
 logger = logging.getLogger(__name__)
 

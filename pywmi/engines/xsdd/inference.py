@@ -3,10 +3,10 @@ from typing import Dict
 from pysdd.sdd import SddManager
 from pysmt.typing import REAL
 
-from .smt_to_sdd import recover
 from pywmi.smt_print import pretty_print
 from .smt_to_sdd import convert
-from pywmi import Engine, RejectionEngine, Domain
+from pywmi import RejectionEngine, Domain
+from pywmi.engine import Engine
 from .semiring import amc, Semiring
 
 import pysmt.shortcuts as smt
