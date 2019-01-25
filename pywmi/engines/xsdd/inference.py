@@ -59,12 +59,8 @@ class NativeXsddEngine(Engine):
 
     def integrate_convex(self, convex_support, polynomial_weight):
         try:
-            print(pretty_print(smt.simplify(convex_support)))
-            print(pretty_print(smt.simplify(polynomial_weight)))
             domain = Domain(self.domain.real_vars, {v: REAL for v in self.domain.real_vars}, self.domain.var_domains)
             result = RejectionEngine(domain, convex_support, polynomial_weight, 100000).compute_volume()
-            print(result)
-            print()
             return result
         except ZeroDivisionError:
             return 0
@@ -74,16 +70,16 @@ class NativeXsddEngine(Engine):
         support_sdd = convert(self.support, self.manager, abstractions, var_to_lit)
         sdd_dicts = convert(self.weight, self.manager, abstractions, var_to_lit)
 
-        print("Native", sdd_dicts)
         volume = 0
         for world_weight, world_support in sdd_dicts.items():
-            print(world_weight)
             convex_supports = amc(WMISemiring(abstractions, var_to_lit), support_sdd & world_support)
             for convex_support, variables in convex_supports:
                 missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                print(f"Missing variables: {missing_variable_count}")
                 volume += self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
         return volume
 
     def copy(self, support, weight):
         return NativeXsddEngine(self.domain, support, weight, self.manager)
+
+    def __str__(self):
+        return "n-xsdd"
