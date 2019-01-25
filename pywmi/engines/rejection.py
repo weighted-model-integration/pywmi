@@ -53,7 +53,10 @@ class RejectionEngine(Engine):
 
         if self.weight is not None:
             sample_weights = evaluate(self.domain, self.weight, pos_samples)
-            rejection_volume = sum(sample_weights) / len(pos_samples) * approx_volume
+            try:
+                rejection_volume = sum(sample_weights) / len(pos_samples) * approx_volume
+            except ZeroDivisionError:
+                rejection_volume = 0.0
         else:
             rejection_volume = approx_volume
 

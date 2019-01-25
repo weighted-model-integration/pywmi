@@ -59,6 +59,10 @@ def get_engine(description, domain, support, weight):
         options = parse_options(parts[1:], "mode", "timeout", "pint", "collapse", "repeated")
         from pywmi import XsddEngine
         return XsddEngine(domain, support, weight, **options)
+    if parts[0].lower() == "n-xsdd":
+        options = parse_options(parts[1:])
+        from pywmi import NativeXsddEngine
+        return NativeXsddEngine(domain, support, weight, **options)
 
 
 def get_volume(engines, queries=None, print_status=None):

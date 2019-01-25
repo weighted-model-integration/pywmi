@@ -6,7 +6,7 @@ from pywmi.sample import uniform
 from pywmi.smt_check import evaluate
 
 
-def test_plot_data():
+def _test_plot_data():
     domain = Domain.make(["a"], ["x", "y"], [(0, 1), (0, 1)])
     a, x, y = domain.get_symbols(["a", "x", "y"])
     formula = a | (~a & (x <= y))

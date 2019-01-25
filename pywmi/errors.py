@@ -1,0 +1,2 @@
+class InstallError(RuntimeError):
+    pass
