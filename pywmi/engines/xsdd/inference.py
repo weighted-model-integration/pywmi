@@ -1,12 +1,12 @@
 from typing import Dict
 
 from pysdd.sdd import SddManager
-from pysmt.exceptions import InternalSolverError
 from pysmt.typing import REAL
 
 from pywmi.engines.integration_backend import IntegrationBackend
-from pywmi.smt_math import Polynomial, BoundsWalker, implies
-from .smt_to_sdd import convert
+from pywmi.smt_math import Polynomial, BoundsWalker
+from pywmi.smt_math import PolynomialAlgebra
+from .smt_to_sdd import convert_formula, convert_function
 from pywmi import Domain
 from pywmi.engine import Engine
 from .semiring import amc, Semiring
@@ -83,11 +83,12 @@ class NativeXsddEngine(Engine):
         #             conflicts.append(smt.Implies(inequalities[j], inequalities[i]))
         #             print(inequalities[j], "=>", inequalities[i])
 
-        support_sdd = convert(self.support, self.manager, abstractions, var_to_lit)
-        sdd_dicts = convert(self.weight, self.manager, abstractions, var_to_lit)
+        algebra = PolynomialAlgebra
+        support_sdd = convert_formula(self.support, self.manager, algebra, abstractions, var_to_lit)
+        piecewise_function = convert_function(self.weight, self.manager, algebra, abstractions, var_to_lit)
 
         volume = 0
-        for world_weight, world_support in sdd_dicts.items():
+        for world_weight, world_support in piecewise_function.sdd_dict.items():
             convex_supports = amc(WMISemiring(abstractions, var_to_lit), support_sdd & world_support)
             for convex_support, variables in convex_supports:
                 missing_variable_count = len(self.domain.bool_vars) - len(variables)

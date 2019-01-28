@@ -6,6 +6,7 @@ from pysmt.exceptions import InternalSolverError
 from pysmt.shortcuts import Plus, Symbol, Real, Times, Solver
 from pysmt.typing import REAL, BOOL
 
+from pywmi.engines.algebraic_backend import AlgebraBackend
 from pywmi import SmtWalker
 from functools import reduce, partial
 
@@ -97,6 +98,16 @@ class Polynomial(object):
 
     def __repr__(self):
         return self.__str__()
+
+
+class PolynomialAlgebra(AlgebraBackend):
+    @classmethod
+    def symbol(cls, name):
+        return Polynomial({(name,): 1})
+
+    @classmethod
+    def real(cls, float_constant):
+        return Polynomial.from_constant(float_constant)
 
 
 class LinearInequality(object):
