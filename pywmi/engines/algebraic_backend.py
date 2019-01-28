@@ -1,6 +1,7 @@
 import pysmt.shortcuts as smt
-import sympy
 from pysmt.typing import REAL
+import sympy
+import psipy
 
 
 class AlgebraBackend(object):
@@ -90,3 +91,35 @@ class SympyAlgebra(AlgebraBackend):
     @classmethod
     def real(cls, float_constant):
         return float_constant
+
+class PSIAlgebra(AlgebraBackend):
+    @classmethod
+    def times(cls, a, b):
+        return psipy.mul(a,b)
+
+    @classmethod
+    def plus(cls, a, b):
+        return psipy.add(a,b)
+
+    @classmethod
+    def negate(cls, a):
+        return psipy.mul(psipy.S("-1"), a)
+
+    @classmethod
+    def symbol(cls, name):
+        assert isinstance(name, str)
+        return psipy.S(name)
+
+    @classmethod
+    def real(cls, float_constant):
+        assert isinstance(float_constant, (float,int))
+        return psipy.S(str(float_constant))
+
+    @classmethod
+    def power(cls, a, power):
+        if not isinstance(power, int) and int(power) != power:
+            raise ValueError(f"Expected integer power, got {power}")
+        if power < 0:
+            raise ValueError(f"Unexpected negative power {power}")
+        result = psipy.pow(str(a),str(power))
+        return result
