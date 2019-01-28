@@ -27,6 +27,8 @@ def parse_options(option_strings, *whitelist):
             n, v = "sample_count", int(option_string[1:])
         elif option_string.startswith("m"):
             n, v = "mode", option_string[1:]
+        elif option_string.startswith("b"):
+            n, v = "backend", option_string[1:]
         elif option_string=="pint":
             n, v = "pint", True
         elif option_string=="collapse":
@@ -60,9 +62,26 @@ def get_engine(description, domain, support, weight):
         from pywmi import XsddEngine
         return XsddEngine(domain, support, weight, **options)
     if parts[0].lower() == "n-xsdd":
-        options = parse_options(parts[1:], "sample_count")
+        options = parse_options(parts[1:], "backend")
+        backend_string = options.get("backend", None)
+        if backend_string is None:
+            backend = None
+        else:
+            parts = backend_string.split(".")
+            if parts[0] == "rej":
+                from .engines.rejection import RejectionIntegrator
+                bb = int(parts[2]) if len(parts) > 2 else 0
+                backend = RejectionIntegrator(int(parts[1]), bb)
+            elif parts[0] == "xadd":
+                from .engines.xadd import XaddIntegrator
+                backend = XaddIntegrator(parts[1] if len(parts) > 1 else None)
+            elif parts[0] == "latte":
+                from .engines.latte_backend import LatteIntegrator
+                backend = LatteIntegrator()
+
+        del options["backend"]
         from pywmi import NativeXsddEngine
-        return NativeXsddEngine(domain, support, weight, **options)
+        return NativeXsddEngine(domain, support, weight, backend, **options)
 
 
 def get_volume(engines, queries=None, print_status=None):

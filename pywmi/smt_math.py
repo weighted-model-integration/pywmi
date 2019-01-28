@@ -1,7 +1,10 @@
+import math
+from fractions import Fraction
 from typing import Dict, Tuple, Union
 
-from pysmt.shortcuts import Plus, Symbol, Real, Times
-from pysmt.typing import REAL
+from pysmt.exceptions import InternalSolverError
+from pysmt.shortcuts import Plus, Symbol, Real, Times, Solver
+from pysmt.typing import REAL, BOOL
 
 from pywmi import SmtWalker
 from functools import reduce, partial
@@ -96,6 +99,44 @@ class Polynomial(object):
         return self.__str__()
 
 
+class LinearInequality(object):
+    def __init__(self, inequality_dict):
+        self.inequality_dict = inequality_dict
+
+    def coefficient(self, *args):
+        return self.inequality_dict.get(tuple(args), 0)
+
+    def a(self, *args):
+        return self.coefficient(*args)
+
+    def b(self):
+        return -self.coefficient()
+
+    @staticmethod
+    def from_smt(formula):
+        return LinearInequality(MathDictConverter(force_linear=True).walk_smt(formula))
+
+    def to_smt(self):
+        return Plus(Times(Symbol(n, REAL) for n in name) * Real(factor)
+                    if factor != 1 else Times(Symbol(n, REAL) for n in name)
+                    for name, factor in self.inequality_dict.items() if name != CONST_KEY) \
+               <= Real(-self.inequality_dict.get(CONST_KEY, 0))
+
+    @staticmethod
+    def lcm(num1, num2):
+        return int(num1 * num2 / math.gcd(num1, num2))
+
+    def scale_to_integer(self):
+        fractions = {k: Fraction(v).limit_denominator() for k, v in self.inequality_dict.items()}
+        denominators = [int(fraction.denominator) for fraction in fractions.values()]
+        lcm = reduce(LinearInequality.lcm, denominators)
+        fractions = {k: v * lcm for k, v in fractions.items()}  # type: Dict[Tuple, Fraction]
+        numerators = [int(fraction.numerator) for fraction in fractions.values()]
+        gcd = reduce(lambda num1, num2: int(math.gcd(num1, num2)), numerators)
+        fractions = {k: int(v / gcd) for k, v in fractions.items()}  # type: Dict[Tuple, int]
+        return LinearInequality(fractions)
+
+
 class MathDictConverter(SmtWalker):
     def __init__(self, force_linear=True):
         self.force_linear = force_linear
@@ -118,7 +159,8 @@ class MathDictConverter(SmtWalker):
         return reduce(partial(Polynomial.dict_times, force_linear=self.force_linear), self.walk_smt_multiple(args))
 
     def walk_not(self, argument):
-        raise ValueError(f"NOT not supported")
+        term_dict = self.walk_smt(argument)
+        return {k: -v for k, v in term_dict.items()}
 
     def walk_ite(self, if_arg, then_arg, else_arg):
         raise ValueError(f"ITE not supported")
@@ -177,3 +219,83 @@ def get_inequality_smt(formula):
                 if factor != 1 else Times(Symbol(n, REAL) for n in name)
                 for name, factor in formula_dict.items() if name != CONST_KEY) \
            <= Real(-formula_dict.get(CONST_KEY, 0))
+
+
+class BoundsWalker(SmtWalker):
+    def __init__(self, allow_or=False):
+        self.allow_or = allow_or
+
+    def collect(self, args):
+        lists = self.walk_smt_multiple(args)
+        result = lists[0]
+        for l in lists[1:]:
+            result |= l
+        return result
+
+    def walk_and(self, args):
+        return self.collect(args)
+
+    def walk_or(self, args):
+        if self.allow_or:
+            return self.collect(args)
+        raise ValueError("Invalid OR node")
+
+    def walk_plus(self, args):
+        if not self.allow_or:
+            raise ValueError("Invalid PLUS node")
+        return set()
+
+    def walk_minus(self, left, right):
+        if not self.allow_or:
+            raise ValueError("Invalid MINUS node")
+        return set()
+
+    def walk_times(self, args):
+        if not self.allow_or:
+            raise ValueError("Invalid TIMES node")
+        return set()
+
+    def walk_not(self, argument):
+        inequalities = self.walk_smt(argument)
+        return {~i for i in inequalities}
+
+    def walk_ite(self, if_arg, then_arg, else_arg):
+        raise ValueError("Invalid ITE node")
+
+    def walk_pow(self, base, exponent):
+        raise ValueError("Invalid POW node")
+
+    def walk_lte(self, left, right):
+        return {get_inequality_smt(left <= right)}
+
+    def walk_lt(self, left, right):
+        return {get_inequality_smt(left < right)}
+
+    def walk_equals(self, left, right):
+        raise ValueError("Invalid EQ node")
+
+    def walk_symbol(self, name, v_type):
+        if not self.allow_or and v_type != BOOL:
+            raise ValueError(f"Invalid Symbol node {v_type}:{name}")
+        return set()
+
+    def walk_constant(self, value, v_type):
+        if not self.allow_or and v_type != BOOL:
+            raise ValueError(f"Invalid Constant node {v_type}:{value}")
+        return set()
+
+    @staticmethod
+    def get_inequalities(formula):
+        inequalities = BoundsWalker().walk_smt(formula)
+        return [LinearInequality.from_smt(i) for i in inequalities]
+
+
+def implies(term1, term2):
+    with Solver() as solver:
+        solver.add_assertion(term1 & ~term2)
+        solver.solve()
+        try:
+            solver.get_model()
+            return False
+        except InternalSolverError:
+            return True

@@ -1,11 +1,13 @@
 from typing import Dict
 
 from pysdd.sdd import SddManager
+from pysmt.exceptions import InternalSolverError
 from pysmt.typing import REAL
 
-from pywmi.smt_print import pretty_print
+from pywmi.engines.integration_backend import IntegrationBackend
+from pywmi.smt_math import Polynomial, BoundsWalker, implies
 from .smt_to_sdd import convert
-from pywmi import RejectionEngine, Domain
+from pywmi import Domain
 from pywmi.engine import Engine
 from .semiring import amc, Semiring
 
@@ -50,10 +52,10 @@ class WMISemiring(Semiring):
 
 
 class NativeXsddEngine(Engine):
-    def __init__(self, domain, support, weight, sample_count=100000, manager=None):
-        super().__init__(domain, support, weight, False)
+    def __init__(self, domain, support, weight, backend: IntegrationBackend, manager=None):
+        super().__init__(domain, support, weight, backend.exact)
         self.manager = manager or SddManager()
-        self.sample_count = sample_count
+        self.backend = backend
 
     def get_samples(self, n):
         raise NotImplementedError()
@@ -61,13 +63,26 @@ class NativeXsddEngine(Engine):
     def integrate_convex(self, convex_support, polynomial_weight):
         try:
             domain = Domain(self.domain.real_vars, {v: REAL for v in self.domain.real_vars}, self.domain.var_domains)
-            result = RejectionEngine(domain, convex_support, polynomial_weight, self.sample_count).compute_volume()
-            return result
+            return self.backend.integrate(domain, BoundsWalker.get_inequalities(convex_support),
+                                          Polynomial.from_smt(polynomial_weight))
         except ZeroDivisionError:
             return 0
 
     def compute_volume(self):
         abstractions, var_to_lit = dict(), dict()
+
+        # conflicts = []
+        # inequalities = list(BoundsWalker(True).walk_smt(self.support) | BoundsWalker(True).walk_smt(self.weight))
+        # for i in range(len(inequalities) - 1):
+        #     for j in range(i + 1, len(inequalities)):
+        #         # TODO Find conflicts
+        #         if implies(inequalities[i], inequalities[j]):
+        #             conflicts.append(smt.Implies(inequalities[i], inequalities[j]))
+        #             print(inequalities[i], "=>", inequalities[j])
+        #         if implies(inequalities[j], inequalities[i]):
+        #             conflicts.append(smt.Implies(inequalities[j], inequalities[i]))
+        #             print(inequalities[j], "=>", inequalities[i])
+
         support_sdd = convert(self.support, self.manager, abstractions, var_to_lit)
         sdd_dicts = convert(self.weight, self.manager, abstractions, var_to_lit)
 
@@ -76,11 +91,12 @@ class NativeXsddEngine(Engine):
             convex_supports = amc(WMISemiring(abstractions, var_to_lit), support_sdd & world_support)
             for convex_support, variables in convex_supports:
                 missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                volume += self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
+                vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
+                volume += vol
         return volume
 
     def copy(self, support, weight):
         return NativeXsddEngine(self.domain, support, weight, self.manager)
 
     def __str__(self):
-        return "n-xsdd"
+        return f"n-xsdd:b{self.backend}"

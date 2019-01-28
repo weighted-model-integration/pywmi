@@ -36,11 +36,18 @@ class SddConversionWalker(SmtWalker):
 
     def test_to_sdd(self, test_node):
         test_node = self.to_canonical(test_node)
+        negate = False
+        if test_node.arg(1).constant_value() == -1:
+            test_node = self.to_canonical(test_node.arg(0) >= test_node.arg(1))
+            negate = True
         # node_id = test_node.node_id()
         if test_node not in self.abstractions:
             literal = self.new_literal()
             self.abstractions[test_node] = literal
-        return self.manager.l(self.abstractions[test_node])
+        result = self.manager.l(self.abstractions[test_node])
+        if negate:
+            result = result.negate()
+        return result
 
     def to_dict(self, value_or_dict):
         if isinstance(value_or_dict, dict):

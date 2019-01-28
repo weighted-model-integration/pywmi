@@ -1,8 +1,12 @@
+import pytest
 from pysmt.exceptions import PysmtTypeError
 from pysmt.shortcuts import Symbol, Pow, Int, Real
 from pysmt.typing import REAL
 
-from pywmi.smt_math import get_inequality_dict, get_inequality_smt, Polynomial
+from pywmi.engines.xadd import XaddIntegrator
+from pywmi.engines.latte_backend import LatteIntegrator
+from pywmi import Domain
+from pywmi.smt_math import get_inequality_dict, get_inequality_smt, Polynomial, LinearInequality, implies
 
 
 def test_conversion():
@@ -42,6 +46,22 @@ def test_conversion_non_linear_error():
         assert True
 
 
+def test_inequality_to_integer():
+    x, y = [Symbol(n, REAL) for n in "xy"]
+    formula = x * 5/24 + y * 13/17 <= 28/56
+    inequality = LinearInequality.from_smt(formula)
+    assert inequality.scale_to_integer().to_smt() == (x * 85 + y * 312 <= 204)
+
+
+def test_latte_backend():
+    x, y = [Symbol(n, REAL) for n in "xy"]
+    inequalities = [LinearInequality.from_smt(f) for f in [(x >= 0), (x <= y), (y <= 1)]]
+    polynomial = Polynomial.from_smt((x*2/3 + 13/15) * (y*1/8 + x))
+    domain = Domain.make([], ["x", "y"], [(0, 1), (0, 1)])
+    result = LatteIntegrator().integrate(domain, inequalities, polynomial)
+    assert result == pytest.approx(XaddIntegrator().integrate(domain, inequalities, polynomial), 0.001)
+
+
 def test_polynomial_from_smt():
     x, y, z = [Symbol(n, REAL) for n in "xyz"]
     formula = (x * 2 + y * y * 3 + 3) * (x * 0.5 + z + 5)
@@ -66,6 +86,22 @@ def test_polynomial_from_smt_constant():
     except Exception:
         assert False
 
+
 def test_polynomial_hash():
     polynomial = Polynomial({("x", "x"): 2.0})
     hash(polynomial)
+
+
+def test_implies():
+    x, y, z = [Symbol(n, REAL) for n in "xyz"]
+
+    term1 = x < 10
+    term2 = x < 5
+    term3 = y < 5
+
+    assert not implies(term1, term2)
+    assert implies(term2, term1)
+    assert not implies(term1, term3)
+    assert not implies(term2, term3)
+    assert not implies(term3, term1)
+    assert not implies(term3, term2)
