@@ -91,7 +91,7 @@ def amc_callback(
             #     sub_smooth_factor = 2 ** nb_missing_vars
             # else:
             #     sub_smooth_factor = 1
-            rvalue = semiring.plus(rvalue, semiring.times(mc_prime, mc_sub))
+            rvalue = semiring.plus(rvalue, semiring.times(mc_prime, mc_sub), node.id)
         return rvalue
 
 
