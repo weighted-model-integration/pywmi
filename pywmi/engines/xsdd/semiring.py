@@ -1,12 +1,12 @@
 import functools
-from typing import List, Tuple, Set
+from typing import List, Tuple, Set, Any
 
 try:
     import pysdd.iterator as sdd_it
-    import pysdd.sdd as sdd_lib
+    from pysdd.sdd import SddNode
 except ImportError:
     sdd_it = None
-    sdd_lib = None
+    SddNode = None
 
 
 class Semiring(object):
@@ -58,13 +58,8 @@ class WMCSemiring(Semiring):
         return self.weights[a]
 
 
-def amc_callback(
-        semiring: Semiring,
-        node: sdd_lib.SddNode,
-        rvalues: List[Tuple[int, int, Set[int], Set[int]]],
-        expected_prime_vars: Set[int],
-        expected_sub_vars: Set[int]
-):
+def amc_callback(semiring, node, rvalues, expected_prime_vars, expected_sub_vars):
+    # type: (Semiring, SddNode, List[Tuple[int, int, Set[int], Set[int]]], Set[int], Set[int]) -> Any
     if rvalues is None:
         # Leaf
         if node.is_true():
@@ -95,6 +90,7 @@ def amc_callback(
         return rvalue
 
 
-def amc(semiring: Semiring, sdd: sdd_lib.SddNode, smooth=False):
+def amc(semiring, sdd, smooth=False):
+    # type: (Semiring, SddNode, bool) -> Any
     it = sdd_it.SddIterator(sdd.manager, smooth=smooth)
     return it.depth_first(sdd, functools.partial(amc_callback, semiring))
