@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='pywmi',
-    version='0.3.12',
+    version='0.3.13',
     description='Essential tools and interfaces for WMI',
     url='http://github.com/samuelkolb/pywmi',
     author='Samuel Kolb',
@@ -13,7 +13,10 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     install_requires=['pysmt', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'problog',
-                      'graphviz', 'sympy', 'scipy', "pysdd"],
+                      'graphviz', 'sympy', 'scipy'],
+    extras_require={
+        'sdd': ["pysdd"]
+    },
     setup_requires=['pytest-runner'],
     tests_require=["pytest"],
     entry_points={
