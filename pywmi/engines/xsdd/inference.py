@@ -1,6 +1,10 @@
 from typing import Dict
 
-from pysdd.sdd import SddManager
+try:
+    from pysdd.sdd import SddManager
+except ImportError:
+    SddManager = None
+
 from pysmt.typing import REAL
 
 from pywmi.engines.integration_backend import IntegrationBackend
@@ -54,6 +58,9 @@ class WMISemiring(Semiring):
 class NativeXsddEngine(Engine):
     def __init__(self, domain, support, weight, backend: IntegrationBackend, manager=None):
         super().__init__(domain, support, weight, backend.exact)
+        if SddManager is None:
+            from pywmi.errors import InstallError
+            raise InstallError("NativeXsddEngine requires the pysdd package")
         self.manager = manager or SddManager()
         self.backend = backend
 
