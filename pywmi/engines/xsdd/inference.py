@@ -51,6 +51,52 @@ class WMISemiring(Semiring):
         raise NotImplementedError()
 
 
+class ContinuousProvenanceSemiring(Semiring):
+    def __init__(self, abstractions: Dict, var_to_lit: Dict):
+        self.reverse_abstractions = {v: k for k, v in abstractions.items()}
+        self.lit_to_var = {v: k for k, v in var_to_lit.items()}
+        self.var_dependencies = {}
+
+    def times_neutral(self):
+        return dict()
+
+    def plus_neutral(self):
+        return dict()
+
+    def plus(self, a, b, index=None):
+        assert index
+        variables = a | b
+        common_variables_children = a & b
+        return (variables, common_variables_children)
+    def times(self, a, b, index=None):
+        assert index
+        variables = a | b
+        common_variables_children = a & b
+        return (variables, common_variables_children)
+
+
+class IntTagSemiring(self, abstractions: Dict, var_to_lit:Dict, node_var_dependencies: Dict):
+        self.reverse_abstractions = {v: k for k, v in abstractions.items()}
+        self.lit_to_var = {v: k for k, v in var_to_lit.items()}
+        self.int_tags = {}
+
+
+    def negate(self, a):
+        raise NotImplementedError()
+
+    def weight(self, a):
+        index = a
+        if abs(a) in self.lit_to_var:
+            return (set(), set())
+        else:
+            f = self.reverse_abstractions[abs(a)]
+            variables = f.variables()#TODO look up correct method
+            return (variables, variables)
+
+    def positive_weight(self, a):
+        raise NotImplementedError()
+
+
 class NativeXsddEngine(Engine):
     def __init__(self, domain, support, weight, backend: IntegrationBackend, manager=None):
         super().__init__(domain, support, weight, backend.exact)
@@ -68,7 +114,8 @@ class NativeXsddEngine(Engine):
         except ZeroDivisionError:
             return 0
 
-    def compute_volume(self):
+
+    def compute_volume(self, pint=False):
         abstractions, var_to_lit = dict(), dict()
 
         # conflicts = []
@@ -89,12 +136,21 @@ class NativeXsddEngine(Engine):
 
         volume = 0
         for world_weight, world_support in piecewise_function.sdd_dict.items():
-            convex_supports = amc(WMISemiring(abstractions, var_to_lit), support_sdd & world_support)
+
+            support = support_sdd & world_support
+            if pint:
+                node_var_dependencies, node_var_dependencies_cache = amc(ContinuousProvenanceSemiring(abstractions, var_to_lit), support)
+                int_tags, _ = amc(IntTagSemiring(abstractions, var_to_lit), support)
+            else:
+                int_tags = {}
+
+            convex_supports, _ = amc(WMISemiring(abstractions, var_to_lit, int_tags), support)
             for convex_support, variables in convex_supports:
                 missing_variable_count = len(self.domain.bool_vars) - len(variables)
                 vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
                 volume += vol
         return volume
+
 
     def copy(self, support, weight):
         return NativeXsddEngine(self.domain, support, weight, self.manager)

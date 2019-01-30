@@ -97,4 +97,7 @@ def amc_callback(
 
 def amc(semiring: Semiring, sdd: sdd_lib.SddNode, smooth=False):
     it = sdd_it.SddIterator(sdd.manager, smooth=smooth)
-    return it.depth_first(sdd, functools.partial(amc_callback, semiring))
+    amc = it.depth_first(sdd, functools.partial(amc_callback, semiring))
+    amc_cache = it._wmc_cache
+
+    return amc, amc_cache
