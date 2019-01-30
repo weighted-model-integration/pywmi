@@ -13,7 +13,10 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     install_requires=['pysmt', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'problog',
-                      'graphviz', 'sympy'],
+                      'graphviz', 'sympy', 'scipy'],
+    extras_require={
+        'sdd': ["pysdd"]
+    },
     setup_requires=['pytest-runner'],
     tests_require=["pytest"],
     entry_points={

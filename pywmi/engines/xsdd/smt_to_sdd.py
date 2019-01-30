@@ -3,15 +3,16 @@ from typing import Type
 from pywmi.engines.algebraic_backend import AlgebraBackend
 from pywmi.engines.xsdd.piecewise import PiecewiseXSDD
 from .semiring import Semiring, amc
-from pywmi.smt_math import get_inequality_smt, Polynomial
+from pywmi.smt_math import get_inequality_smt
 
 try:
     from pysdd.sdd import SddManager, SddNode
 except ImportError:
     SddManager = None
+    SddNode = None
 
 from pysmt.fnode import FNode
-from pysmt.shortcuts import Real, Symbol, Pow, Plus, Times, get_type, LE, TRUE, FALSE, simplify
+from pysmt.shortcuts import Symbol, Pow, TRUE, FALSE, simplify
 from pysmt.typing import REAL, BOOL
 from pywmi import SmtWalker
 from pywmi.errors import InstallError
@@ -57,7 +58,7 @@ class SddConversionWalker(SmtWalker):
 
     def walk_and(self, args):
         if not self.boolean_stack[-1]:
-            raise ValueError(f"Parsing mode must be boolean")
+            raise ValueError("Parsing mode must be boolean")
         converted = self.walk_smt_multiple(args)
 
         result = converted[0]
@@ -67,7 +68,7 @@ class SddConversionWalker(SmtWalker):
 
     def walk_or(self, args):
         if not self.boolean_stack[-1]:
-            raise ValueError(f"Parsing mode must be boolean")
+            raise ValueError("Parsing mode must be boolean")
         converted = self.walk_smt_multiple(args)
 
         result = converted[0]
@@ -77,7 +78,7 @@ class SddConversionWalker(SmtWalker):
 
     def walk_plus(self, args):
         if self.boolean_stack[-1]:
-            raise ValueError(f"Parsing mode must be non-boolean")
+            raise ValueError("Parsing mode must be non-boolean")
         converted = self.walk_smt_multiple(args)
 
         result = converted[0]
@@ -87,7 +88,7 @@ class SddConversionWalker(SmtWalker):
 
     def walk_minus(self, left, right):
         if self.boolean_stack[-1]:
-            raise ValueError(f"Parsing mode must be non-boolean")
+            raise ValueError("Parsing mode must be non-boolean")
 
         left, right = self.walk_smt_multiple([left, right])
 
@@ -95,7 +96,7 @@ class SddConversionWalker(SmtWalker):
 
     def walk_times(self, args):
         if self.boolean_stack[-1]:
-            raise ValueError(f"Parsing mode must be non-boolean")
+            raise ValueError("Parsing mode must be non-boolean")
         converted = self.walk_smt_multiple(args)
 
         result = converted[0]
@@ -105,7 +106,7 @@ class SddConversionWalker(SmtWalker):
 
     def walk_not(self, argument):
         if not self.boolean_stack[-1]:
-            raise ValueError(f"Parsing mode must be boolean")
+            raise ValueError("Parsing mode must be boolean")
 
         return self.manager.negate(self.walk_smt(argument))
 
@@ -126,13 +127,13 @@ class SddConversionWalker(SmtWalker):
 
     def walk_lte(self, left: FNode, right: FNode):
         if not self.boolean_stack[-1]:
-            raise ValueError(f"Parsing mode must be boolean")
+            raise ValueError("Parsing mode must be boolean")
 
         return self.test_to_sdd(left <= right)
 
     def walk_lt(self, left: FNode, right: FNode):
         if not self.boolean_stack[-1]:
-            raise ValueError(f"Parsing mode must be boolean")
+            raise ValueError("Parsing mode must be boolean")
 
         return self.test_to_sdd(left < right)
 
@@ -142,27 +143,27 @@ class SddConversionWalker(SmtWalker):
     def walk_symbol(self, name, v_type):
         if self.boolean_stack[-1]:
             if v_type != BOOL:
-                raise ValueError(f"Parsing mode cannot be boolean")
+                raise ValueError("Parsing mode cannot be boolean")
             if name not in self.var_to_lit:
                 literal = self.new_literal()
                 self.var_to_lit[name] = literal
             return self.manager.l(self.var_to_lit[name])
         else:
             if v_type != REAL:
-                raise ValueError(f"Parsing mode cannot be real")
+                raise ValueError("Parsing mode cannot be real")
             return PiecewiseXSDD.symbol(name, self.manager, self.algebra)
 
     def walk_constant(self, value, v_type):
         if self.boolean_stack[-1]:
             if v_type != BOOL:
-                raise ValueError(f"Parsing mode cannot be boolean")
+                raise ValueError("Parsing mode cannot be boolean")
             if value:
                 return self.manager.true()
             else:
                 return self.manager.false()
         else:
             if v_type != REAL:
-                raise ValueError(f"Parsing mode cannot be real")
+                raise ValueError("Parsing mode cannot be real")
             return PiecewiseXSDD.real(value, self.manager, self.algebra)
 
 

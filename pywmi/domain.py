@@ -54,6 +54,11 @@ class Domain(object):
     def var_index_map(self):
         return {v: i for i, v in enumerate(self.variables)}
 
+    def change_bounds(self, new_var_bounds):
+        if not isinstance(new_var_bounds, dict):
+            new_var_bounds = {v: new_var_bounds for v in self.real_vars}
+        return Domain(self.variables, self.var_types, new_var_bounds)
+
     @staticmethod
     def make(boolean_variables=None, real_variables=None, real_variable_bounds=None):
         if boolean_variables is None:

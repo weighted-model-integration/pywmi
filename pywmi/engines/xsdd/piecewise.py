@@ -1,12 +1,18 @@
 from typing import Dict, Any, Type
 
-from pysdd.sdd import SddManager, SddNode
+try:
+    from pysdd.sdd import SddManager, SddNode
+except ImportError:
+    SddManager, SddNode = None, None
 
 from pywmi.engines.algebraic_backend import AlgebraBackend
 
 
 class PiecewiseXSDD(object):
     def __init__(self, sdd_dict: Dict[Any, SddNode], manager: SddManager, algebra: Type[AlgebraBackend]):
+        if SddManager is None or SddNode is None:
+            from pywmi.errors import InstallError
+            raise InstallError("Piecewise XSDDs require the pysdd package")
         self.sdd_dict = sdd_dict
         self.manager = manager
         self.algebra = algebra

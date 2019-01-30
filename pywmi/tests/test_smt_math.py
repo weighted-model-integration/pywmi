@@ -1,11 +1,10 @@
 import pytest
-from pysmt.exceptions import PysmtTypeError
-from pysmt.shortcuts import Symbol, Pow, Int, Real
+from pysmt.shortcuts import Symbol, Pow, Real
 from pysmt.typing import REAL
 
-from pywmi.engines.xadd import XaddIntegrator
-from pywmi.engines.latte_backend import LatteIntegrator
 from pywmi import Domain
+from pywmi.engines.latte_backend import LatteIntegrator
+from pywmi.engines.xadd import XaddIntegrator
 from pywmi.smt_math import get_inequality_dict, get_inequality_smt, Polynomial, LinearInequality, implies
 
 

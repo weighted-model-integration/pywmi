@@ -31,7 +31,7 @@ class Polynomial(object):
             other = Polynomial({CONST_KEY: other})
 
         if not isinstance(other, Polynomial):
-            raise NotImplementedError(f"Can only add polynomials not {other}")
+            raise NotImplementedError("Can only add polynomials not {other}".format(other=other))
 
         return Polynomial(Polynomial.dict_plus(self.poly_dict, other.poly_dict))
 
@@ -45,7 +45,7 @@ class Polynomial(object):
             other = Polynomial({CONST_KEY: other})
 
         if not isinstance(other, Polynomial):
-            raise NotImplementedError(f"Can only multiply polynomials not {other}")
+            raise NotImplementedError("Can only multiply polynomials not {other}".format(other=other))
 
         return Polynomial(Polynomial.dict_times(self.poly_dict, other.poly_dict))
 
@@ -70,7 +70,7 @@ class Polynomial(object):
         for key1, value1 in dict1.items():
             for key2, value2 in dict2.items():
                 if key1 != CONST_KEY and key2 != CONST_KEY and force_linear:
-                    raise ValueError(f"Non-linear constraints not supported")
+                    raise ValueError("Non-linear constraints not supported")
                 key = tuple(sorted(key1 + key2))
                 result[key] = result.get(key, 0) + value1 * value2
         return result
@@ -94,7 +94,7 @@ class Polynomial(object):
         return isinstance(other, Polynomial) and self.poly_dict == other.poly_dict
 
     def __str__(self):
-        return " + ".join("*".join(str(e) for e in key + (value,)) for key, value in self.poly_dict.items())
+        return " + ".join("*".join(key + (str(value),)) for key, value in self.poly_dict.items())
 
     def __repr__(self):
         return self.__str__()
@@ -153,10 +153,10 @@ class MathDictConverter(SmtWalker):
         self.force_linear = force_linear
 
     def walk_and(self, args):
-        raise ValueError(f"AND not supported")
+        raise ValueError("AND not supported")
 
     def walk_or(self, args):
-        raise ValueError(f"OR not supported")
+        raise ValueError("OR not supported")
 
     def walk_plus(self, args):
         return reduce(Polynomial.dict_plus, self.walk_smt_multiple(args))
@@ -167,6 +167,7 @@ class MathDictConverter(SmtWalker):
         return Polynomial.dict_plus(left_dict, right_dict)
 
     def walk_times(self, args):
+        # noinspection PyTypeChecker
         return reduce(partial(Polynomial.dict_times, force_linear=self.force_linear), self.walk_smt_multiple(args))
 
     def walk_not(self, argument):
@@ -174,15 +175,16 @@ class MathDictConverter(SmtWalker):
         return {k: -v for k, v in term_dict.items()}
 
     def walk_ite(self, if_arg, then_arg, else_arg):
-        raise ValueError(f"ITE not supported")
+        raise ValueError("ITE not supported")
 
     def walk_pow(self, base, exponent):
         exponent = float(exponent.constant_value())
         if int(exponent) != exponent:
-            raise ValueError(f"Fractional powers ({exponent}) are not supported")
+            raise ValueError("Fractional powers ({exponent}) are not supported".format(exponent=exponent))
         exponent = int(exponent)
         if exponent != 1 and self.force_linear:
-            raise ValueError(f"Non-linear constraints are not supported ({base}**{exponent})")
+            raise ValueError("Non-linear constraints are not supported ({base}**{exponent})"
+                             .format(base=base, exponent=exponent))
         base = self.walk_smt(base)
         result = base
         for _ in range(exponent - 1):
@@ -205,19 +207,19 @@ class MathDictConverter(SmtWalker):
         return self.walk_lte(left, right)
 
     def walk_equals(self, left, right):
-        raise ValueError(f"EQ not supported")
+        raise ValueError("EQ not supported")
 
     def walk_symbol(self, name, v_type):
         if v_type == REAL:
             return {(name,): 1}
         else:
-            raise ValueError(f"Symbol of type {v_type} not supported")
+            raise ValueError("Symbol of type {v_type} not supported".format(v_type=v_type))
 
     def walk_constant(self, value, v_type):
         if v_type == REAL:
             return {CONST_KEY: float(value)}
         else:
-            raise ValueError(f"Constant of type {v_type} not supportde")
+            raise ValueError("Constant of type {v_type} not supported".format(v_type=v_type))
 
 
 def get_inequality_dict(formula) -> Dict:
@@ -287,12 +289,12 @@ class BoundsWalker(SmtWalker):
 
     def walk_symbol(self, name, v_type):
         if not self.allow_or and v_type != BOOL:
-            raise ValueError(f"Invalid Symbol node {v_type}:{name}")
+            raise ValueError("Invalid Symbol node {v_type}:{name}".format(v_type=v_type, name=name))
         return set()
 
     def walk_constant(self, value, v_type):
         if not self.allow_or and v_type != BOOL:
-            raise ValueError(f"Invalid Constant node {v_type}:{value}")
+            raise ValueError("Invalid Constant node {v_type}:{value}".format(v_type=v_type, value=value))
         return set()
 
     @staticmethod

@@ -8,6 +8,7 @@ from .engines.rejection import RejectionEngine
 from .engines.pa import PredicateAbstractionEngine
 from .engines.xadd import XaddEngine
 from .engines.xsdd.inference import NativeXsddEngine
+from .engines.adaptive_rejection import AdaptiveRejection, information_gain, entropy
 
 try:
     from .engines.xsdd.xsdd import XsddEngine

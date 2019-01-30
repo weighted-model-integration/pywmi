@@ -12,7 +12,6 @@ from pywmi.smt_math import LinearInequality, Polynomial
 from .integration_backend import IntegrationBackend
 from pywmi.domain import TemporaryDensityFile
 from pywmi.engine import Engine
-from pywmi.convert import import_xadd_mspn
 import pysmt.shortcuts as smt
 
 logger = logging.getLogger(__name__)
@@ -68,7 +67,7 @@ class XaddEngine(Engine):
         raise NotImplementedError()
 
     def normalize(self, new_support, paths=True):
-        # type: (FNode, str, bool) -> bool
+        # type: (FNode, bool) -> Optional[FNode]
 
         if not os.path.exists(XaddEngine.path):
             raise RuntimeError("The XADD engine requires the XADD library JAR file which is currently not installed.")
@@ -119,4 +118,4 @@ class XaddIntegrator(IntegrationBackend):
         return engine.compute_volume()
 
     def __str__(self):
-        return f"xadd_int.{self.mode}" if self.mode else "xadd_int"
+        return "xadd_int.{}".format(self.mode) if self.mode else "xadd_int"

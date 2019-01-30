@@ -1,4 +1,4 @@
-import math
+import logging
 import os
 import re
 import tempfile
@@ -9,7 +9,6 @@ from typing import List
 from pywmi.smt_math import LinearInequality, Polynomial
 from .integration_backend import IntegrationBackend
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -57,18 +56,19 @@ class LatteIntegrator(IntegrationBackend):
         with TemporaryFile(suffix=".hrep.latte") as bounds_file:
             with TemporaryFile(suffix=".poly.latte") as poly_file:
                 with open(bounds_file, "w") as bounds_ref:
-                    print(f"{len(b_geq_a)} {len(domain.real_vars) + 1}", file=bounds_ref)
+                    print("{} {}".format(len(b_geq_a), len(domain.real_vars) + 1), file=bounds_ref)
                     print(*[" ".join(map(str, e)) for e in b_geq_a], sep="\n", file=bounds_ref)
 
                 with open(poly_file, "w") as poly_ref:
                     print("[{}]".format(",".join("[{},[{}]]".format(m[0], ",".join(map(str, m[1])))
                                                  for m in monomials)), file=poly_ref)
 
-                command = f"integrate --valuation=integrate {self.algorithm} --monomials={poly_file} {bounds_file}"
+                command = "integrate --valuation=integrate {} --monomials={} {}"\
+                    .format(self.algorithm, poly_file, bounds_file)
                 output = check_output(command, shell=True, stderr=DEVNULL).decode()
                 match = re.search(self.pattern, output)
                 if not match:
-                    raise RuntimeError(f"Could not find answer in Latte output: {output}")
+                    raise RuntimeError("Could not find answer in Latte output: {output}".format(output=output))
                 return float(Fraction(int(match.group(1)), int(match.group(2))))
 
     def __str__(self):

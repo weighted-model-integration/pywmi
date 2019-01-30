@@ -1,11 +1,11 @@
 import pytest
 from pysmt.shortcuts import Ite, Real
 
+from pywmi import Domain, RejectionEngine, XaddEngine
 from pywmi.engines.latte_backend import LatteIntegrator
-from pywmi.engines.rejection import RejectionIntegrator
 from pywmi.engines.xsdd.inference import NativeXsddEngine
-from pywmi import Domain, RejectionEngine, XaddEngine, PredicateAbstractionEngine
 
+ERROR = 0.1
 
 def test_volume():
     # Support:  (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 10)
@@ -33,8 +33,8 @@ def test_volume():
     correction_volume_rej = RejectionEngine(domain, support, weight, 1000000).compute_volume()
     correction_volume_xadd = XaddEngine(domain, support, weight).compute_volume()
     print(correction_volume_rej, correction_volume_xadd, computed_volume)
-    assert computed_volume == pytest.approx(correction_volume_rej, 0.1 * correction_volume_rej)
-    assert computed_volume == pytest.approx(correction_volume_xadd, 0.1 * correction_volume_xadd)
+    assert computed_volume == pytest.approx(correction_volume_rej, rel=ERROR)
+    assert computed_volume == pytest.approx(correction_volume_xadd, rel=ERROR)
 
 
 def test_trivial_weight_function():
@@ -50,5 +50,5 @@ def test_trivial_weight_function():
     correction_volume_rej = RejectionEngine(domain, support, weight, 1000000).compute_volume()
     correction_volume_xadd = XaddEngine(domain, support, weight).compute_volume()
     print(correction_volume_rej, correction_volume_xadd, computed_volume)
-    assert computed_volume == pytest.approx(correction_volume_rej, 0.1 * correction_volume_rej)
-    assert computed_volume == pytest.approx(correction_volume_xadd, 0.1 * correction_volume_xadd)
+    assert computed_volume == pytest.approx(correction_volume_rej, rel=ERROR)
+    assert computed_volume == pytest.approx(correction_volume_xadd, rel=ERROR)

@@ -56,8 +56,8 @@ class XsddEngine(Engine, SMT2PL):
         repeated = repeated and len(set(free_variables)) <= 1
         return repeated, [smt.serialize(v) for v in free_variables[0]]
 
-    def call_wmi(self, queries=[], timeout=None, **kwdargs):
-
+    def call_wmi(self, queries=None, timeout=None, **kwdargs):
+        queries = queries or []
         if self.repeated:
             self.repeated, free_variables = self.check_for_repeated(queries)
             if self.repeated:

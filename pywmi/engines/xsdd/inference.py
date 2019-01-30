@@ -100,4 +100,4 @@ class NativeXsddEngine(Engine):
         return NativeXsddEngine(self.domain, support, weight, self.manager)
 
     def __str__(self):
-        return f"n-xsdd:b{self.backend}"
+        return "n-xsdd:b{}".format(self.backend)

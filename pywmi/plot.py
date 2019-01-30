@@ -187,6 +187,7 @@ def plot_combined(feat_x: Union[str, int],
             values, labels = data  # type: Tuple[np.ndarray, np.ndarray]
             var_index_map = domain.var_index_map()
             fx, fy = (f if isinstance(f, int) else var_index_map[f] for f in (feat_x, feat_y))
+            # noinspection PyUnresolvedReferences
             for i in range(values.shape[0]):
                 row = values[i, :]
                 point = row[fx], row[fy]

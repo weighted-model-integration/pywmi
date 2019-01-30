@@ -158,7 +158,9 @@ class WMIPL(object):
         self.string_program += rule
     def add_query(self, query):
         self.string_program += "query({}).\n".format(query)
-    def add_weight(self, expression, parent=[]):
+    def add_weight(self, expression, parent=None):
+        if parent is None:
+            parent = []
         if expression.is_ite():
             condition, pos, neg = expression.args()
             con = self.algebra2pl(condition)

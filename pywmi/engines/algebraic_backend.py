@@ -1,7 +1,10 @@
 import pysmt.shortcuts as smt
 from pysmt.typing import REAL
 import sympy
-import psipy
+try:
+    import psipy
+except ImportError:
+    psipy = None
 
 
 class AlgebraBackend(object):
@@ -48,9 +51,9 @@ class AlgebraBackend(object):
     @classmethod
     def power(cls, a, power):
         if not isinstance(power, int) and int(power) != power:
-            raise ValueError(f"Expected integer power, got {power}")
+            raise ValueError("Expected integer power, got {power}".format(power=power))
         if power < 0:
-            raise ValueError(f"Unexpected negative power {power}")
+            raise ValueError("Unexpected negative power {power}".format(power=power))
         result = cls.one()
         for i in range(int(power)):
             result = cls.times(result, a)
@@ -92,6 +95,7 @@ class SympyAlgebra(AlgebraBackend):
     def real(cls, float_constant):
         return float_constant
 
+
 class PSIAlgebra(AlgebraBackend):
     @classmethod
     def times(cls, a, b):
@@ -118,8 +122,8 @@ class PSIAlgebra(AlgebraBackend):
     @classmethod
     def power(cls, a, power):
         if not isinstance(power, int) and int(power) != power:
-            raise ValueError(f"Expected integer power, got {power}")
+            raise ValueError("Expected integer power, got {power}".format(power=power))
         if power < 0:
-            raise ValueError(f"Unexpected negative power {power}")
-        result = psipy.pow(str(a),str(power))
+            raise ValueError("Unexpected negative power {power}".format(power=power))
+        result = psipy.pow(str(a), str(power))
         return result

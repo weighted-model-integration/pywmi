@@ -28,7 +28,7 @@ def construct_condition(condition):
     return ivs
 
 def poly2expr(poly):
-    poly_numericals = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[\.]?\d*(?:[eE][-+]?\d+)?", str(poly))
+    poly_numericals = re.findall("[-+]?[.]?[\d]+(?:,\d\d\d)*[.]?\d*(?:[eE][-+]?\d+)?", str(poly))
     for n in poly_numericals:
         n_rational = str(Fraction.from_float(float(n)).limit_denominator(100))
         poly = poly.replace(n, n_rational, 1)
@@ -50,13 +50,12 @@ def poly2expr(poly):
 
 
 class SemiringWMIPSI(SemiringHAL):
-
-    def __init__(self, neutral, abe, free_variables=set(), **kwdargs):
-        SemiringHAL.__init__(self, neutral, abe, [], [], [], **kwdargs)
+    def __init__(self, neutral, abe, free_variables=None, **kwargs):
+        SemiringHAL.__init__(self, neutral, abe, [], [], [], **kwargs)
         self.neutral = neutral
         self.abe = abe
         self.values_semiring = {}
-        self.free_variables = free_variables
+        self.free_variables = free_variables or set()
 
     def value(self, a):
         a = a.functor
@@ -70,6 +69,8 @@ class SemiringWMIPSI(SemiringHAL):
             variables = set([(str(v),None) for v in variables])
 
             result = WeightPSI(condition, variables)
+        else:
+            raise ValueError("Illegal functor {}".format(a.functor))
         self.values_semiring[a] = result
         return result
 

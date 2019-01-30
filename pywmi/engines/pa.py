@@ -1,16 +1,11 @@
-import json
+import logging
 import os
 import subprocess
-import logging
 import sys
-import tempfile
 from subprocess import TimeoutExpired
 from typing import Optional, List, TYPE_CHECKING
 
-from pysmt.shortcuts import TRUE
-
 from pywmi.engine import Engine
-from pywmi import export_domain, smt_to_nested
 
 if TYPE_CHECKING:
     from pysmt.fnode import FNode

@@ -8,9 +8,10 @@ import tabulate
 from pysmt.fnode import FNode
 from typing import Optional
 
+from .engine import Engine
 from .convert import Import
 from .domain import import_density, export_density
-from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, plot
+from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, plot, AdaptiveRejection
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +28,10 @@ def parse_options(option_strings, *whitelist):
             n, v = "sample_count", int(option_string[1:])
         elif option_string.startswith("m"):
             n, v = "mode", option_string[1:]
-        elif option_string.startswith("b"):
+        elif option_string.startswith("b") and "backend" in whitelist:
             n, v = "backend", option_string[1:]
+        elif option_string.startswith("b") and "sample_count_build" in whitelist:
+            n, v = "sample_count_build", int(option_string[1:])
         elif option_string=="pint":
             n, v = "pint", True
         elif option_string=="collapse":
@@ -54,6 +57,9 @@ def get_engine(description, domain, support, weight):
     if parts[0].lower() == "rej":
         options = parse_options(parts[1:], "sample_count")
         return RejectionEngine(domain, support, weight, **options)
+    if parts[0].lower() == "adapt":
+        options = parse_options(parts[1:], "sample_count")
+        return AdaptiveRejection(domain, support, weight, **options)
     if parts[0].lower() == "xadd":
         options = parse_options(parts[1:], "mode", "timeout")
         return XaddEngine(domain, support, weight, **options)
@@ -78,6 +84,8 @@ def get_engine(description, domain, support, weight):
             elif parts[0] == "latte":
                 from .engines.latte_backend import LatteIntegrator
                 backend = LatteIntegrator()
+            else:
+                raise ValueError("Please specify a valid backend instead of {}".format(parts[0]))
 
         del options["backend"]
         from pywmi import NativeXsddEngine
@@ -234,7 +242,7 @@ def parse():
 
     elif args.task == "normalize":
         engine = XaddEngine(domain, support, weight, "original")
-        engine.normalize(import_density(args.new_support)[2], args.output_path, not args.total)
+        engine.normalize(import_density(args.new_support)[2], not args.total)
 
     elif args.task == "plot":
         if args.output is not None and args.output == "*":

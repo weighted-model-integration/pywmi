@@ -1,20 +1,16 @@
-from functools import reduce
+from builtins import range
 from typing import List
 
 import numpy
-
-from builtins import range
-
+import pysmt.shortcuts as smt
 import scipy.optimize
 
-from pywmi.sample import uniform
-from .xsdd.smt_to_sdd import product
-from pywmi.smt_math import LinearInequality, Polynomial
-from .integration_backend import IntegrationBackend
 from pywmi import evaluate, Domain
 from pywmi.engine import Engine
 from pywmi.exceptions import SamplingException
-import pysmt.shortcuts as smt
+from pywmi.sample import uniform
+from pywmi.smt_math import LinearInequality, Polynomial
+from .integration_backend import IntegrationBackend
 
 
 def sample(n_boolean_vars, bounds, n):
@@ -145,7 +141,7 @@ class RejectionIntegrator(IntegrationBackend):
 
                 lb_ub_bounds = {domain.variables[j]: (lbs[j], ubs[j]) for j in range(len(domain.variables))}
             else:
-                raise ValueError(f"Illegal bounding box value {self.bounding_box}")
+                raise ValueError("Illegal bounding box value {}".format(self.bounding_box))
             domain = Domain(domain.variables, domain.var_types, lb_ub_bounds)
 
         engine = RejectionEngine(domain, formula, polynomial.to_smt(), self.sample_count)
@@ -155,4 +151,5 @@ class RejectionIntegrator(IntegrationBackend):
         return result
 
     def __str__(self):
-        return f"xadd_int.{self.sample_count}" + (f".{self.bounding_box}" if self.bounding_box > 0 else "")
+        return "xadd_int.{}".format(self.sample_count)\
+               + (".{}".format(self.bounding_box) if self.bounding_box > 0 else "")

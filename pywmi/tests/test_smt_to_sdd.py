@@ -1,14 +1,14 @@
 import pysmt.shortcuts as smt
 
 from pywmi import Domain
-from pywmi.engines.xsdd.smt_to_sdd import SddConversionWalker, convert_formula, convert_function, recover_formula
+from pywmi.engines.xsdd.smt_to_sdd import SddConversionWalker, convert_function, recover_formula
 from pywmi.smt_print import pretty_print
 from pywmi.smt_math import PolynomialAlgebra
 
 try:
     from pysdd.sdd import SddManager
 except ImportError:
-    pass
+    SddManager = None
 
 
 def test_convert_weight():
@@ -53,13 +53,13 @@ def test_convert_weight2():
     abstractions_c, var_to_lit_c = dict(), dict()
     converted_c = convert_function(smt.Real(0.6), SddManager(), algebra, abstractions_c, var_to_lit_c)
     for p, s in converted_c.sdd_dict.items():
-        print(f"{p}: {recover_formula(s, abstractions_c, var_to_lit_c)}")
+        print("{}: {}".format(p, recover_formula(s, abstractions_c, var_to_lit_c)))
     assert len(converted_c.sdd_dict) == 1
 
     abstractions_a, var_to_lit_a = dict(), dict()
     converted_a = convert_function(ite_a, SddManager(), algebra, abstractions_a, var_to_lit_a)
     for p, s in converted_a.sdd_dict.items():
-        print(f"{p}: {recover_formula(s, abstractions_a, var_to_lit_a)}")
+        print("{}: {}".format(p, recover_formula(s, abstractions_a, var_to_lit_a)))
     assert len(converted_a.sdd_dict) == 2
 
     converted_b = convert_function(ite_b, SddManager(), algebra)
@@ -69,7 +69,7 @@ def test_convert_weight2():
     abstractions_x, var_to_lit_x = dict(), dict()
     converted_x = convert_function(ite_x, SddManager(), algebra, abstractions_x, var_to_lit_x)
     for p, s in converted_x.sdd_dict.items():
-        print(f"{p}: {recover_formula(s, abstractions_x, var_to_lit_x)}")
+        print("{}: {}".format(p, recover_formula(s, abstractions_x, var_to_lit_x)))
     assert len(converted_x.sdd_dict) == 2
 
     converted = convert_function(weight, SddManager(), algebra)
