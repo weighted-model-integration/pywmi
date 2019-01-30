@@ -24,7 +24,13 @@ however, you need to install Java and Gurobi manually. Once you did that, just c
 
     pywmi-install xadd
 
-### XSDD engine
+
+### Native XSDD engine
+The native XSDD engine (and the PiecewiseXSDD class for representing piecewise functions) are implemented using the
+[PySDD](https://github.com/wannesm/PySDD) library. In newer versions of pywmi these classes are available out of the
+box.
+
+### External XSDD engine
 WMI using XSDD inference is also supported by pywmi. To use the XSDD engine you need to install
 [HAL-ProbLog](https://bitbucket.org/pedrozudo/hal_problog) by following the instructions provided in the README file.
 
