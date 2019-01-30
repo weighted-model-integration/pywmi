@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import shutil
 import tempfile
 from fractions import Fraction
 from subprocess import check_output, DEVNULL
@@ -34,6 +35,9 @@ class LatteIntegrator(IntegrationBackend):
 
     def __init__(self):
         super().__init__(True)
+        if not shutil.which("integrate"):
+            from pywmi.errors import InstallError
+            raise InstallError("Latte (integrate) is not installed")
         self.algorithm = "--cone-decompose"
 
     def partially_integrate(self, domain, convex_bounds: List[LinearInequality], polynomial: Polynomial, variables: List[str]):

@@ -1,4 +1,5 @@
 import pysmt.shortcuts as smt
+import pytest
 
 from pywmi import Domain
 from pywmi.engines.xsdd.smt_to_sdd import SddConversionWalker, convert_function, recover_formula
@@ -9,6 +10,8 @@ try:
     from pysdd.sdd import SddManager
 except ImportError:
     SddManager = None
+
+pytestmark = pytest.mark.skipif(SddManager is None, reason="pysdd is not installed")
 
 
 def test_convert_weight():

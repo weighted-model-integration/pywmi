@@ -5,7 +5,16 @@ from pywmi import Domain, RejectionEngine, XaddEngine
 from pywmi.engines.latte_backend import LatteIntegrator
 from pywmi.engines.xsdd.inference import NativeXsddEngine
 
+try:
+    import pysdd
+    pysdd_installed = True
+except ImportError:
+    pysdd_installed = False
+
+pytestmark = pytest.mark.skipif(not pysdd_installed, reason="pysdd is not installed")
+
 ERROR = 0.1
+
 
 def test_volume():
     # Support:  (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 10)
