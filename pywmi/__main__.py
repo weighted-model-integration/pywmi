@@ -216,7 +216,8 @@ def parse():
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
 
-    domain, support, weight, queries = Import.import_density(args.file, args.dialect)
+    density = Import.import_density(args.file, args.dialect)
+    domain, support, weight, queries = density.domain, density.support, density.weight, density.queries
 
     if args.verbose:
         logging.basicConfig(level=logging.INFO)
@@ -226,7 +227,7 @@ def parse():
         if json_file is None:
             json_file = args.file + ".converted.json"
 
-        Density(domain, support, weight, queries).to_file(json_file)
+        density.to_file(json_file)
 
     elif args.task == "volume":
         print(get_volume([get_engine(d, domain, support, weight) for d in args.engines], print_status=args.status))
