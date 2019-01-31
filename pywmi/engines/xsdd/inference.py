@@ -79,7 +79,8 @@ class ContinuousProvenanceSemiring(Semiring):
         return (variables, common_variables_children)
 
 
-class IntTagSemiring(self, abstractions: Dict, var_to_lit:Dict, node_var_dependencies: Dict):
+class IntTagSemiring(Semiring):
+    def __init__(self, abstractions: Dict, var_to_lit:Dict, node_var_dependencies: Dict):
         self.reverse_abstractions = {v: k for k, v in abstractions.items()}
         self.lit_to_var = {v: k for k, v in var_to_lit.items()}
         self.int_tags = {}
@@ -146,12 +147,12 @@ class NativeXsddEngine(Engine):
 
             support = support_sdd & world_support
             if pint:
-                node_var_dependencies, node_var_dependencies_cache = amc(ContinuousProvenanceSemiring(abstractions, var_to_lit), support)
-                int_tags, _ = amc(IntTagSemiring(abstractions, var_to_lit), support)
+                node_var_dependencies, node_var_dependencies_cache = amc(ContinuousProvenanceSemiring(abstractions, var_to_lit), support, return_cache=True)
+                int_tags = amc(IntTagSemiring(abstractions, var_to_lit), support)
             else:
                 int_tags = {}
 
-            convex_supports, _ = amc(WMISemiring(abstractions, var_to_lit, int_tags), support)
+            convex_supports = amc(WMISemiring(abstractions, var_to_lit, int_tags), support)
             for convex_support, variables in convex_supports:
                 missing_variable_count = len(self.domain.bool_vars) - len(variables)
                 vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
