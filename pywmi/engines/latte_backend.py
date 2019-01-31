@@ -31,7 +31,7 @@ class TemporaryFile(object):
 
 
 class LatteIntegrator(IntegrationBackend):
-    pattern = re.compile(".*Answer:\s+(-?\d+)/(\d+).*")
+    pattern = re.compile(r".*Answer:\s+(-?\d+)/(\d+).*")
 
     def __init__(self):
         super().__init__(True)

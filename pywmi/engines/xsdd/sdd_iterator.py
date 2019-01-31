@@ -14,9 +14,10 @@ from typing import Dict, Set, Optional, List, Tuple, Callable, Union
 from pywmi.errors import InstallError
 
 try:
-    from pysdd import SddManager, Vtree, SddNode
+    from pysdd.sdd import SddManager, SddNode, Vtree
 except ImportError:
     SddManager, Vtree, SddNode = None, None, None
+    raise
 
 
 class SddIterator:

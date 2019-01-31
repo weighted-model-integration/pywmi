@@ -1,6 +1,5 @@
 import functools
 from typing import List, Tuple, Set, Any, Union, Dict
-
 from .sdd_iterator import SddIterator
 
 try:
@@ -86,7 +85,7 @@ def amc_callback(semiring, node, rvalues, expected_prime_vars, expected_sub_vars
             #     sub_smooth_factor = 2 ** nb_missing_vars
             # else:
             #     sub_smooth_factor = 1
-            rvalue = semiring.plus(rvalue, semiring.times(mc_prime, mc_sub, (prime & sub).id), node.id)
+            rvalue = semiring.plus(rvalue, semiring.times(mc_prime, mc_sub, (prime.id, sub.id)), node.id)
         return rvalue
 
 
