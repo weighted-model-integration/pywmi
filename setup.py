@@ -12,7 +12,7 @@ setup(
     license='MIT',
     packages=find_packages(),
     zip_safe=False,
-    install_requires=['pysmt', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'problog',
+    install_requires=['pysmt<0.8', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'problog',
                       'graphviz', 'sympy', 'scipy', 'autodora'],
     extras_require={
         'sdd': ["pysdd"]

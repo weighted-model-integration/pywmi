@@ -1,11 +1,10 @@
 import functools
 from typing import List, Tuple, Set, Any
+from .sdd_iterator import SddIterator
 
 try:
-    import pysdd.iterator as sdd_it
     from pysdd.sdd import SddNode
 except ImportError:
-    sdd_it = None
     SddNode = None
 
 
@@ -63,11 +62,17 @@ def amc_callback(semiring, node, rvalues, expected_prime_vars, expected_sub_vars
     if rvalues is None:
         # Leaf
         if node.is_true():
-            return semiring.times_neutral()
+            weight = semiring.times_neutral()
+            print(weight)
+            return weight
         elif node.is_false():
-            return semiring.plus_neutral()
+            weight = semiring.plus_neutral()
+            print(weight)
+            return weight
         elif node.is_literal():
-            return semiring.weight(node.literal)
+            weight = semiring.weight(node.literal)
+            print(weight)
+            return weight
         else:
             raise Exception("Unknown leaf type for node {}".format(node))
     else:
@@ -75,7 +80,7 @@ def amc_callback(semiring, node, rvalues, expected_prime_vars, expected_sub_vars
         if not node.is_decision():
             raise Exception("Expected a decision node for node {}".format(node))
         rvalue = semiring.plus_neutral()
-        for mc_prime, mc_sub, prime_vars, sub_vars in rvalues:
+        for mc_prime, mc_sub, prime_vars, sub_vars, prime, sub in rvalues:
             # if prime_vars is not None:
             #     nb_missing_vars = len(expected_prime_vars) - len(prime_vars)
             #     prime_smooth_factor = 2 ** nb_missing_vars
@@ -86,11 +91,11 @@ def amc_callback(semiring, node, rvalues, expected_prime_vars, expected_sub_vars
             #     sub_smooth_factor = 2 ** nb_missing_vars
             # else:
             #     sub_smooth_factor = 1
-            rvalue = semiring.plus(rvalue, semiring.times(mc_prime, mc_sub), node.id)
+            rvalue = semiring.plus(rvalue, semiring.times(mc_prime, mc_sub, (prime.id, sub.id)), node.id)
         return rvalue
 
 
 def amc(semiring, sdd, smooth=False):
     # type: (Semiring, SddNode, bool) -> Any
-    it = sdd_it.SddIterator(sdd.manager, smooth=smooth)
+    it = SddIterator(sdd.manager, smooth=smooth)
     return it.depth_first(sdd, functools.partial(amc_callback, semiring))

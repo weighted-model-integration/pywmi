@@ -312,3 +312,8 @@ def implies(term1, term2):
             return False
         except InternalSolverError:
             return True
+        except Exception as e:
+            if "Z3Exception" in e.__class__.__name__:
+                return True
+            else:
+                raise
