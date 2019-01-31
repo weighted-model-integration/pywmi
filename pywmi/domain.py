@@ -183,7 +183,7 @@ class Density(Exportable):
     @classmethod
     def from_state(cls, state: dict):
         return cls(
-            Domain.get_state(state["domain"]),
+            Domain.from_state(state["domain"]),
             nested_to_smt(state["formula"]),
             nested_to_smt(state["weights"]),
             [nested_to_smt(query) for query in state["queries"]],
