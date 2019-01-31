@@ -2,7 +2,6 @@ import math
 import numpy as np
 from pysmt.exceptions import PysmtException
 
-from pywmi.domain import Density
 from pywmi.engine import Engine
 from pywmi import evaluate, Domain
 import pysmt.shortcuts as smt
@@ -315,14 +314,3 @@ class AdaptiveRejection(Engine):
 
     def __str__(self):
         return "adapt:n{}:b{}".format(self.sample_count, self.sample_count_build)
-
-
-def main():
-    filename = "../wmi-experiments/res/mutex/generated_mutex_8.json"
-    density = Density.import_from(filename)
-    engine = AdaptiveRejection(density.domain, density.support, density.weight, 100000, 10000)
-    engine.compute_volume()
-
-
-if __name__ == "__main__":
-    main()

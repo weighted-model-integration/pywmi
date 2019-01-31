@@ -8,6 +8,7 @@ from typing import Optional, List
 from pysmt.fnode import FNode
 from pysmt.shortcuts import Real, TRUE
 
+from pywmi.errors import InstallError
 from pywmi.smt_math import LinearInequality, Polynomial
 from .integration_backend import IntegrationBackend
 from pywmi.domain import TemporaryDensityFile
@@ -23,6 +24,8 @@ class XaddEngine(Engine):
 
     def __init__(self, domain, support, weight, mode=None, timeout=None):
         super().__init__(domain, support, weight)
+        if not os.path.exists(XaddEngine.path):
+            raise InstallError("The XADD engine requires the XADD library JAR file which is currently not installed.")
         self.mode = mode
         self.timeout = timeout
 

@@ -10,7 +10,7 @@ from typing import Optional
 
 from .engine import Engine
 from .convert import Import
-from .domain import import_density, export_density
+from .domain import Density
 from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, plot, AdaptiveRejection
 
 logger = logging.getLogger(__name__)
@@ -216,7 +216,8 @@ def parse():
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
 
-    domain, support, weight, queries = Import.import_density(args.file, args.dialect)
+    density = Import.import_density(args.file, args.dialect)
+    domain, support, weight, queries = density.domain, density.support, density.weight, density.queries
 
     if args.verbose:
         logging.basicConfig(level=logging.INFO)
@@ -226,7 +227,7 @@ def parse():
         if json_file is None:
             json_file = args.file + ".converted.json"
 
-        export_density(json_file, domain, support, weight, queries)
+        density.to_file(json_file)
 
     elif args.task == "volume":
         print(get_volume([get_engine(d, domain, support, weight) for d in args.engines], print_status=args.status))
@@ -242,7 +243,8 @@ def parse():
 
     elif args.task == "normalize":
         engine = XaddEngine(domain, support, weight, "original")
-        engine.normalize(import_density(args.new_support)[2], not args.total)
+        new_density = Density.from_file(args.new_support)  # type: Density
+        engine.normalize(new_density.support, not args.total)
 
     elif args.task == "plot":
         if args.output is not None and args.output == "*":
@@ -250,8 +252,9 @@ def parse():
         else:
             output_file = args.output
         if args.difference:
-            other = import_density(args.difference)
-            plot.plot_formula(output_file, domain, (support & ~other[2] | ~support & other[2]), (args.feat_x, args.feat_y))
+            other = Density.from_file(args.difference)  # type: Density
+            difference = support & ~other.support | ~support & other.support
+            plot.plot_formula(output_file, domain, difference, (args.feat_x, args.feat_y))
         else:
             plot.plot_formula(output_file, domain, support, (args.feat_x, args.feat_y))
 

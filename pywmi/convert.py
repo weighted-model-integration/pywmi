@@ -4,13 +4,13 @@ from typing import Tuple, List
 
 from pysmt.fnode import FNode
 
-from .domain import import_density, import_domain
+from .domain import Density
 from pywmi import Domain, nested_to_smt
 from pysmt import shortcuts as smt
 
 
 def import_xadd_mspn(filename):
-    # type: (str) -> Tuple[Domain, FNode, FNode, List[FNode]]
+    # type: (str) -> Density
     name = os.path.basename(filename)
     parts = name.split("_")
     real_vars = int(parts[1])
@@ -24,11 +24,11 @@ def import_xadd_mspn(filename):
         weight = nested_to_smt(f.readlines()[0])
     queries = [smt.TRUE()]
 
-    return domain, support, weight, queries
+    return Density(domain, support, weight, queries)
 
 
 def import_wmi_mspn(filename):
-    # type: (str) -> Tuple[Domain, FNode, FNode, List[FNode]]
+    # type: (str) -> Density
     q_file, s_file, w_file = ("{}.{}".format(filename, ext) for ext in ["query", "support", "weight"])
     queries = [smt.TRUE()] if not os.path.exists(q_file) else [smt.read_smtlib(q_file)]
     support = smt.read_smtlib(s_file)
@@ -44,48 +44,47 @@ def import_wmi_mspn(filename):
     domain = Domain.make(["A_{}".format(i) for i in range(bool_vars)],
                          {"x_{}".format(i): [0, 1] for i in range(real_vars)})
 
-    return domain, support, weights, queries
+    return Density(domain, support, weights, queries)
 
 
 def import_smt_synthetic(filename):
-    # type: (str) -> Tuple[Domain, FNode, FNode, List[FNode]]
+    # type: (str) -> Density
 
     with open(filename) as f:
         flat = json.load(f)
 
-    domain = import_domain(flat["synthetic_problem"]["problem"]["domain"])
+    domain = Domain.from_state(flat["synthetic_problem"]["problem"]["domain"])
     queries = [smt.TRUE()]
     support = nested_to_smt(flat["synthetic_problem"]["problem"]["theory"]) & domain.get_bounds()
     weights = smt.Real(1)
 
-    return domain, support, weights, queries
+    return Density(domain, support, weights, queries)
 
 
 def import_wmi_generate_tree(filename):
-    # type: (str) -> Tuple[Domain, FNode, FNode, List[FNode]]
+    # type: (str) -> Density
     queries = [smt.read_smtlib(filename + ".query")]
     support = smt.read_smtlib(filename + ".support")
     weights = smt.read_smtlib(filename + ".weights")
     variables = queries[0].get_free_variables() | support.get_free_variables() | weights.get_free_variables()
     domain = Domain.make(real_variables={v.symbol_name(): [0, 1] for v in variables if v.symbol_type() == smt.REAL},
                          boolean_variables=[v.symbol_name() for v in variables if v.symbol_type() == smt.BOOL])
-    return domain, support, weights, queries
+    return Density(domain, support, weights, queries)
 
 
 def import_wmi_generate_100(filename):
-    # type: (str) -> Tuple[Domain, FNode, FNode, List[FNode]]
+    # type: (str) -> Density
     queries = [smt.read_smtlib(filename + ".query")]
     support = smt.read_smtlib(filename + ".support")
     weights = smt.read_smtlib(filename + ".weights")
     variables = queries[0].get_free_variables() | support.get_free_variables() | weights.get_free_variables()
-    domain = Domain.make(real_variables={v.symbol_name(): [-100, 100] for v in variables if v.symbol_type() == smt.REAL},
+    domain = Domain.make(real_bounds=(-100, 100),
                          boolean_variables=[v.symbol_name() for v in variables if v.symbol_type() == smt.BOOL])
-    return domain, support, weights, queries
+    return Density(domain, support, weights, queries)
 
 
-def import_wrap(fn):
-    domain, queries, support, weight = import_density(fn)
-    return domain, support, weight, queries
+def import_wrap(filename):
+    return Density.from_file(filename)
 
 
 class Import(object):
@@ -102,7 +101,7 @@ class Import(object):
 
     @staticmethod
     def import_density(filename, dialect=None):
-        # type: (str, str) -> Tuple[Domain, FNode, FNode, List[FNode]]
+        # type: (str, str) -> Density
         if dialect in Import._dialects:
             return Import._dialects[dialect](filename)
         raise ValueError("Invalid dialect: {}".format(dialect))

@@ -1,11 +1,26 @@
 import pytest
-from pysmt.shortcuts import Symbol, Pow, Real
+from pysmt.exceptions import NoSolverAvailableError
+from pysmt.shortcuts import Symbol, Pow, Real, Solver
 from pysmt.typing import REAL
 
+from pywmi.errors import InstallError
 from pywmi import Domain
 from pywmi.engines.latte_backend import LatteIntegrator
 from pywmi.engines.xadd import XaddIntegrator
 from pywmi.smt_math import get_inequality_dict, get_inequality_smt, Polynomial, LinearInequality, implies
+
+
+try:
+    with Solver() as solver:
+        solver_available = True
+except NoSolverAvailableError:
+    solver_available = False
+
+try:
+    LatteIntegrator()
+    latte_installed = True
+except InstallError:
+    latte_installed = False
 
 
 def test_conversion():
@@ -52,13 +67,16 @@ def test_inequality_to_integer():
     assert inequality.scale_to_integer().to_smt() == (x * 85 + y * 312 <= 204)
 
 
+@pytest.mark.skipif(not latte_installed, reason="Latte (integrate) is not installed")
 def test_latte_backend():
     x, y = [Symbol(n, REAL) for n in "xy"]
     inequalities = [LinearInequality.from_smt(f) for f in [(x >= 0), (x <= y), (y <= 1)]]
     polynomial = Polynomial.from_smt((x*2/3 + 13/15) * (y*1/8 + x))
     domain = Domain.make([], ["x", "y"], [(0, 1), (0, 1)])
     result = LatteIntegrator().integrate(domain, inequalities, polynomial)
-    assert result == pytest.approx(XaddIntegrator().integrate(domain, inequalities, polynomial), 0.001)
+    xadd_result = XaddIntegrator().integrate(domain, inequalities, polynomial)
+    print(result, xadd_result)
+    assert result == pytest.approx(xadd_result, rel=0.001)
 
 
 def test_polynomial_from_smt():
@@ -91,6 +109,7 @@ def test_polynomial_hash():
     hash(polynomial)
 
 
+@pytest.mark.skipif(not solver_available, reason="No SMT solver available")
 def test_implies():
     x, y, z = [Symbol(n, REAL) for n in "xyz"]
 

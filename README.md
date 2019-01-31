@@ -24,7 +24,14 @@ however, you need to install Java and Gurobi manually. Once you did that, just c
 
     pywmi-install xadd
 
-### XSDD engine
+
+### Native XSDD engine
+The native XSDD engine (and the PiecewiseXSDD class for representing piecewise functions) are implemented using the
+[PySDD](https://github.com/wannesm/PySDD) library. The PySDD package can be installed as follows:
+
+    pip install git+https://github.com/wannesm/PySDD.git#egg=PySDD
+
+### External XSDD engine
 WMI using XSDD inference is also supported by pywmi. To use the XSDD engine you need to install
 [HAL-ProbLog](https://bitbucket.org/pedrozudo/hal_problog) by following the instructions provided in the README file.
 
@@ -46,3 +53,15 @@ WMI using XSDD inference is also supported by pywmi. To use the XSDD engine you 
 
 Take care that your code does not run in the same directory as the one you cloned the libraries, as they will pollute
 your namespace.
+
+### Latte
+The Latte integration backend (as well as the predicate abstraction solver) require
+[Latte](https://www.math.ucdavis.edu/~latte/software.php) to be installed. You can find the latest releases on their
+[GitHub releases page](https://github.com/latte-int/latte/releases). You'll probably want the bundle: latte-integrale.
+
+**Summary**
+1. `wget "https://github.com/latte-int/latte/releases/download/version_1_7_5/latte-integrale-1.7.5.tar.gz"`
+2. `tar -xvzf latte-integrale-1.7.5.tar.gz`
+3. `cd latte-integrale-1.7.5`
+4. `./configure`
+5. `make`
