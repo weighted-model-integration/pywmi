@@ -74,7 +74,9 @@ def test_latte_backend():
     polynomial = Polynomial.from_smt((x*2/3 + 13/15) * (y*1/8 + x))
     domain = Domain.make([], ["x", "y"], [(0, 1), (0, 1)])
     result = LatteIntegrator().integrate(domain, inequalities, polynomial)
-    assert result == pytest.approx(XaddIntegrator().integrate(domain, inequalities, polynomial), 0.001)
+    xadd_result = XaddIntegrator().integrate(domain, inequalities, polynomial)
+    print(result, xadd_result)
+    assert result == pytest.approx(xadd_result, rel=0.001)
 
 
 def test_polynomial_from_smt():

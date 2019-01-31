@@ -30,14 +30,15 @@ def get_examples(exclude_boolean=False, exclude_continuous=False):
     return [e() for e, b, c in examples if (not exclude_boolean or not b) and (not exclude_continuous or not c)]
 
 
-def test_density(engine, density, test_unweighted=True, test_weighted=True, test_volume=True, test_queries=True,
-                 test_engine=None):
+def inspect_density(engine_factory, density, test_unweighted=True, test_weighted=True, test_volume=True,
+                    test_queries=True, test_engine=None):
     if test_engine is None:
         try:
             test_engine = XaddEngine(density.domain, density.support, density.weight)
         except InstallError:
             test_engine = RejectionEngine(density.domain, density.support, density.weight, TEST_SAMPLE_COUNT)
 
+    engine = engine_factory(density.domain, density.support, density.weight)
     trivial_weight = Real(1.0)
     if test_volume:
         if test_weighted:

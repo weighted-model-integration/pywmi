@@ -4,7 +4,7 @@ from typing import Tuple, List
 
 from pysmt.fnode import FNode
 
-from .domain import import_density, import_domain
+from .domain import Density
 from pywmi import Domain, nested_to_smt
 from pysmt import shortcuts as smt
 
@@ -53,7 +53,7 @@ def import_smt_synthetic(filename):
     with open(filename) as f:
         flat = json.load(f)
 
-    domain = import_domain(flat["synthetic_problem"]["problem"]["domain"])
+    domain = Domain.from_state(flat["synthetic_problem"]["problem"]["domain"])
     queries = [smt.TRUE()]
     support = nested_to_smt(flat["synthetic_problem"]["problem"]["theory"]) & domain.get_bounds()
     weights = smt.Real(1)
@@ -78,14 +78,13 @@ def import_wmi_generate_100(filename):
     support = smt.read_smtlib(filename + ".support")
     weights = smt.read_smtlib(filename + ".weights")
     variables = queries[0].get_free_variables() | support.get_free_variables() | weights.get_free_variables()
-    domain = Domain.make(real_variables={v.symbol_name(): [-100, 100] for v in variables if v.symbol_type() == smt.REAL},
+    domain = Domain.make(real_bounds=(-100, 100),
                          boolean_variables=[v.symbol_name() for v in variables if v.symbol_type() == smt.BOOL])
     return domain, support, weights, queries
 
 
-def import_wrap(fn):
-    domain, queries, support, weight = import_density(fn)
-    return domain, support, weight, queries
+def import_wrap(filename):
+    return Density.from_file(filename)
 
 
 class Import(object):

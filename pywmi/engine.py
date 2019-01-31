@@ -1,14 +1,10 @@
-import json
 import logging
-import os
-import tempfile
 from typing import List, Tuple, Optional
 
 import numpy as np
 from pysmt.fnode import FNode
-from pysmt.shortcuts import TRUE
 
-from pywmi import Domain, export_domain, smt_to_nested
+from pywmi import Domain
 from .domain import TemporaryDensityFile
 
 logger = logging.getLogger(__name__)
@@ -65,27 +61,3 @@ class Engine(object):
 
     def temp_file(self, queries=None, directory=None):
         return TemporaryDensityFile(self.domain, self.support, self.weight, queries, directory)
-
-    def wmi_to_file(self, queries=None, directory=None):
-        # type: (Optional[List[FNode]], Optional[str]) -> str
-        if queries is None:
-            queries = [TRUE()]
-
-        flat = {
-            "domain": export_domain(self.domain, False),
-            "queries": [smt_to_nested(query) for query in queries],
-            "formula": smt_to_nested(self.support),
-            "weights": smt_to_nested(self.weight)
-        }
-
-        fd, filename = tempfile.mkstemp(suffix=".json", dir=directory)
-
-        try:
-            logger.info("Created tmp file: {}".format(filename))
-            with open(filename, "w") as f:
-                json.dump(flat, f)
-        except Exception:
-            os.remove(filename)
-            raise
-
-        return filename

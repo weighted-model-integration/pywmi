@@ -1,20 +1,21 @@
 from __future__ import print_function
 
-import json
 import logging
 import os
 import tempfile
-from typing import Optional, List, Tuple
+from typing import Optional, List
+from pywmi.export import Exportable
 
 import pysmt.shortcuts as smt
 from pysmt.fnode import FNode
+from pysmt.formula import FormulaManager
 
 from .parse import smt_to_nested, nested_to_smt
 
 logger = logging.getLogger(__name__)
 
 
-class Domain(object):
+class Domain(Exportable):
     def __init__(self, variables, var_types, var_domains):
         self.variables = variables
         self.var_types = var_types
@@ -35,6 +36,14 @@ class Domain(object):
 
     def get_symbols(self, variables: List[str], formula_manager=None) -> List[FNode]:
         return [self.get_symbol(v, formula_manager) for v in variables]
+
+    def get_real_symbols(self, formula_manager=None):
+        # type: (Optional[FormulaManager]) -> List[FNode]
+        return self.get_symbols(self.real_vars, formula_manager)
+
+    def get_bool_symbols(self, formula_manager=None):
+        # type: (Optional[FormulaManager]) -> List[FNode]
+        return self.get_symbols(self.bool_vars, formula_manager)
 
     def get_bounds(self, formula_manager=None):
         fm = smt if formula_manager is None else formula_manager
@@ -60,11 +69,15 @@ class Domain(object):
         return Domain(self.variables, self.var_types, new_var_bounds)
 
     @staticmethod
-    def make(boolean_variables=None, real_variables=None, real_variable_bounds=None):
+    def make(boolean_variables=None, real_variables=None, real_variable_bounds=None, real_bounds=None):
         if boolean_variables is None:
             boolean_variables = []
         else:
             boolean_variables = list(boolean_variables)
+        if real_variable_bounds and real_bounds:
+            raise ValueError("Cannot specify both real_variable_bounds and real_bounds")
+        if real_bounds:
+            real_variable_bounds = {v: real_bounds for v in real_variables}
         if real_variables is None and real_variable_bounds is None:
             real_names = []
             bounds = dict()
@@ -89,37 +102,35 @@ class Domain(object):
             ("{}[{}, {}]".format(v, *self.var_domains[v]) if self.var_types[v] is smt.REAL else v)
             for v in self.variables))
 
+    def get_state(self):
+        def export_type(_t):
+            if _t == smt.BOOL:
+                return "bool"
+            elif _t == smt.REAL:
+                return "real"
+            else:
+                raise RuntimeError("Unknown type {}".format(_t))
 
-def export_domain(domain, to_str=True):
-    def export_type(_t):
-        if _t == smt.BOOL:
-            return "bool"
-        elif _t == smt.REAL:
-            return "real"
-        else:
-            raise RuntimeError("Unknown type {}".format(_t))
+        return {
+            "variables": self.variables,
+            "var_types": {v: export_type(t) for v, t in self.var_types.items()},
+            "var_domains": self.var_domains,
+        }
 
-    flat = {
-        "variables": domain.variables,
-        "var_types": {v: export_type(t) for v, t in domain.var_types.items()},
-        "var_domains": domain.var_domains,
-    }
-    return json.dumps(flat) if to_str else flat
+    @classmethod
+    def from_state(cls, state):
+        def import_type(_t):
+            if _t == "bool":
+                return smt.BOOL
+            elif _t == "real":
+                return smt.REAL
+            else:
+                raise RuntimeError("Unknown type {}".format(_t))
 
-
-def import_domain(flat):
-    def import_type(_t):
-        if _t == "bool":
-            return smt.BOOL
-        elif _t == "real":
-            return smt.REAL
-        else:
-            raise RuntimeError("Unknown type {}".format(_t))
-
-    variables = [str(v) for v in flat["variables"]]
-    var_types = {str(v): import_type(str(t)) for v, t in flat["var_types"].items()}
-    var_domains = {str(v): t for v, t in flat["var_domains"].items()}
-    return Domain(variables, var_types, var_domains)
+        variables = [str(v) for v in state["variables"]]
+        var_types = {str(v): import_type(str(t)) for v, t in state["var_types"].items()}
+        var_domains = {str(v): t for v, t in state["var_domains"].items()}
+        return cls(variables, var_types, var_domains)
 
 
 class TemporaryDensityFile(object):
@@ -139,58 +150,41 @@ class TemporaryDensityFile(object):
 
         # noinspection PyBroadException
         try:
-            export_density(self.tmp_filename, self.domain, self.support, self.weight, self.queries)
-        except Exception as e:
+            Density(self.domain, self.support, self.weight, self.queries).to_file(self.tmp_filename)
+        except Exception:
             os.remove(self.tmp_filename)
+            raise
 
         return self.tmp_filename
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, t, value, traceback):
         if os.path.exists(self.tmp_filename):
             os.remove(self.tmp_filename)
 
 
-class Density(object):
+class Density(Exportable):
     def __init__(self, domain, support, weight, queries=None):
         self.domain = domain
         self.support = support
         self.weight = weight
-        self.queries = queries if queries else [smt.TRUE()]
+        self.queries = queries if queries is not None else [smt.TRUE()]
 
-    def export_to(self, filename):
-        # type: (str) -> None
-        export_density(filename, self.domain, self.support, self.weight, self.queries)
+    def get_temp_file(self, directory=None):
+        return TemporaryDensityFile(self.domain, self.support, self.weight, self.queries, directory)
 
-    @staticmethod
-    def import_from(filename):
-        domain, queries, support, weight = import_density(filename)
-        return Density(domain, support, weight, queries)
+    def get_state(self):
+        return {
+            "domain": self.domain.get_state(),
+            "queries": [smt_to_nested(query) for query in self.queries],
+            "formula": smt_to_nested(self.support),
+            "weights": smt_to_nested(self.weight)
+        }
 
-
-def export_density(filename, domain, support, weight, queries=None):
-    # type: (str, Domain, FNode, FNode, Optional[List[FNode]]) -> None
-    queries = queries if queries else [smt.TRUE()]
-
-    flat = {
-        "domain": export_domain(domain, False),
-        "queries": [smt_to_nested(query) for query in queries],
-        "formula": smt_to_nested(support),
-        "weights": smt_to_nested(weight)
-    }
-
-    with open(filename, "w") as f:
-        json.dump(flat, f)
-
-
-def import_density(filename):
-    # type: (str) -> Tuple[Domain, List[FNode], FNode, FNode]
-
-    with open(filename) as f:
-        flat = json.load(f)
-
-    domain = import_domain(flat["domain"])
-    queries = [nested_to_smt(query) for query in flat["queries"]]
-    support = nested_to_smt(flat["formula"])
-    weight = nested_to_smt(flat["weights"])
-
-    return domain, queries, support, weight
+    @classmethod
+    def from_state(cls, state: dict):
+        return cls(
+            Domain.get_state(state["domain"]),
+            nested_to_smt(state["formula"]),
+            nested_to_smt(state["weights"]),
+            [nested_to_smt(query) for query in state["queries"]],
+        )

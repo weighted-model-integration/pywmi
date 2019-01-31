@@ -13,7 +13,7 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     install_requires=['pysmt', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'problog',
-                      'graphviz', 'sympy', 'scipy'],
+                      'graphviz', 'sympy', 'scipy', 'autodora'],
     extras_require={
         'sdd': ["pysdd"]
     },

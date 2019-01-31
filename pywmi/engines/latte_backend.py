@@ -25,7 +25,7 @@ class TemporaryFile(object):
         logger.info("Created tmp file: {}".format(self.tmp_filename))
         return self.tmp_filename
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, t, value, traceback):
         if os.path.exists(self.tmp_filename):
             os.remove(self.tmp_filename)
 
