@@ -9,7 +9,7 @@ pywmi offers various services and engines that require additional installation s
 pywmi relies upon pysmt to interface with SMT solvers. If you want to benefit from functionality relying on SMT solvers
 please install an SMT solver through the pysmt-install tool that comes as part of your pywmi installation.
 
-    pysmt-install --z3
+    pysmt-install --msat  # example to install mathsat, more solvers are available
     
 Make sure that when you use pywmi, the SMT solvers are on your path. The pysmt-install tool can show you the necessary
 commands.
