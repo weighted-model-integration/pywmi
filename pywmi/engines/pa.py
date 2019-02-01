@@ -4,11 +4,19 @@ import subprocess
 import sys
 from subprocess import TimeoutExpired
 from typing import Optional, List, TYPE_CHECKING
+from pysmt.environment import push_env, get_env, pop_env
 
 from pywmi.engine import Engine
 
 if TYPE_CHECKING:
     from pysmt.fnode import FNode
+
+
+try:
+    from wmipa import Weights, WMI
+except ImportError:
+    Weights, WMI = None, None
+
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +51,23 @@ class PredicateAbstractionEngine(Engine):
         if timeout is None:
             timeout = self.timeout
 
-        return self.call_wmi(timeout=timeout)[0]
+        push_env()
+        translated_support = get_env().formula_manager.normalize(self.support)
+        translated_weight = get_env().formula_manager.normalize(self.weight)
+
+        # noinspection PyCallingNonCallable
+        solver, weights = WMI(), Weights(translated_weight)
+        volume = solver.compute(
+            translated_support.support & weights.labelling,
+            weights,
+            WMI.MODE_PA,
+            domA=set(self.domain.get_bool_symbols(get_env().formula_manager)),
+            domX=set(self.domain.get_real_symbols(get_env().formula_manager))
+        )[0]
+
+        pop_env()
+
+        return volume
 
     def get_samples(self, n):
         raise NotImplementedError()
