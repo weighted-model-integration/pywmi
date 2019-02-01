@@ -48,6 +48,7 @@ class RegionBuilder(SmtWalker):
 
     def walk_or(self, args):
         regions = self.walk_smt_multiple(args)
+        print(regions)
         region = regions[0]
         for i in range(1, len(regions)):
             region = region.union(regions[i])
@@ -155,7 +156,7 @@ def plot_combined(feat_x: Union[str, int],
 
         if formula is not None:
             substitution = {domain.get_symbol(v): smt.Bool(a) for v, a in zip(domain.bool_vars, assignment)}
-            substituted = formula.substitute(substitution)
+            substituted = smt.simplify(formula.substitute(substitution))
             try:
                 region = RegionBuilder(domain).walk_smt(substituted)
                 try:
