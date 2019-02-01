@@ -155,7 +155,7 @@ def plot_combined(feat_x: Union[str, int],
 
         if formula is not None:
             substitution = {domain.get_symbol(v): smt.Bool(a) for v, a in zip(domain.bool_vars, assignment)}
-            substituted = formula.substitute(substitution)
+            substituted = smt.simplify(formula.substitute(substitution))
             try:
                 region = RegionBuilder(domain).walk_smt(substituted)
                 try:
