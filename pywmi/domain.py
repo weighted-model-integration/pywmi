@@ -34,6 +34,9 @@ class Domain(Exportable):
             formula_manager = smt
         return formula_manager.Symbol(variable, self.var_types[variable])
 
+    def sym(self, variable, formula_manager=None):
+        return self.get_symbol(variable, formula_manager)
+
     def get_symbols(self, variables=None, formula_manager=None):
         # type: (Optional[List[str]], Optional[FormulaManager]) -> List[FNode]
         return [self.get_symbol(v, formula_manager) for v in (variables if variables is not None else self.variables)]

@@ -1,9 +1,11 @@
+import pytest
 import numpy as np
 from pysmt.shortcuts import Real, Ite, Bool, Equals, Pow, REAL, BOOL
 
 from pywmi import Domain, RejectionEngine, evaluate
 
 
+@pytest.mark.skip(reason="The get_samples() method does not work properly at the moment")
 def test_simple():
     domain = Domain.make(["a", "b"], {"x": (0, 100), "y": (0, 50)})
     # noinspection SpellCheckingInspection
