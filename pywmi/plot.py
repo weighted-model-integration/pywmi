@@ -48,7 +48,6 @@ class RegionBuilder(SmtWalker):
 
     def walk_or(self, args):
         regions = self.walk_smt_multiple(args)
-        print(regions)
         region = regions[0]
         for i in range(1, len(regions)):
             region = region.union(regions[i])
