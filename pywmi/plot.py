@@ -11,6 +11,7 @@ from pysmt.fnode import FNode
 from pysmt.typing import REAL
 
 from pywmi import Domain, SmtWalker
+from .smt_math import LinearInequality
 
 if platform.system() == "Darwin":
     mpl.use('TkAgg')
@@ -82,23 +83,11 @@ class RegionBuilder(SmtWalker):
         raise RuntimeError("Should not encounter power")
 
     def walk_lte(self, left, right):
-        left, right = self.walk_smt_multiple((left, right))
-        if isinstance(right, str):
-            right = {right: 1.0}
+        inequality = LinearInequality.from_smt(left <= right)
 
-        if isinstance(left, str):
-            left = {left: 1.0}
+        coefficients = np.array([inequality.coefficient(v) for v in self.domain.real_vars])
 
-        if isinstance(right, dict):
-            t = right
-            right = left
-            left = t
-            right = -right
-            left = {v: -val for v, val in left.items()}
-
-        coefficients = np.array([left[v] if v in left else 0.0 for v in self.domain.real_vars])
-
-        inequality = self.get_bounded_region(coefficients, right)
+        inequality = self.get_bounded_region(coefficients, inequality.b())
         return inequality
 
     def walk_lt(self, left, right):

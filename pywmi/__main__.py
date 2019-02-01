@@ -141,7 +141,7 @@ def compare(engines, query=None):
     exact_durations = []
     delta = 10 ** -5
 
-    header = ["Engine", "Time", "R Time", "Volume", "Error", "Std.Dev"]
+    header = ["Engine", "Time", "R Time", "Volume" if not query else "Probability", "Error", "Std.Dev"]
     stats = []
     for i, engine in enumerate(engines):
         print("Running engine {} of {}: {: <70}".format(i + 1, len(engines), str(engine)), end="\r", flush=True)
