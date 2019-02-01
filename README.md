@@ -1,4 +1,4 @@
-# pywmi ![build status](https://travis-ci.org/samuelkolb/pywmi.svg?branch=master)
+# pywmi [![Build Status](https://travis-ci.org/samuelkolb/pywmi.svg?branch=master)](https://travis-ci.org/samuelkolb/pywmi)
 ## Installation
 
     pip install pywmi
