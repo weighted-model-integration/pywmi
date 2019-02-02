@@ -11,7 +11,7 @@ with open(path.join(setup_dir, "README.md")) as ref:
 
 setup(
     name='pywmi',
-    version='0.3.24',
+    version='0.4.0',
     description='Essential tools and interfaces for WMI',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -22,7 +22,7 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     install_requires=['pysmt<0.8', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'problog',
-                      'graphviz', 'sympy', 'scipy', 'autodora>=0.3.3', 'deprecated'],
+                      'graphviz', 'sympy', 'scipy', 'autodora>=0.3.3', 'deprecated', 'networkx'],
     extras_require={
         'sdd': ["pysdd"]
     },

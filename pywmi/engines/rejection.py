@@ -44,7 +44,7 @@ def weighted_sample(weights, values, n):
 
 class RejectionEngine(Engine):
     def __init__(self, domain, support, weight, sample_count, seed=None):
-        Engine.__init__(self, domain, support, weight, exact=False)
+        Engine.__init__(self, domain, support, weight, add_bounds=False, exact=False)
         if seed is not None:
             numpy.random.seed(seed)
         self.seed = seed

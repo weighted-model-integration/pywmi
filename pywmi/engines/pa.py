@@ -17,11 +17,18 @@ from pywmi.smt_print import pretty_print
 if TYPE_CHECKING:
     from pysmt.fnode import FNode
 
-
 try:
     from wmipa import Weights, WMI
 except ImportError:
-    Weights, WMI = None, None
+    lib_filename = os.path.join(os.path.dirname(__file__), "lib", "pa", "wmi-pa-master")
+    if os.path.exists(lib_filename):
+        sys.path.append(lib_filename)
+        try:
+            from wmipa import Weights, WMI
+        except ImportError:
+            raise RuntimeError("Corrupted PA install")
+    else:
+        Weights, WMI = None, None
 
 
 logger = logging.getLogger(__name__)

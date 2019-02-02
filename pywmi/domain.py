@@ -51,8 +51,13 @@ class Domain(Exportable):
 
     def get_bounds(self, formula_manager=None):
         fm = smt if formula_manager is None else formula_manager
-        sym = fm.Symbol
-        bounds = [(sym(v, smt.REAL) >= b[0]) & (sym(v, smt.REAL) <= b[1]) for v, b in self.var_domains.items()]
+        bounds = []
+        for v, (lb, ub) in self.var_domains.items():
+            symbol = self.get_symbol(v, formula_manager)
+            if lb is not None:
+                bounds.append(symbol >= lb)
+            if ub is not None:
+                bounds.append(symbol <= ub)
         return fm.And(*bounds)
 
     def domain_size(self, variable):
