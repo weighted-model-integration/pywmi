@@ -10,7 +10,7 @@ from pywmi.temp import TemporaryFile
 
 logger = logging.getLogger(__name__)
 
-
+# noinspection PyTypeChecker
 T = TypeVar('T', bound='Engine')
 
 
