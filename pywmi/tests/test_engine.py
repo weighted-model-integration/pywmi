@@ -14,7 +14,6 @@ except NoSolverAvailableError:
     solver_available = False
 
 STRICT_TOLERANCE = 0.00001
-APPROX_TOLERANCE = 0.01
 
 
 @pytest.mark.skipif((WMI is None) or (not solver_available), reason="PA or SMT solver is not installed")
@@ -30,6 +29,7 @@ def test_bounds_added():
     assert restricted == pytest.approx(1, STRICT_TOLERANCE)
 
 
+@pytest.mark.skipif(WMI is None, reason="PA is not installed")
 def test_boolean_evidence():
     domain = Domain.make(["a", "b"], ["x", "y"], real_bounds=(0, 1))
     a, b, x, y = domain.get_symbols()
@@ -37,12 +37,12 @@ def test_boolean_evidence():
     weight = Ite(a, Real(0.25), Real(0.75)) * Ite(b, Real(0.5), Real(0.5)) * x
 
     # worlds:
-    engine = RejectionEngine(domain, support, weight, 1000000)
-    should_be = engine.with_constraint(a).compute_volume()
-    computed_volume = engine.with_evidence({a: TRUE()}).compute_volume()
+    pa_engine = PredicateAbstractionEngine(domain, support, weight)
+    should_be = pa_engine.with_constraint(a).compute_volume()
+    computed_volume = pa_engine.with_evidence({a: TRUE()}).compute_volume()
 
-    assert should_be == pytest.approx(computed_volume, rel=APPROX_TOLERANCE)
+    assert should_be == pytest.approx(computed_volume, rel=STRICT_TOLERANCE)
 
-    should_be = engine.with_constraint(a).compute_probability(x <= y / 2)
-    computed_volume = engine.with_evidence({a: TRUE()}).compute_probability(x <= y / 2)
-    assert should_be == pytest.approx(computed_volume, rel=APPROX_TOLERANCE)
+    should_be = pa_engine.with_constraint(a).compute_probability(x <= y / 2)
+    computed_volume = pa_engine.with_evidence({a: TRUE()}).compute_probability(x <= y / 2)
+    assert should_be == pytest.approx(computed_volume, rel=STRICT_TOLERANCE)
