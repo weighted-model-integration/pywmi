@@ -11,7 +11,7 @@ URL = 'http://github.com/samuelkolb/pywmi'
 EMAIL = 'samuel.kolb@me.com'
 AUTHOR = 'Samuel Kolb'
 REQUIRES_PYTHON = '>=3.5.0'
-VERSION = "0.5.1"
+VERSION = "0.5.2"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -24,7 +24,7 @@ EXTRAS = {
         'sdd': ["pysdd"]
 }
 
-# Distribute: python setup.py sdist upload
+# Distribute: python setup.py upload
 
 here = os.path.abspath(os.path.dirname(__file__))
 

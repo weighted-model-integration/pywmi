@@ -317,9 +317,3 @@ def implies(term1, term2):
                 return True
             else:
                 raise
-
-
-class Factorized(Times):
-    def __init__(self, weights):
-        super().__init__(*[Ite(v, w, Real(1.0)) for v, w in weights.items()])
-        self.weights = weights
