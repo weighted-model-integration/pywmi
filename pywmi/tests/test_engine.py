@@ -1,9 +1,20 @@
-from pysmt.shortcuts import TRUE, Real
+import pytest
+
+from pysmt.exceptions import NoSolverAvailableError
+from pysmt.shortcuts import TRUE, Real, Solver
 
 from pywmi import RejectionEngine, Domain, PredicateAbstractionEngine
 from pywmi.smt_math import implies
+from pywmi.engines.pa import WMI
+
+try:
+    with Solver() as solver:
+        solver_available = True
+except NoSolverAvailableError:
+    solver_available = False
 
 
+@pytest.mark.skipif((WMI is None) or (not solver_available), reason="PA or SMT solver is not installed")
 def test_bounds_added():
     domain = Domain.make([], ["x"], [(0, 1)])
     x, = domain.get_symbols()

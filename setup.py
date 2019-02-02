@@ -13,7 +13,7 @@ with open(path.join(setup_dir, "README.md")) as ref:
 
 setup(
     name='pywmi',
-    version='0.4.3',
+    version='0.4.4',
     description='Essential tools and interfaces for WMI',
     long_description=long_description,
     long_description_content_type="text/markdown",
