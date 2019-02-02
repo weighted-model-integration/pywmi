@@ -43,18 +43,18 @@ def weighted_sample(weights, values, n):
 
 
 class RejectionEngine(Engine):
-    def __init__(self, domain, support, weight, sample_count, seed=None):
-        Engine.__init__(self, domain, support, weight, add_bounds=False, exact=False)
+    def __init__(self, domain, support, weight, sample_count, seed=None, add_bounds=False):
+        Engine.__init__(self, domain, support, weight, exact=False)
         if seed is not None:
             numpy.random.seed(seed)
         self.seed = seed
         self.sample_count = sample_count
 
-    def compute_volume(self, sample_count=None):
+    def compute_volume(self, sample_count=None, add_bounds=False):
         sample_count = sample_count if sample_count is not None else self.sample_count
         samples = uniform(self.domain, sample_count)
         labels = evaluate(self.domain, self.support, samples)
-        bound_volume = self.bound_volume() * 2**len(self.domain.bool_vars)
+        bound_volume = self.domain.get_volume()
         approx_volume = bound_volume * sum(labels) / len(labels)
 
         if self.weight is not None:
@@ -67,7 +67,7 @@ class RejectionEngine(Engine):
         else:
             return approx_volume
 
-    def compute_probabilities(self, queries, sample_count=None):
+    def compute_probabilities(self, queries, sample_count=None, add_bounds=False):
         sample_count = sample_count if sample_count is not None else self.sample_count
         samples = uniform(self.domain, sample_count)
         labels = evaluate(self.domain, self.support, samples)
@@ -108,8 +108,8 @@ class RejectionEngine(Engine):
         else:
             return numpy.array(list(pos_samples)[:n]), pos_ratio
 
-    def copy(self, support, weight):
-        return RejectionEngine(self.domain, support, weight, self.sample_count, self.seed)
+    def copy(self, domain, support, weight, add_bounds=False):
+        return RejectionEngine(domain, support, weight, self.sample_count, self.seed, add_bounds=add_bounds)
 
     def __str__(self):
         return "rej" + (":n{}".format(self.sample_count))

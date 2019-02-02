@@ -1,5 +1,4 @@
 import numpy as np
-import pysmt.shortcuts as smt
 
 # noinspection PyUnresolvedReferences
 from .domain import Domain, Density

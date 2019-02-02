@@ -46,8 +46,8 @@ def inspect_density(engine_factory, density, test_unweighted=True, test_weighted
             actual_volume = test_engine.compute_volume()
             assert computed_volume == pytest.approx(actual_volume, rel=TEST_RELATIVE_TOLERANCE)
         if test_unweighted:
-            computed_volume = engine.copy(density.support, trivial_weight).compute_volume()
-            actual_volume = test_engine.copy(density.support, trivial_weight).compute_volume()
+            computed_volume = engine.copy(density.domain, density.support, trivial_weight).compute_volume()
+            actual_volume = test_engine.copy(density.domain, density.support, trivial_weight).compute_volume()
             assert computed_volume == pytest.approx(actual_volume, rel=TEST_RELATIVE_TOLERANCE)
     if test_queries:
         for query in density.queries:
@@ -56,8 +56,8 @@ def inspect_density(engine_factory, density, test_unweighted=True, test_weighted
                 actual = test_engine.compute_probability(query)
                 assert computed == pytest.approx(actual, rel=TEST_RELATIVE_TOLERANCE)
             if test_unweighted:
-                computed = engine.copy(density.support, trivial_weight).compute_probability(query)
-                actual = test_engine.copy(density.support, trivial_weight).compute_probability(query)
+                computed = engine.copy(density.domain, density.support, trivial_weight).compute_probability(query)
+                actual = test_engine.copy(density.domain, density.support, trivial_weight).compute_probability(query)
                 assert computed == pytest.approx(actual, rel=TEST_RELATIVE_TOLERANCE)
 
 
@@ -103,8 +103,11 @@ def inspect_infinite_without_domain_bounds(engine_factory, should_be_infinite):
     support = (x >= 0.5)
     weight = Real(1.0)
     engine = engine_factory(domain, support, weight)
+    volume = engine.compute_volume(add_bounds=True)
+    assert volume == pytest.approx(0.5, rel=TEST_RELATIVE_TOLERANCE)
+
     try:
-        volume = engine.compute_volume()
+        volume = engine.compute_volume(add_bounds=False)
         if should_be_infinite:
             assert (volume is None) or (volume == float("inf"))
         else:

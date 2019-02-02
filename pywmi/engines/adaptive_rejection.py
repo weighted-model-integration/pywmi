@@ -308,8 +308,8 @@ class AdaptiveRejection(Engine):
     def get_samples(self, n):
         raise NotImplementedError()
 
-    def copy(self, support, weight):
-        return AdaptiveRejection(self.domain, support, weight, self.sample_count, self.sample_count_build,
+    def copy(self, domain, support, weight):
+        return AdaptiveRejection(domain, support, weight, self.sample_count, self.sample_count_build,
                                  self.stop_criterion, self.split_criterion)
 
     def __str__(self):

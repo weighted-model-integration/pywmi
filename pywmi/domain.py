@@ -1,8 +1,6 @@
 from __future__ import print_function
 
 import logging
-import os
-import tempfile
 from typing import Optional, List
 from pywmi.export import Exportable
 
@@ -77,6 +75,23 @@ class Domain(Exportable):
             new_var_bounds = {v: new_var_bounds for v in self.real_vars}
         return Domain(self.variables, self.var_types, new_var_bounds)
 
+    def get_bounding_box_volume(self):
+        # type: () -> float
+
+        if len(self.real_vars) == 0:
+            return 0
+
+        volume = 1
+        for lb, ub in self.var_domains.values():
+            if lb is None or ub is None:
+                return float("inf")
+            volume *= ub - lb
+        return volume
+
+    def get_volume(self):
+        # type: () -> float
+        return self.get_bounding_box_volume() * 2**len(self.bool_vars)
+
     @staticmethod
     def make(boolean_variables=None, real_variables=None, real_variable_bounds=None, real_bounds=None):
         if boolean_variables is None:
@@ -86,7 +101,7 @@ class Domain(Exportable):
         if real_variable_bounds and real_bounds:
             raise ValueError("Cannot specify both real_variable_bounds and real_bounds")
         if real_bounds:
-            real_variable_bounds = {v: real_bounds for v in real_variables}
+            real_variable_bounds = [real_bounds for _ in real_variables]
         if real_variables is None and real_variable_bounds is None:
             real_names = []
             bounds = dict()
@@ -142,44 +157,12 @@ class Domain(Exportable):
         return cls(variables, var_types, var_domains)
 
 
-class TemporaryDensityFile(object):
-    def __init__(self, domain, support, weight, queries=None, directory=None):
-        self.domain = domain
-        self.support = support
-        self.weight = weight
-        self.queries = queries
-        self.directory = directory
-        self.tmp_filename = None
-
-    def __enter__(self):
-        prefix = "{}_{}_".format(len(self.domain.real_vars), len(self.domain.bool_vars))
-        tmp_file = tempfile.mkstemp(prefix=prefix, suffix=".json", dir=self.directory)
-        self.tmp_filename = tmp_file[1]
-        logger.info("Created tmp file: {}".format(self.tmp_filename))
-
-        # noinspection PyBroadException
-        try:
-            Density(self.domain, self.support, self.weight, self.queries).to_file(self.tmp_filename)
-        except Exception:
-            os.remove(self.tmp_filename)
-            raise
-
-        return self.tmp_filename
-
-    def __exit__(self, t, value, traceback):
-        if os.path.exists(self.tmp_filename):
-            os.remove(self.tmp_filename)
-
-
 class Density(Exportable):
     def __init__(self, domain, support, weight, queries=None):
         self.domain = domain
         self.support = support
         self.weight = weight
         self.queries = queries if queries is not None else [smt.TRUE()]
-
-    def get_temp_file(self, directory=None):
-        return TemporaryDensityFile(self.domain, self.support, self.weight, self.queries, directory)
 
     def get_state(self):
         return {

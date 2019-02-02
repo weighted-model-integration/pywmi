@@ -8,10 +8,11 @@ from typing import Optional, List
 from pysmt.fnode import FNode
 from pysmt.shortcuts import Real, TRUE
 
+from pywmi import Density
 from pywmi.errors import InstallError
 from pywmi.smt_math import LinearInequality, Polynomial
+from pywmi.temp import TemporaryFile
 from .integration_backend import IntegrationBackend
-from pywmi.domain import TemporaryDensityFile
 from pywmi.engine import Engine
 import pysmt.shortcuts as smt
 
@@ -54,7 +55,9 @@ class XaddEngine(Engine):
                 raise
         return None
 
-    def compute_volume(self, timeout=None):
+    def compute_volume(self, timeout=None, add_bounds=True):
+        if add_bounds:
+            return self.with_constraint(self.domain.get_bounds()).compute_volume(timeout, False)
         if timeout is None:
             timeout = self.timeout
         result = self.call_wmi(timeout=timeout)
@@ -63,8 +66,8 @@ class XaddEngine(Engine):
         else:
             return result[0]
 
-    def copy(self, support, weight):
-        return XaddEngine(self.domain, support, weight, self.mode, self.timeout)
+    def copy(self, domain, support, weight, add_bounds=True):
+        return XaddEngine(domain, support, weight, self.mode, self.timeout)
 
     def get_samples(self, n):
         raise NotImplementedError()
@@ -76,8 +79,11 @@ class XaddEngine(Engine):
             raise RuntimeError("The XADD engine requires the XADD library JAR file which is currently not installed.")
 
         with self.temp_file() as f:
-            with TemporaryDensityFile(self.domain, new_support, Real(1.0)) as f2:
-                with TemporaryDensityFile(self.domain, TRUE(), Real(1.0)) as f3:
+            with TemporaryFile() as f2:
+                Density(self.domain, new_support, Real(1.0)).to_file(f2)
+                with TemporaryFile() as f3:
+                    Density(self.domain, TRUE(), Real(1.0)).to_file(f3)
+
                     try:
                         cmd_args = ["java", "-jar", XaddEngine.path, "normalize", f, f2, "-p" if paths else "-t", f3]
                         logger.info("> {}".format(" ".join(cmd_args)))

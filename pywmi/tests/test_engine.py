@@ -1,7 +1,7 @@
 import pytest
 
 from pysmt.exceptions import NoSolverAvailableError
-from pysmt.shortcuts import TRUE, Real, Solver
+from pysmt.shortcuts import TRUE, Real, Solver, Ite
 
 from pywmi import RejectionEngine, Domain, PredicateAbstractionEngine
 from pywmi.smt_math import implies
@@ -13,19 +13,35 @@ try:
 except NoSolverAvailableError:
     solver_available = False
 
+STRICT_TOLERANCE = 0.00001
+
 
 @pytest.mark.skipif((WMI is None) or (not solver_available), reason="PA or SMT solver is not installed")
 def test_bounds_added():
     domain = Domain.make([], ["x"], [(0, 1)])
     x, = domain.get_symbols()
-    support = TRUE()
+    support = (x >= -1) & (x <= 2)
     weight = Real(1.0)
-    rej_engine = RejectionEngine(domain, support, weight, 1)
-    assert not implies(rej_engine.support, ~((x < 0) | (x > 1)))
-
     pa_engine = PredicateAbstractionEngine(domain, support, weight)
-    assert implies(pa_engine.support, ~(x < 0) & ~(x > 1))
+    unrestricted = pa_engine.compute_volume(add_bounds=False)
+    assert unrestricted == pytest.approx(3, STRICT_TOLERANCE)
+    restricted = pa_engine.compute_volume(add_bounds=True)
+    assert restricted == pytest.approx(1, STRICT_TOLERANCE)
 
-    domain2 = domain.change_bounds({"x": (None, None)})
-    pa_engine2 = PredicateAbstractionEngine(domain2, support, weight)
-    assert not implies(pa_engine2.support, ~(x < 0) & ~(x > 1))
+
+def test_boolean_evidence():
+    domain = Domain.make(["a", "b"], ["x", "y"], real_bounds=(0, 1))
+    a, b, x, y = domain.get_symbols()
+    support = ((a & b) | (~a & ~b)) & (x <= y)
+    weight = Ite(a, Real(0.25), Real(0.75)) * Ite(b, Real(0.5), Real(0.5)) * x
+
+    # worlds:
+    pa_engine = PredicateAbstractionEngine(domain, support, weight)
+    should_be = pa_engine.with_constraint(a).compute_volume()
+    computed_volume = pa_engine.with_evidence({a: TRUE()}).compute_volume()
+
+    assert should_be == pytest.approx(computed_volume, rel=STRICT_TOLERANCE)
+
+    should_be = pa_engine.with_constraint(a).compute_probability(x <= y / 2)
+    computed_volume = pa_engine.with_evidence({a: TRUE()}).compute_probability(x <= y / 2)
+    assert should_be == pytest.approx(computed_volume, rel=STRICT_TOLERANCE)

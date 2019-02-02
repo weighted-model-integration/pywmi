@@ -7,25 +7,22 @@ from pywmi.engines.pa import WMI
 REL_ERROR = 0.000001
 
 
-def make_pa_factory(add_bounds=True):
-    def pa_factory(d, s, w):
-        return PredicateAbstractionEngine(d, s, w, add_bounds=add_bounds)
-    return pa_factory
+def pa_factory(d, s, w):
+    return PredicateAbstractionEngine(d, s, w)
 
 
 @pytest.mark.skipif(WMI is None, reason="PA solver is not installed")
 def test_manual():
-    inspect_manual(make_pa_factory(), REL_ERROR)
+    inspect_manual(pa_factory, REL_ERROR)
 
 
 @pytest.mark.skipif(WMI is None, reason="PA solver is not installed")
 def test_pa():
     for e in get_examples():
-        inspect_density(make_pa_factory(), e)
+        inspect_density(pa_factory, e)
 
 
 @pytest.mark.skipif(WMI is None, reason="PA solver is not installed")
 def test_infinity():
-    inspect_infinite_without_domain_bounds(make_pa_factory(), False)
     pytest.skip("Infinite bounds are not yet correctly supported")
-    inspect_infinite_without_domain_bounds(make_pa_factory(False), True)
+    inspect_infinite_without_domain_bounds(pa_factory, True)

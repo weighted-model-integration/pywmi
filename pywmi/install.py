@@ -1,26 +1,10 @@
 import argparse
 import os
 import shutil
-import tempfile
 import urllib.request
 import zipfile
 
-
-class TemporaryFile(object):
-    def __init__(self, prefix=None, suffix=None, directory=None):
-        self.prefix = prefix
-        self.suffix = suffix
-        self.directory = directory
-        self.filename = None
-
-    def __enter__(self):
-        tmp_file = tempfile.mkstemp(prefix=self.prefix, suffix=self.suffix, dir=self.directory)
-        self.tmp_filename = tmp_file[1]
-        return self.tmp_filename
-
-    def __exit__(self, t, value, traceback):
-        if os.path.exists(self.tmp_filename):
-            os.remove(self.tmp_filename)
+from temp import TemporaryFile
 
 
 def install_xadd(upgrade=False, remove=False):
