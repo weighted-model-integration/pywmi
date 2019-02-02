@@ -3,7 +3,7 @@ from fractions import Fraction
 from typing import Dict, Tuple, Union
 
 from pysmt.exceptions import InternalSolverError
-from pysmt.shortcuts import Plus, Symbol, Real, Times, Solver
+from pysmt.shortcuts import Plus, Symbol, Real, Times, Solver, Ite
 from pysmt.typing import REAL, BOOL
 
 from pywmi.engines.algebraic_backend import AlgebraBackend
@@ -317,3 +317,9 @@ def implies(term1, term2):
                 return True
             else:
                 raise
+
+
+class Factorized(Times):
+    def __init__(self, weights):
+        super().__init__(*[Ite(v, w, Real(1.0)) for v, w in weights.items()])
+        self.weights = weights
