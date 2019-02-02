@@ -4,6 +4,8 @@ from os import path
 # Distribute: python setup.py sdist upload
 # python setup.py sdist bdist_wheel
 # twine upload dist/*
+# rm -rf dist/
+# rm -rf build/
 
 setup_dir = path.abspath(path.dirname(__file__))
 with open(path.join(setup_dir, "README.md")) as ref:
@@ -11,7 +13,7 @@ with open(path.join(setup_dir, "README.md")) as ref:
 
 setup(
     name='pywmi',
-    version='0.4.2',
+    version='0.4.3',
     description='Essential tools and interfaces for WMI',
     long_description=long_description,
     long_description_content_type="text/markdown",

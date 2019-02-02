@@ -13,18 +13,18 @@ def make_pa_factory(add_bounds=True):
     return pa_factory
 
 
-@pytest.mark.skipif(WMI is None, "PA solver is not installed")
+@pytest.mark.skipif(WMI is None, reason="PA solver is not installed")
 def test_manual():
     inspect_manual(make_pa_factory(), REL_ERROR)
 
 
-@pytest.mark.skipif(WMI is None, "PA solver is not installed")
+@pytest.mark.skipif(WMI is None, reason="PA solver is not installed")
 def test_pa():
     for e in get_examples():
         inspect_density(make_pa_factory(), e)
 
 
-@pytest.mark.skipif(WMI is None, "PA solver is not installed")
+@pytest.mark.skipif(WMI is None, reason="PA solver is not installed")
 def test_infinity():
     inspect_infinite_without_domain_bounds(make_pa_factory(), False)
     pytest.skip("Infinite bounds are not yet correctly supported")
