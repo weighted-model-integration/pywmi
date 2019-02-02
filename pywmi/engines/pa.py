@@ -28,46 +28,29 @@ logger = logging.getLogger(__name__)
 
 
 class PredicateAbstractionEngine(Engine):
-    def __init__(self, domain, support, weight, directory=None, timeout=None):
-        super().__init__(domain, support, weight)
+    def __init__(self, domain, support, weight, add_bounds=True, directory=None, timeout=None):
+        super().__init__(domain, support, weight, add_bounds=add_bounds)
         if WMI is None:
             raise InstallError("The wmipa library is not in your PYTHONPATH")
         self.timeout = timeout
         self.directory = directory
 
-    def call_wmi(self, queries=None, timeout=None):
-        # type: (Optional[List[FNode]], Optional[int]) -> List[Optional[float]]
-        wmi_python = "/Users/samuelkolb/Documents/PhD/wmi-pa/env/bin/python"
-        wmi_client = "/Users/samuelkolb/Documents/PhD/wmi-pa/experiments/client/run.py"
-
-        with self.temp_file(queries) as filename:
-            try:
-                args = [wmi_python, wmi_client, "-f", filename, "-v"]
-                logger.info("> {}".format(" ".join(args)))
-                output = subprocess.check_output(args, timeout=timeout).decode(sys.stdout.encoding)
-                return [float(line.split(": ")[1]) for line in str(output).split("\n")[:-1]]
-            except TimeoutExpired:
-                return [None for _ in range(1 if queries is None else len(queries))]
-            except ValueError:
-                output = str(subprocess.check_output(["cat", filename]))
-                logger.warning("File content:\n{}".format(output))
-                raise
-
     def compute_volume(self, timeout=None):
-        print(self.call_wmi())
-
         timeout = timeout or self.timeout
-        with self.temp_file() as filename:
-            print(pretty_print(self.support))
-            print(pretty_print(self.weight))
-            out, err = run_command("python {} {}".format(__file__, filename), timeout=timeout)
-            print("\nOUT ---")
-            print(out)
-            print("---")
-        try:
-            return float(out.split("\n")[-1])
-        except TypeError:
-            raise RuntimeError("Could not convert:{}\nError output:\n{}".format(out, err))
+        if timeout:
+            with self.temp_file() as filename:
+                print(pretty_print(self.support))
+                print(pretty_print(self.weight))
+                out, err = run_command("python {} {}".format(__file__, filename), timeout=timeout)
+                print("\nOUT ---")
+                print(out)
+                print("---")
+            try:
+                return float(out.split("\n")[-1])
+            except TypeError:
+                raise RuntimeError("Could not convert:{}\nError output:\n{}".format(out, err))
+        else:
+            return PredicateAbstractionEngine.compute_volume_pa(self.domain, self.support, self.weight)
 
     def get_samples(self, n):
         raise NotImplementedError()
@@ -77,6 +60,18 @@ class PredicateAbstractionEngine(Engine):
 
     def __str__(self):
         return "pa" + ("" if self.timeout is None else ":t{}".format(self.timeout))
+
+    @staticmethod
+    def compute_volume_pa(domain, support, weight):
+        # noinspection PyCallingNonCallable
+        solver, weights = WMI(), Weights(weight)
+        return solver.compute(
+            support & weights.labelling,
+            weights,
+            WMI.MODE_PA,
+            domA=set(domain.get_bool_symbols()),
+            domX=set(domain.get_real_symbols())
+        )[0]
 
 
 if __name__ == "__main__":
@@ -88,24 +83,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     density = Density.from_file(args.filename)
-    print(density.domain, pretty_print(density.support), pretty_print(density.weight))
-
-    # noinspection PyCallingNonCallable
-    solver, weights = WMI(), Weights(density.weight)
-    volume = solver.compute(
-        density.support & weights.labelling,
-        weights,
-        WMI.MODE_PA,
-        domA=set(density.domain.get_bool_symbols()),
-        domX=set(density.domain.get_real_symbols())
-    )[0]
-    print(volume)
-
-    weights_d = Weights(density.weight)
-    support_d = density.support & weights_d.labelling
-    wmisolver = WMI()
-    print(wmisolver.compute(support_d, weights_d, WMI.MODE_PA)[0])
-
-    # print()
-    # print(density.domain, pretty_print(density.support), pretty_print(density.weight), end="")
-
+    print(PredicateAbstractionEngine.compute_volume_pa(density.domain, density.support, density.weight))

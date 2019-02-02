@@ -1,7 +1,7 @@
 import pytest
 from pysmt.shortcuts import Ite, Real
 
-from pywmi.errors import InstallError
+from pywmi.errors import InstallError, InfiniteVolumeError
 from pywmi import Domain, RejectionEngine, XaddEngine, Density
 
 TEST_SAMPLE_COUNT = 1000000
@@ -64,7 +64,7 @@ def inspect_density(engine_factory, density, test_unweighted=True, test_weighted
 def inspect_manual(engine_factory, rel_error):
     domain = Domain.make(["a"], ["x"], [(0, 1)])
     a, x, = domain.get_symbols()
-    support = (a & (x <= 0.5)) | (x >= 0.2)
+    support = (a & (x <= 0.5)) | (x >= 0.2) & domain.get_bounds()
     weight = Ite(a, Real(0.3), Real(0.7)) * x
     # worlds:    a, x <= 0.5, x >= 0.2  integrate 0.3 * x, 0.2 <= x <= 0.5 = 0.0315
     #            a, x <= 0.5, x <= 0.2  integrate 0.3 * x, 0.0 <= x <= 0.2 = 0.006
@@ -95,3 +95,22 @@ def inspect_manual(engine_factory, rel_error):
     real_result = 0.0075 + 0.006 + 0.0175
 
     assert engine.compute_probability(real_query) == pytest.approx(real_result / volume, rel=rel_error)
+
+
+def inspect_infinite_without_domain_bounds(engine_factory, should_be_infinite):
+    domain = Domain.make([], ["x"], [(0, 1)])
+    x, = domain.get_symbols()
+    support = (x >= 0.5)
+    weight = Real(1.0)
+    engine = engine_factory(domain, support, weight)
+    try:
+        volume = engine.compute_volume()
+        if should_be_infinite:
+            assert (volume is None) or (volume == float("inf"))
+        else:
+            assert volume == pytest.approx(0.5, rel=TEST_RELATIVE_TOLERANCE)
+    except InfiniteVolumeError:
+        assert should_be_infinite
+
+
+

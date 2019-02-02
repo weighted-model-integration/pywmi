@@ -11,10 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 class Engine(object):
-    def __init__(self, domain, support, weight, exact=True):
-        self.domain = domain  # type: Domain
-        self.support = support  # type: FNode
-        self.weight = weight  # type: FNode
+    def __init__(self, domain, support, weight, add_bounds=True, exact=True):
+        # type: (Domain, FNode, FNode, bool, bool) -> None
+        self.domain = domain
+        self.support = (domain.get_bounds() & support) if add_bounds else support
+        self.weight = weight
         self.exact = exact
 
     def compute_volume(self):
