@@ -1,11 +1,20 @@
 from setuptools import setup, find_packages
+from os import path
 
 # Distribute: python setup.py sdist upload
+# python setup.py sdist bdist_wheel
+# twine upload dist/*
+
+setup_dir = path.abspath(path.dirname(__file__))
+with open(path.join(setup_dir, "README.md")) as ref:
+    long_description = ref.read()
 
 setup(
     name='pywmi',
-    version='0.3.21',
+    version='0.3.24',
     description='Essential tools and interfaces for WMI',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     url='http://github.com/samuelkolb/pywmi',
     author='Samuel Kolb',
     author_email='samuel.kolb@me.com',
