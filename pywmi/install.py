@@ -62,7 +62,7 @@ def main():
     args = parser.parse_args()
     if args.solver == "xadd":
         install_xadd(args.force, args.remove)
-    if args.solver == "pa":
+    elif args.solver == "pa":
         install_pa(args.force, args.remove)
     else:
         print("Unknown solver {}".format(args.solver))
