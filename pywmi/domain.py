@@ -1,7 +1,8 @@
 from __future__ import print_function
 
 import logging
-from typing import Optional, List
+import numpy as np
+from typing import Optional, List, Tuple
 from pywmi.export import Exportable
 
 import pysmt.shortcuts as smt
@@ -155,6 +156,21 @@ class Domain(Exportable):
         var_types = {str(v): import_type(str(t)) for v, t in state["var_types"].items()}
         var_domains = {str(v): t for v, t in state["var_domains"].items()}
         return cls(variables, var_types, var_domains)
+
+    def project(self, variables_to_keep, data):
+        # type: (List[str], np.ndarray) -> Tuple[Domain, np.ndarray]
+        var_types = {v: self.var_types[v] for v in variables_to_keep}
+        var_domains = {v: self.var_domains[v] for v in variables_to_keep if self.is_real(v)}
+        new_domain = Domain(variables_to_keep, var_types, var_domains)
+        variable_indices = [self.variables.index(v) for v in variables_to_keep]
+        new_data = data[:, variable_indices]
+        return new_domain, new_data
+
+    def project_real(self, data):
+        return self.project(self.real_vars, data)
+
+    def project_bool(self, data):
+        return self.project(self.bool_vars, data)
 
 
 class Density(Exportable):
