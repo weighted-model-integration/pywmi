@@ -11,8 +11,8 @@ please install an SMT solver through the pysmt-install tool that comes as part o
 
     pysmt-install --msat  # example to install mathsat, more solvers are available
     
-Make sure that when you use pywmi, the SMT solvers are on your path. The pysmt-install tool can show you the necessary
-commands.
+For older versions of PySMT (older than version 0.8), you have to make sure that when you use pywmi, the SMT solvers are on your path.
+The pysmt-install tool can show you the necessary commands.
 
     pysmt-install --env
 
