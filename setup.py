@@ -11,12 +11,12 @@ URL = 'http://github.com/samuelkolb/pywmi'
 EMAIL = 'samuel.kolb@me.com'
 AUTHOR = 'Samuel Kolb'
 REQUIRES_PYTHON = '>=3.5.0'
-VERSION = "0.5.2"
+VERSION = "0.5.3"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
     'pysmt<0.8', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'graphviz', 'sympy',
-    'scipy', 'autodora>=0.3.3', 'deprecated', 'networkx'
+    'scipy>=1.2', 'autodora>=0.3.3', 'deprecated', 'networkx'
 ]
 
 # What packages are optional?
