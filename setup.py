@@ -15,7 +15,7 @@ VERSION = "0.5.6"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'pysmt<0.8', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'graphviz', 'sympy',
+    'pysmt', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'graphviz', 'sympy',
     'scipy>=1.2', 'autodora>=0.3.3', 'deprecated', 'networkx'
 ]
 
