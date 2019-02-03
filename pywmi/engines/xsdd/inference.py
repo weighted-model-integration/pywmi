@@ -147,20 +147,20 @@ class NativeXsddEngine(Engine):
 
             support = support_sdd & world_support
             if pint:
-                node_var_dependencies, node_var_dependencies_cache = amc(ContinuousProvenanceSemiring(abstractions, var_to_lit), support, return_cache=True)
-                int_tags = amc(IntTagSemiring(abstractions, var_to_lit), support)
+                pass
+                # node_var_dependencies, node_var_dependencies_cache = amc(ContinuousProvenanceSemiring(abstractions, var_to_lit), support, return_cache=True)
+                # int_tags = amc(IntTagSemiring(abstractions, var_to_lit), support)
+                # TODO partial integration
             else:
-                int_tags = {}
+                convex_supports = amc(WMISemiring(abstractions, var_to_lit), support)
+                for convex_support, variables in convex_supports:
+                    missing_variable_count = len(self.domain.bool_vars) - len(variables)
+                    vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
+                    volume += vol
 
-            convex_supports = amc(WMISemiring(abstractions, var_to_lit, int_tags), support)
-            for convex_support, variables in convex_supports:
-                missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
-                volume += vol
         return volume
 
-
-    def copy(self, support, weight):
+    def copy(self, domain, support, weight):
         return NativeXsddEngine(self.domain, support, weight, self.manager)
 
     def __str__(self):
