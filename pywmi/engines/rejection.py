@@ -4,6 +4,7 @@ from typing import List
 import numpy
 import pysmt.shortcuts as smt
 import scipy.optimize
+from deprecated import deprecated
 
 from pywmi import evaluate, Domain
 from pywmi.engine import Engine
@@ -42,33 +43,52 @@ def weighted_sample(weights, values, n):
 
 
 class RejectionEngine(Engine):
-    def __init__(self, domain, support, weight, sample_count, seed=None):
+    def __init__(self, domain, support, weight, sample_count, seed=None, add_bounds=False):
         Engine.__init__(self, domain, support, weight, exact=False)
         if seed is not None:
             numpy.random.seed(seed)
         self.seed = seed
         self.sample_count = sample_count
 
-    def compute_volume(self, sample_count=None):
+    def compute_volume(self, sample_count=None, add_bounds=False):
         sample_count = sample_count if sample_count is not None else self.sample_count
-        bounds = self.bound_tuples()
-        samples = sample(len(self.domain.bool_vars), bounds, sample_count)
+        samples = uniform(self.domain, sample_count)
         labels = evaluate(self.domain, self.support, samples)
-        pos_samples = samples[labels]
-        bound_volume = self.bound_volume(bounds) * 2**len(self.domain.bool_vars)
+        bound_volume = self.domain.get_volume()
         approx_volume = bound_volume * sum(labels) / len(labels)
 
         if self.weight is not None:
+            pos_samples = samples[labels]
             sample_weights = evaluate(self.domain, self.weight, pos_samples)
             try:
-                rejection_volume = sum(sample_weights) / len(pos_samples) * approx_volume
+                return sum(sample_weights) / pos_samples.shape[0] * approx_volume
             except ZeroDivisionError:
-                rejection_volume = 0.0
+                return 0.0
         else:
-            rejection_volume = approx_volume
+            return approx_volume
 
-        return rejection_volume
+    def compute_probabilities(self, queries, sample_count=None, add_bounds=False):
+        sample_count = sample_count if sample_count is not None else self.sample_count
+        samples = uniform(self.domain, sample_count)
+        labels = evaluate(self.domain, self.support, samples)
+        positive_samples = samples[labels]
 
+        results = []
+        if self.weight is not None:
+            sample_weights = evaluate(self.domain, self.weight, positive_samples)
+            total = sum(sample_weights)
+            for query in queries:
+                query_labels = numpy.logical_and(evaluate(self.domain, query, positive_samples), labels[labels])
+                results.append(sum(sample_weights[query_labels]) / total)
+        else:
+            total = positive_samples.shape[0]
+            for query in queries:
+                query_labels = numpy.logical_and(evaluate(self.domain, query, positive_samples), labels[labels])
+                results.append(sum(query_labels) / total)
+
+        return results
+
+    @deprecated(reason="The samples are returned in a different format than the rest of the code")
     def get_samples(self, n, extra_sample_ratio=None, weighted=True):
         sample_count = n * extra_sample_ratio if extra_sample_ratio is not None else self.sample_count
         bounds = self.bound_tuples()
@@ -88,8 +108,8 @@ class RejectionEngine(Engine):
         else:
             return numpy.array(list(pos_samples)[:n]), pos_ratio
 
-    def copy(self, support, weight):
-        return RejectionEngine(self.domain, support, weight, self.sample_count, self.seed)
+    def copy(self, domain, support, weight, add_bounds=False):
+        return RejectionEngine(domain, support, weight, self.sample_count, self.seed, add_bounds=add_bounds)
 
     def __str__(self):
         return "rej" + (":n{}".format(self.sample_count))

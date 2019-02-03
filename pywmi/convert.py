@@ -1,8 +1,5 @@
 import json
 import os
-from typing import Tuple, List
-
-from pysmt.fnode import FNode
 
 from .domain import Density
 from pywmi import Domain, nested_to_smt

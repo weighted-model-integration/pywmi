@@ -1,63 +1,70 @@
 import logging
-from typing import List, Tuple, Optional
+from typing import List, TypeVar, Dict
 
-import numpy as np
 from pysmt.fnode import FNode
+from pysmt.shortcuts import simplify
+from pysmt.typing import BOOL
 
-from pywmi import Domain
-from .domain import TemporaryDensityFile
+from pywmi import Domain, Density
+from pywmi.temp import TemporaryFile
 
 logger = logging.getLogger(__name__)
 
+# noinspection PyTypeChecker
+T = TypeVar('T', bound='Engine')
 
-class Engine(object):
-    def __init__(self, domain, support, weight, exact=True):
-        self.domain = domain  # type: Domain
-        self.support = support  # type: FNode
-        self.weight = weight  # type: FNode
+
+class Engine:
+    def __init__(self, domain=None, support=None, weight=None, exact=True):
+        # type: (Domain, FNode, FNode, bool) -> None
         self.exact = exact
+        self.domain = domain
+        self.support = support
+        self.weight = weight
 
-    def compute_volume(self):
-        # type: () -> float
+    def compute_volume(self, add_bounds=True):
+        # type: (bool) -> float
         raise NotImplementedError()
 
-    def compute_probabilities(self, queries):
-        # type: (List[FNode]) -> List[float]
-        volume = self.compute_volume()
-        return [self.copy(self.support & query, self.weight).compute_volume() / float(volume) for query in queries]
+    def compute_probabilities(self, queries, add_bounds=True):
+        # type: (List[FNode], bool) -> List[float]
+        volume = self.compute_volume(add_bounds=add_bounds)
+        return [self.with_constraint(query).compute_volume(add_bounds=add_bounds) / volume
+                for query in queries]
 
-    def compute_probability(self, query):
-        # type: (FNode) -> float
-        return self.compute_probabilities([query])[0]
+    def compute_probability(self, query, add_bounds=True):
+        # type: (FNode, bool) -> float
+        return self.compute_probabilities([query], add_bounds=add_bounds)[0]
 
-    def get_samples(self, n):
-        # type: (int) -> np.ndarray
+    def with_evidence(self, substitutions):
+        # type: (T, Dict[FNode, FNode]) -> T
+        variables_to_remove = set()
+        for k, v in substitutions.items():
+            assert k.is_symbol()
+            assert k.symbol_type() == BOOL
+            assert v.is_constant()
+            variables_to_remove.add(k.symbol_name())
+        variables = [v for v in self.domain.variables if v not in variables_to_remove]
+        domain = Domain(variables, {v: self.domain.var_types[v] for v in variables}, self.domain.var_domains)
+        support = self.support.substitute(substitutions)
+        weight = simplify(self.weight.substitute(substitutions))
+        return self.copy(domain, support, weight)
+
+    def with_constraint(self, constraint):
+        # type: (T, FNode) -> T
+        return self.copy_with(support=self.support & constraint)
+
+    def copy_with(self, domain=None, support=None, weight=None):
+        # type: (T, Domain, FNode, FNode) -> T
+        domain = domain or self.domain
+        support = support or self.support
+        weight = weight or self.weight
+        return self.copy(self.domain, support, self.weight)
+
+    def copy(self, domain, support, weight):
+        # type: (T, Domain, FNode, FNode) -> T
         raise NotImplementedError()
-
-    def copy(self, support, weight):
-        # type: (FNode, FNode) -> Engine
-        raise NotImplementedError()
-
-    def bound_tuples(self):
-        # type: () -> Tuple[Tuple[Tuple[float, bool], Tuple[float, bool]], ...]
-        return tuple(
-            ((self.domain.var_domains[var][0], True), (self.domain.var_domains[var][1], True))
-            for var in self.domain.real_vars
-        )
-
-    def bound_volume(self, bounds=None):
-        # type: (Optional[Tuple[Tuple[Tuple[float, bool], Tuple[float, bool]], ...]]) -> Optional[float]
-
-        if bounds is None:
-            bounds = self.bound_tuples()
-
-        if bounds is None or len(bounds) == 0:
-            return None
-
-        volume = 1
-        for lb_bound, ub_bound in bounds:
-            volume *= ub_bound[0] - lb_bound[0]
-        return volume
 
     def temp_file(self, queries=None, directory=None):
-        return TemporaryDensityFile(self.domain, self.support, self.weight, queries, directory)
+        density = Density(self.domain, self.support, self.weight, queries)
+        return TemporaryFile(directory=directory, callback=density.to_file)
