@@ -4,11 +4,9 @@ from typing import List
 import numpy
 import pysmt.shortcuts as smt
 import scipy.optimize
-from deprecated import deprecated
 
 from pywmi import evaluate, Domain
 from pywmi.engine import Engine
-from pywmi.exceptions import SamplingException
 from pywmi.sample import uniform
 from pywmi.smt_math import LinearInequality, Polynomial
 from .integration_backend import IntegrationBackend
@@ -40,6 +38,11 @@ def weighted_sample(weights, values, n):
         w -= x
         yield v
         n -= 1
+
+
+class SamplingError(RuntimeError):
+    def __init__(self, msg=""):
+        self.msg = msg
 
 
 class RejectionEngine(Engine):
@@ -88,25 +91,43 @@ class RejectionEngine(Engine):
 
         return results
 
-    @deprecated(reason="The samples are returned in a different format than the rest of the code")
-    def get_samples(self, n, extra_sample_ratio=None, weighted=True):
-        sample_count = n * extra_sample_ratio if extra_sample_ratio is not None else self.sample_count
-        bounds = self.bound_tuples()
-        samples = sample(len(self.domain.bool_vars), bounds, sample_count)
+    def get_samples(self, required_sample_count, sample_pool_size=None, sample_count=None, weighted=True,
+                    max_samples=None):
+        sample_pool_size = sample_pool_size or (required_sample_count if not weighted else required_sample_count * 10)
+        sample_count = sample_count or (self.sample_count or sample_pool_size * 2)
+        max_samples = max_samples or sample_count * 10
+        samples = uniform(self.domain, sample_count)
         labels = evaluate(self.domain, self.support, samples)
         pos_samples = samples[labels]
 
-        if len(pos_samples) < n:
-            msg = "Sampled points {}, needed {}"
-            raise SamplingException(msg.format(len(pos_samples), n))
+        while pos_samples.shape[0] < sample_pool_size:
+            if sample_count >= max_samples:
+                raise SamplingError("Max sample count {} exceeded (could not find pool of size {})"
+                                    .format(max_samples, sample_pool_size))
 
-        pos_ratio = sum(labels) / len(labels)
+            pos_ratio = pos_samples.shape[0] / sample_count
+            estimated_count = (sample_pool_size - pos_samples.shape[0]) / max(pos_ratio, 0.001)
+            new_sample_count = min(int(estimated_count * 1.1), max_samples - sample_count)
+            new_samples = uniform(self.domain, new_sample_count)
+            new_labels = evaluate(self.domain, self.support, new_samples)
+            new_pos_samples = new_samples[new_labels]
+            if pos_samples.shape[0] > 0:
+                print(pos_samples, new_pos_samples)
+                pos_samples = numpy.concatenate((pos_samples, new_pos_samples), axis=0)
+            else:
+                pos_samples = new_pos_samples
+            sample_count = sample_count + new_sample_count
+
+        pos_ratio = pos_samples.shape[0] / sample_count
+
+        if pos_samples.shape[0] > sample_pool_size:
+            pos_samples = pos_samples[:sample_pool_size]
 
         if weighted and self.weight is not None:
             sample_weights = evaluate(self.domain, self.weight, pos_samples)
-            return numpy.array(list(weighted_sample(sample_weights, pos_samples, n))), pos_ratio
+            return numpy.array(list(weighted_sample(sample_weights, pos_samples, required_sample_count))), pos_ratio
         else:
-            return numpy.array(list(pos_samples)[:n]), pos_ratio
+            return pos_samples, pos_ratio
 
     def copy(self, domain, support, weight, add_bounds=False):
         return RejectionEngine(domain, support, weight, self.sample_count, self.seed, add_bounds=add_bounds)
