@@ -42,16 +42,17 @@ class XaddEngine(Engine):
             try:
                 cmd_args = ["java", "-jar", XaddEngine.path, "inference", f] + ([self.mode] if self.mode else [])
                 logger.info("> {}".format(" ".join(cmd_args)))
-                output = subprocess.check_output(cmd_args, timeout=timeout).decode(sys.stdout.encoding)
+                output = subprocess.check_output(cmd_args, timeout=timeout).decode(sys.stdout.encoding)  # type: str
                 results = [(float(match[0]) if queries is not None else float(match[1]))
                            for match in XaddEngine.pattern.findall(output)]
                 return results
             except subprocess.CalledProcessError as e:
-                logger.warning(e.output)
+                logger.warning(e.output.decode(sys.stdout.encoding)
+                               .replace("Academic license - for non-commercial use only\n", ""))
             except subprocess.TimeoutExpired:
                 logger.warning("Timeout")
             except ValueError:
-                logger.warning(output)
+                logger.warning(output.replace("Academic license - for non-commercial use only\n", ""))
                 raise
         return None
 
