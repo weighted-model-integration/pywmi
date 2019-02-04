@@ -4,6 +4,7 @@ from pysmt.shortcuts import Real, TRUE
 from pywmi.errors import InstallError
 from pywmi import Domain, XaddEngine
 
+
 try:
     # noinspection PyTypeChecker
     XaddEngine(None, None, None)
