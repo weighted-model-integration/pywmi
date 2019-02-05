@@ -61,3 +61,20 @@ def test_trivial_weight_function():
     print(correction_volume_rej, correction_volume_xadd, computed_volume)
     assert computed_volume == pytest.approx(correction_volume_rej, rel=ERROR)
     assert computed_volume == pytest.approx(correction_volume_xadd, rel=ERROR)
+
+
+def test_trivial_weight_function_partial():
+    # Support:  (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 10)
+    # Weight:   1
+
+    domain = Domain.make(["a", "b"], ["x", "y"], [(0, 1), (0, 1)])
+    a, b, x, y = domain.get_symbols(domain.variables)
+    support = (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 1)
+    weight = Real(1.0)
+    xsdd = NativeXsddEngine(domain, support, weight, XaddIntegrator())
+    computed_volume = xsdd.compute_volume(pint=True)
+    correction_volume_rej = RejectionEngine(domain, support, weight, 1000000).compute_volume()
+    correction_volume_xadd = XaddEngine(domain, support, weight).compute_volume()
+    print(correction_volume_rej, correction_volume_xadd, computed_volume)
+    assert computed_volume == pytest.approx(correction_volume_rej, rel=ERROR)
+    assert computed_volume == pytest.approx(correction_volume_xadd, rel=ERROR)
