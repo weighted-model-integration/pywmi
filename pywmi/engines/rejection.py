@@ -4,11 +4,9 @@ from typing import List
 import numpy
 import pysmt.shortcuts as smt
 import scipy.optimize
-from deprecated import deprecated
 
 from pywmi import evaluate, Domain
 from pywmi.engine import Engine
-from pywmi.exceptions import SamplingException
 from pywmi.sample import uniform
 from pywmi.smt_math import LinearInequality, Polynomial
 from .integration_backend import IntegrationBackend
@@ -25,25 +23,8 @@ def sample(n_boolean_vars, bounds, n):
     return samples
 
 
-def weighted_sample(weights, values, n):
-    # https://stackoverflow.com/a/2151885/253387
-    total = float(sum(weights))
-    i = 0
-    w, v = weights[0], values[0]
-    while n:
-        x = total * (1 - numpy.random.random() ** (1.0 / n))
-        total -= x
-        while x > w:
-            x -= w
-            i += 1
-            w, v = weights[i], values[i]
-        w -= x
-        yield v
-        n -= 1
-
-
 class RejectionEngine(Engine):
-    def __init__(self, domain, support, weight, sample_count, seed=None, add_bounds=False):
+    def __init__(self, domain, support, weight, sample_count, seed=None):
         Engine.__init__(self, domain, support, weight, exact=False)
         if seed is not None:
             numpy.random.seed(seed)
@@ -88,28 +69,8 @@ class RejectionEngine(Engine):
 
         return results
 
-    @deprecated(reason="The samples are returned in a different format than the rest of the code")
-    def get_samples(self, n, extra_sample_ratio=None, weighted=True):
-        sample_count = n * extra_sample_ratio if extra_sample_ratio is not None else self.sample_count
-        bounds = self.bound_tuples()
-        samples = sample(len(self.domain.bool_vars), bounds, sample_count)
-        labels = evaluate(self.domain, self.support, samples)
-        pos_samples = samples[labels]
-
-        if len(pos_samples) < n:
-            msg = "Sampled points {}, needed {}"
-            raise SamplingException(msg.format(len(pos_samples), n))
-
-        pos_ratio = sum(labels) / len(labels)
-
-        if weighted and self.weight is not None:
-            sample_weights = evaluate(self.domain, self.weight, pos_samples)
-            return numpy.array(list(weighted_sample(sample_weights, pos_samples, n))), pos_ratio
-        else:
-            return numpy.array(list(pos_samples)[:n]), pos_ratio
-
-    def copy(self, domain, support, weight, add_bounds=False):
-        return RejectionEngine(domain, support, weight, self.sample_count, self.seed, add_bounds=add_bounds)
+    def copy(self, domain, support, weight):
+        return RejectionEngine(domain, support, weight, self.sample_count, self.seed)
 
     def __str__(self):
         return "rej" + (":n{}".format(self.sample_count))
@@ -141,7 +102,9 @@ class RejectionIntegrator(IntegrationBackend):
                 c = numpy.zeros((len(domain.real_vars),))
                 for j in range(len(domain.real_vars)):
                     c[j] = 1
+                    # noinspection PyTypeChecker
                     lb = scipy.optimize.linprog(c, a_matrix, b_matrix).x[j]
+                    # noinspection PyTypeChecker
                     ub = scipy.optimize.linprog(-c, a_matrix, b_matrix).x[j]
                     c[j] = 0
                     lb_ub_bounds[domain.real_vars[j]] = (lb, ub)
@@ -171,5 +134,5 @@ class RejectionIntegrator(IntegrationBackend):
         return result
 
     def __str__(self):
-        return "xadd_int.{}".format(self.sample_count)\
+        return "ref_int.{}".format(self.sample_count)\
                + (".{}".format(self.bounding_box) if self.bounding_box > 0 else "")

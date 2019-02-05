@@ -1,5 +1,5 @@
 from examples import inspect_manual, inspect_density, inspect_infinite_without_domain_bounds, get_examples
-from pywmi import Domain, RejectionEngine
+from pywmi import RejectionEngine
 
 SAMPLE_COUNT = 1000000
 REL_ERROR = 0.01

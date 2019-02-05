@@ -5,14 +5,21 @@ from argparse import ArgumentParser
 from typing import TYPE_CHECKING
 
 from autodora.parallel import run_command
+from pysmt.exceptions import NoSolverAvailableError
+from pysmt.shortcuts import Solver
 
 from pywmi import Density
 from pywmi.engine import Engine
 from pywmi.errors import InstallError
-from pywmi.smt_print import pretty_print
 
 if TYPE_CHECKING:
     pass
+
+try:
+    with Solver() as solver:
+        pysmt_installed = True
+except NoSolverAvailableError:
+    pysmt_installed = False
 
 try:
     from wmipa import Weights, WMI
@@ -34,6 +41,8 @@ logger = logging.getLogger(__name__)
 class PredicateAbstractionEngine(Engine):
     def __init__(self, domain, support, weight, directory=None, timeout=None):
         super().__init__(domain, support, weight)
+        if not pysmt_installed:
+            raise InstallError("No PySMT solver is installed (not installed or not on path)")
         if WMI is None:
             raise InstallError("The wmipa library is not in your PYTHONPATH")
         self.timeout = timeout

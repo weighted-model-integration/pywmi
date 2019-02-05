@@ -1,5 +1,6 @@
 import fractions
 import pysmt.shortcuts as smt
+from pysmt.fnode import FNode
 from pysmt.operators import POW, IMPLIES
 
 
@@ -130,6 +131,7 @@ class SmtParser(object):
 
 
 def smt_to_nested(expression):
+    # type: (FNode) -> str
     """
     Converts an smt expression to a nested formula
     :param expression: An SMT expression (FNode)
