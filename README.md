@@ -95,7 +95,15 @@ The Latte integration backend as well as the predicate abstraction solver requir
     print("Volume (XADD):                ", xadd_engine.compute_volume())  # Compute the weighted model integral
     print("Query probability (XADD):     ", xadd_engine.compute_probability(query))  # Compute query probability
 
-**Generating weighted samples**
+**Generating uniform samples and their labels**
+
+    from pywmi.sample import uniform
+    # n: Required number of samples
+    # domain, support: Domain and support defined as above
+    samples = uniform(domain, n)
+    labels = evaluate(samples, support, samples)
+
+**Generating weighted positive samples**
 
     from pywmi.sample import positive
     # n: Required number of samples
