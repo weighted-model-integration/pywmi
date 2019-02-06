@@ -123,3 +123,11 @@ def test_implies():
     assert not implies(term2, term3)
     assert not implies(term3, term1)
     assert not implies(term3, term2)
+
+
+def test_linear_inequality_variables():
+    x, y, z = [Symbol(n, REAL) for n in "xyz"]
+    inequality = LinearInequality.from_smt(x - z <= y - z)
+    print(inequality)
+    assert inequality.variables == {"x", "y"}
+

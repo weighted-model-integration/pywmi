@@ -18,6 +18,15 @@ class Polynomial(object):
         self.poly_dict = poly_dict  # type: Dict[Tuple[str], float]
         self._hash_value = None
 
+    @property
+    def variables(self):
+        result = set()
+        for name in self.poly_dict:
+            if name != CONST_KEY:
+                for v in name:
+                    result.add(name)
+        return result
+
     def to_smt(self):
         keys = {key: Times(Symbol(n, REAL) for n in key) if key != CONST_KEY else Real(1.0)
                 for key in self.poly_dict.keys()}
@@ -112,7 +121,11 @@ class PolynomialAlgebra(AlgebraBackend):
 
 class LinearInequality(object):
     def __init__(self, inequality_dict):
-        self.inequality_dict = inequality_dict
+        self.inequality_dict = {k: v for k, v in inequality_dict.items() if v != 0}
+
+    @property
+    def variables(self):
+        return {v for key in self.inequality_dict for v in key}
 
     def coefficient(self, *args):
         return self.inequality_dict.get(tuple(args), 0)
@@ -146,6 +159,11 @@ class LinearInequality(object):
         gcd = reduce(lambda num1, num2: int(math.gcd(num1, num2)), numerators)
         fractions = {k: int(v / gcd) for k, v in fractions.items()}  # type: Dict[Tuple, int]
         return LinearInequality(fractions)
+
+    def __str__(self):
+        terms = ["{}".format(("" if factor == 1 else str(factor)) + "".join(key))
+                 for key, factor in self.inequality_dict.items() if key != CONST_KEY]
+        return "{} <= {}".format(" + ".join(terms), -self.inequality_dict.get(CONST_KEY, 0))
 
 
 class MathDictConverter(SmtWalker):
