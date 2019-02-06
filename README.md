@@ -95,6 +95,18 @@ The Latte integration backend as well as the predicate abstraction solver requir
     print("Volume (XADD):                ", xadd_engine.compute_volume())  # Compute the weighted model integral
     print("Query probability (XADD):     ", xadd_engine.compute_probability(query))  # Compute query probability
 
+**Generating weighted samples**
+
+    from pywmi.sample import positive
+    # n: Required number of samples
+    # domain, support, weight: Defining the density as above
+    # Optional:
+    #   sample_pool_size: The number of uniformly sampled positive samples to weight and select the samples from
+    #   sample_count: The number of samples to draw initially, from which to build the positive pool
+    #   max_samples: The maximum number of uniformly sampled samples (positive or negative) to generate before failing
+    #                => If max_samples is exceeded a SamplingError will be raised
+    samples, positive_ratio = positive(n, domain, support, weight)
+    
 **Handle densities and write to files**
 
     # Wrap support and weight function (and optionally queries) in a density object
