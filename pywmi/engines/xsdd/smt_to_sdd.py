@@ -208,5 +208,6 @@ def convert_function(formula, sdd_manager, algebra: Type[AlgebraBackend], abstra
     return converter.walk_smt(formula)
 
 
-def recover_formula(sdd_node: SddNode, abstractions, var_to_lit) -> FNode:
-    return simplify(amc(PySmtConversion(abstractions, var_to_lit), sdd_node))
+def recover_formula(sdd_node: SddNode, abstractions, var_to_lit, simplify_result=True) -> FNode:
+    result = amc(PySmtConversion(abstractions, var_to_lit), sdd_node)
+    return simplify(result) if simplify_result else result

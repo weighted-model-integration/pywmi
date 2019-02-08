@@ -78,3 +78,17 @@ def test_trivial_weight_function_partial():
     print(correction_volume_rej, correction_volume_xadd, computed_volume)
     assert computed_volume == pytest.approx(correction_volume_rej, rel=ERROR)
     assert computed_volume == pytest.approx(correction_volume_xadd, rel=ERROR)
+
+
+def test_trivial_weight_function_partial_0b_1r_overlap():
+    domain = Domain.make([], ["x"], real_bounds=(0, 1))
+    x, = domain.get_symbols(domain.variables)
+    support = (x >= 0.2) & (x <= 0.6) | (x >= 0.4) & (x <= 0.8)
+    weight = Real(2.0)
+
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
+    computed_volume = engine.compute_volume(pint=True)
+
+    should_be = XaddEngine(domain, support, weight).compute_volume()
+    print(computed_volume, should_be)
+    assert computed_volume == pytest.approx(should_be, rel=ERROR)

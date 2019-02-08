@@ -35,6 +35,16 @@ class Polynomial(object):
             for key, value in self.poly_dict.items()
         )
 
+    def to_expression(self, algebra: AlgebraBackend):
+        result = algebra.zero()
+        for variables, factor in self.poly_dict.items():
+            term = algebra.one()
+            for var in variables:
+                if var != CONST_KEY:
+                    term = algebra.times(term, algebra.symbol(var))
+            result = algebra.plus(result, algebra.times(term, algebra.real(factor)))
+        return result
+
     def __add__(self, other: Union[object, int, float]):
         if isinstance(other, (float, int)):
             other = Polynomial({CONST_KEY: other})
@@ -110,12 +120,10 @@ class Polynomial(object):
 
 
 class PolynomialAlgebra(AlgebraBackend):
-    @classmethod
-    def symbol(cls, name):
+    def symbol(self, name):
         return Polynomial({(name,): 1})
 
-    @classmethod
-    def real(cls, float_constant):
+    def real(self, float_constant):
         return Polynomial.from_constant(float_constant)
 
 
@@ -145,6 +153,16 @@ class LinearInequality(object):
                     if factor != 1 else Times(Symbol(n, REAL) for n in name)
                     for name, factor in self.inequality_dict.items() if name != CONST_KEY) \
                <= Real(-self.inequality_dict.get(CONST_KEY, 0))
+
+    def to_expression(self, algebra: AlgebraBackend):
+        result = algebra.zero()
+        for variables, factor in self.inequality_dict.items():
+            if variables != CONST_KEY:
+                term = algebra.one()
+                for var in variables:
+                    term = algebra.times(term, algebra.symbol(var))
+                result = algebra.plus(result, algebra.times(term, algebra.real(factor)))
+        return algebra.less_than_equal(result, algebra.real(self.b()))
 
     @staticmethod
     def lcm(num1, num2):

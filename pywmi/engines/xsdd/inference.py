@@ -1,8 +1,12 @@
 from collections import defaultdict
 from functools import reduce
-from typing import Dict, List, Tuple, Set, Union
+from typing import Dict, List, Tuple, Set, Union, Any
 
 from pysmt.fnode import FNode
+
+from pywmi.engines.algebraic_backend import StringAlgebra, XaddAlgebra
+from pywmi.smt_print import pretty_print
+from .smt_to_sdd import recover_formula
 
 try:
     from pysdd.sdd import SddManager, SddNode
@@ -78,6 +82,7 @@ class ContinuousProvenanceSemiring(Semiring):
         result = (variables, common_variables_children)
         self.index_to_conprov[index] = result
         return result
+
     def times(self, a, b, index=None):
         assert index
         variables = a[0] | b[0]
@@ -152,33 +157,41 @@ class VariableTagAnalysis(SddWalker):
         self.node_to_groups = dict()
 
     def walk_true(self, node):
-        return set()
+        print(node.id, node)
+        groups = set()
+        self.node_to_groups[node.id] = groups
+        return groups
 
     def walk_false(self, node):
-        return set()
+        print(node.id, node)
+        groups = set()
+        self.node_to_groups[node.id] = groups
+        return groups
 
     def walk_and(self, prime_result, sub_result, prime_node, sub_node):
+        print((prime_node.id, sub_node.id), prime_node, sub_node)
         groups = prime_result | sub_result
         self.node_to_groups[(prime_node.id, sub_node.id)] = groups
         return groups
 
     def walk_or(self, child_results, node):
+        print(node.id, node)
         groups = reduce(lambda x, y: x | y, child_results, set())
         self.node_to_groups[node.id] = groups
         return groups
 
     def walk_literal(self, l, node):
+        print(node.id, node)
         groups = set(self.literal_to_groups.get(abs(l), []))
         self.node_to_groups[node.id] = groups
         return groups
 
 
 class IntTagSemiring(Semiring):
-    def __init__(self, abstractions: Dict, var_to_lit:Dict, index_to_conprov: Dict):
+    def __init__(self, abstractions: Dict, var_to_lit: Dict, index_to_conprov: Dict):
         self.reverse_abstractions = {v: k for k, v in abstractions.items()}
         self.lit_to_var = {v: k for k, v in var_to_lit.items()}
         self.int_tags = {}
-
 
     def negate(self, a):
         raise NotImplementedError()
@@ -189,7 +202,7 @@ class IntTagSemiring(Semiring):
             return (set(), set())
         else:
             f = self.reverse_abstractions[abs(a)]
-            variables = f.variables()#TODO look up correct method
+            variables = f.variables()  # TODO look up correct method
             return (variables, variables)
 
     def positive_weight(self, a):
@@ -200,6 +213,88 @@ class WMISemiringPint(WMISemiring):
     def __init__(self, abstractions: Dict, var_to_lit: Dict, int_tags: Dict):
         WMISemiring.__init__(abstractions, var_to_lit)
         self.int_tags = int_tags
+
+
+class FactorizedWMIWalker(SddWalker):
+    def __init__(self, domain, abstractions, var_to_lit, groups, dependency, integration_tags):
+        # type: (Domain, Dict, Dict, Dict[int, Tuple[Set[str], Polynomial]], Dict, Dict) -> None
+        self.domain = domain
+        self.reverse_abstractions = {v: k for k, v in abstractions.items()}
+        self.lit_to_var = {v: k for k, v in var_to_lit.items()}
+        self.groups = groups
+        self.dependency = dependency
+        self.integration_tags = integration_tags
+        self.algebra = XaddAlgebra()
+
+    def walk_true(self, node):
+        return node.id, {frozenset(): self.algebra.one()}, set()
+
+    def walk_false(self, node):
+        return node.id, {frozenset(): self.algebra.zero()}, set()
+
+    def get_requested_tags(self, parent_id, child_id):
+        return frozenset(self.dependency[parent_id][child_id]) if parent_id in self.dependency else frozenset()
+
+    def walk_and(self, prime_result, sub_result, prime_node, sub_node):
+        key = (prime_node.id, sub_node.id)
+        print("+", "AND", key, prime_result, sub_result)
+        prime_id, prime_result, prime_bool_vars = prime_result
+        sub_id, sub_result, sub_bool_vars = sub_result
+        prime_tags = self.get_requested_tags(key, prime_id)
+        sub_tags = self.get_requested_tags(key, sub_id)
+        expression = self.algebra.times(prime_result[prime_tags], sub_result[sub_tags])
+        bool_vars = prime_bool_vars | sub_bool_vars
+        own_tags = self.integration_tags.get(key, {frozenset()})
+        expr_dict = self.integrate(expression, own_tags)
+        expr_dict = {k | prime_tags | sub_tags: v for k, v in expr_dict.items()}
+        print("-", "AND", key, expr_dict, bool_vars)
+        return key, expr_dict, bool_vars
+
+    def walk_or(self, child_results, node):
+        print("+", "OR", node.id, child_results)
+        print(" ", "OR", *[child_result[1] for child_result in child_results])
+        results = [(child_result[1][self.get_requested_tags(node.id, child_result[0])], child_result[2])
+                   for child_result in child_results]
+        # assert all(self.dependency[node.id][child_results[i][0]] == self.dependency[node.id][child_results[0][0]]
+        #            for i in range(1, len(child_results)))
+        result, bool_vars = results[0]
+        for child_result, child_bool_vars in results[1:]:
+            result = self.algebra.plus(result, child_result)
+            bool_vars |= child_bool_vars
+        expr_dict = {self.get_requested_tags(node.id, child_results[0][0]): result}
+        print("-", "OR", node.id, expr_dict, bool_vars)
+        return node.id, expr_dict, bool_vars
+
+    def walk_literal(self, l, node):
+        print("+", "LIT", node.id, l)
+
+        if abs(l) in self.lit_to_var:
+            expr, bool_vars = smt.TRUE(), {self.lit_to_var[abs(l)]}
+        else:
+            f = self.reverse_abstractions[abs(l)]
+            if l < 0:
+                f = ~f
+            expr, bool_vars = LinearInequality.from_smt(f).to_expression(self.algebra), set()
+        if node.id in self.integration_tags:
+            expr_dict = self.integrate(expr, self.integration_tags.get(node.id, set()))
+        else:
+            expr_dict = {frozenset(): expr}
+        print("-", "LIT", node.id, expr_dict, bool_vars)
+        return node.id, expr_dict, bool_vars
+
+    def integrate(self, expr, tags_set):
+        # type: (Any, Set[Set[int]]) -> Dict[Set[int], Any]
+        print("+", "INT", expr, list(tags_set))
+        result = dict()
+        for group_tags in tags_set:
+            tags_result = expr
+            for group_id in group_tags:
+                variables, poly = self.groups[group_id]
+                group_expr = self.algebra.times(tags_result, poly.to_expression(self.algebra))
+                tags_result = self.algebra.integrate(self.domain, group_expr, variables)
+            result[group_tags] = tags_result
+        print("-", "INT", result)
+        return result
 
 
 def get_variable_groups_poly(weight: Polynomial, real_vars: List[str]) -> List[Tuple[Set[str], Polynomial]]:
@@ -241,34 +336,52 @@ def get_variable_groups(weight: FNode) -> List[Tuple[Set[str], FNode]]:
         return [({str(v) for v in weight.get_free_variables()}, weight)]
 
 
-def push_bounds_down(parent_to_children: Dict, node_to_groups: Dict, root_id: int, mode="OR", tags=None) -> Dict:
+def tag_sdd(parent_to_children, node_to_groups, root_id):
+    dependency = defaultdict(lambda: dict())
+    integration_tags = defaultdict(lambda: set())
+    push_bounds_down(parent_to_children, node_to_groups, root_id, dependency, integration_tags)
+    return dict(dependency), dict(integration_tags)
+
+
+def push_bounds_down(parent_to_children, node_to_groups, root_id, dependency, integration_tags, mode="OR", tags=None,
+                     prefix=""):
+    # type: (Dict, Dict, int, Dict, Dict, str, Set, str) -> None
     if tags is None:
         tags = node_to_groups[root_id]
 
-    print("Tags", tags)
-    print("Root", root_id, "with vars:", node_to_groups[root_id])
+    print(prefix, "Root", root_id, "with vars:", node_to_groups[root_id], "tags", tags)
 
-    assert len(tags - node_to_groups[root_id]) == 0
+    if len(tags) == 0 or len(tags - node_to_groups[root_id]) != 0:
+        return
+
+    if root_id not in parent_to_children:
+        print(prefix, "Leaf {}".format(root_id))
+        integration_tags[root_id].add(frozenset(tags))
+        return
 
     children = parent_to_children[root_id]
-    if len(children) == 0:
-        return {root_id: tags}
     if mode == "OR":
-        int_tags = dict()
         for child in children:
-            print("Push tags {} to child {}".format(tags, child))
-            int_tags.update(push_bounds_down(parent_to_children, node_to_groups, child, "AND", tags))
-        return int_tags
+            dependency[root_id][child] = tags
+            print(prefix, "[{}] Push tags {} to child {}".format(root_id, tags, child))
+            push_bounds_down(parent_to_children, node_to_groups, child, dependency, integration_tags, "AND", tags,
+                             prefix + " | ")
     else:
         groups1 = node_to_groups[children[0]]
         groups2 = node_to_groups[children[1]]
         shared = groups1 & groups2
-        int_tags = {root_id: shared & tags}
-        tags1 = push_bounds_down(parent_to_children, node_to_groups, children[0], "OR", (groups1 - shared) & tags)
-        tags2 = push_bounds_down(parent_to_children, node_to_groups, children[1], "OR", (groups2 - shared) & tags)
-        int_tags.update(tags1)
-        int_tags.update(tags2)
-        return int_tags
+        shared_tags = shared & tags
+        if len(shared_tags) > 0:
+            integration_tags[root_id].add(frozenset(shared_tags))
+        tags1 = (groups1 - shared) & tags
+        tags2 = (groups2 - shared) & tags
+        print(prefix, "INT", shared & tags, "LEFT", tags1, "RIGHT", tags2)
+        dependency[root_id][children[0]] = tags1
+        dependency[root_id][children[1]] = tags2
+        push_bounds_down(parent_to_children, node_to_groups, children[0], dependency, integration_tags, "OR", tags1,
+                         prefix + " | ")
+        push_bounds_down(parent_to_children, node_to_groups, children[1], dependency, integration_tags, "OR", tags2,
+                         prefix + " | ")
 
 
 class NativeXsddEngine(Engine):
@@ -291,7 +404,6 @@ class NativeXsddEngine(Engine):
         except ZeroDivisionError:
             return 0
 
-
     def compute_volume(self, pint=False):
         abstractions, var_to_lit = dict(), dict()
 
@@ -307,7 +419,7 @@ class NativeXsddEngine(Engine):
         #             conflicts.append(smt.Implies(inequalities[j], inequalities[i]))
         #             print(inequalities[j], "=>", inequalities[i])
 
-        algebra = PolynomialAlgebra
+        algebra = PolynomialAlgebra()
         support_sdd = convert_formula(self.support, self.manager, algebra, abstractions, var_to_lit)
         piecewise_function = convert_function(self.weight, self.manager, algebra, abstractions, var_to_lit)
 
@@ -316,7 +428,7 @@ class NativeXsddEngine(Engine):
 
             support = support_sdd & world_support
             if pint:
-
+                print(pretty_print(recover_formula(support, abstractions, var_to_lit, False)))
 
                 print(world_weight)
                 variable_groups = get_variable_groups_poly(world_weight, self.domain.real_vars)
@@ -339,15 +451,22 @@ class NativeXsddEngine(Engine):
                     inequality_groups = [get_group(v) for v in inequality_variables]
                     literal_to_groups[literal] = inequality_groups
 
-                print(literal_to_groups)
+                print("Literal -> groups", literal_to_groups)
 
                 tag_analysis = VariableTagAnalysis(literal_to_groups)
                 walk(tag_analysis, support)
                 node_to_groups = tag_analysis.node_to_groups
-                print(node_to_groups)
+                print("Node -> groups", node_to_groups)
 
                 print()
-                push_bounds_down(parent_to_children_mapping, node_to_groups, support.id)
+                dependency, integration_tags = tag_sdd(parent_to_children_mapping, node_to_groups, support.id)
+                print("Dependency", dependency)
+                print("Tags", integration_tags)
+
+                group_to_vars_poly = {i: g for i, g in enumerate(variable_groups)}
+                print("RESULT",
+                      walk(FactorizedWMIWalker(self.domain, abstractions, var_to_lit, group_to_vars_poly, dependency,
+                                               integration_tags), support))
 
                 exit(0)
                 continuous_vars = ContinuousVars(abstractions, var_to_lit)
@@ -365,7 +484,7 @@ class NativeXsddEngine(Engine):
                 _ = amc(semiring_inttags, support)
                 int_tags = semiring_inttags.int_tags
                 int_tags = {}
-                #TODO fill int tags correctly
+                # TODO fill int tags correctly
                 convex_supports = amc(WMISemiringPint(abstractions, var_to_lit, int_tags), support)
                 for convex_support, variables in convex_supports:
                     missing_variable_count = len(self.domain.bool_vars) - len(variables)
