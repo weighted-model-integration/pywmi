@@ -15,7 +15,7 @@ CONST_KEY = ()
 
 class Polynomial(object):
     def __init__(self, poly_dict):
-        self.poly_dict = poly_dict  # type: Dict[Tuple[str], float]
+        self.poly_dict = {k: float(v) for k, v in poly_dict.items()}  # type: Dict[Tuple[str], float]
         self._hash_value = None
 
     @property
@@ -24,7 +24,7 @@ class Polynomial(object):
         for name in self.poly_dict:
             if name != CONST_KEY:
                 for v in name:
-                    result.add(name)
+                    result.add(v)
         return result
 
     def to_smt(self):
@@ -125,6 +125,9 @@ class PolynomialAlgebra(AlgebraBackend):
 
     def real(self, float_constant):
         return Polynomial.from_constant(float_constant)
+
+    def to_float(self, real_value):
+        raise NotImplementedError()
 
 
 class LinearInequality(object):

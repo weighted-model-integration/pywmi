@@ -4,7 +4,8 @@ from typing import Dict, List, Tuple, Set, Union, Any
 
 from pysmt.fnode import FNode
 
-from pywmi.engines.algebraic_backend import StringAlgebra, XaddAlgebra
+from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend
+from pywmi.engines.algebraic_backend import StringAlgebra, XaddAlgebra, PSIAlgebra
 from pywmi.smt_print import pretty_print
 from .smt_to_sdd import recover_formula
 
@@ -15,7 +16,6 @@ except ImportError:
 
 from pysmt.typing import REAL
 
-from pywmi.engines.integration_backend import IntegrationBackend
 from pywmi.smt_math import Polynomial, BoundsWalker, LinearInequality
 from pywmi.smt_math import PolynomialAlgebra
 from .smt_to_sdd import convert_formula, convert_function
@@ -216,15 +216,21 @@ class WMISemiringPint(WMISemiring):
 
 
 class FactorizedWMIWalker(SddWalker):
-    def __init__(self, domain, abstractions, var_to_lit, groups, dependency, integration_tags):
-        # type: (Domain, Dict, Dict, Dict[int, Tuple[Set[str], Polynomial]], Dict, Dict) -> None
+    def __init__(self,
+                 domain: Domain,
+                 abstractions: Dict,
+                 var_to_lit: Dict,
+                 groups: Dict[int, Tuple[Set[str], Polynomial]],
+                 dependency: Dict,
+                 integration_tags: Dict,
+                 algebra: Union[AlgebraBackend, IntegrationBackend]) -> None:
         self.domain = domain
         self.reverse_abstractions = {v: k for k, v in abstractions.items()}
         self.lit_to_var = {v: k for k, v in var_to_lit.items()}
         self.groups = groups
         self.dependency = dependency
         self.integration_tags = integration_tags
-        self.algebra = XaddAlgebra()
+        self.algebra = algebra
 
     def walk_true(self, node):
         return node.id, {frozenset(): self.algebra.one()}, set()
@@ -253,8 +259,12 @@ class FactorizedWMIWalker(SddWalker):
     def walk_or(self, child_results, node):
         print("+", "OR", node.id, child_results)
         print(" ", "OR", *[child_result[1] for child_result in child_results])
-        results = [(child_result[1][self.get_requested_tags(node.id, child_result[0])], child_result[2])
-                   for child_result in child_results]
+        results = []
+        for child_result in child_results:
+            try:
+                results.append((child_result[1][self.get_requested_tags(node.id, child_result[0])], child_result[2]))
+            except KeyError:
+                pass
         # assert all(self.dependency[node.id][child_results[i][0]] == self.dependency[node.id][child_results[0][0]]
         #            for i in range(1, len(child_results)))
         result, bool_vars = results[0]
@@ -301,6 +311,7 @@ def get_variable_groups_poly(weight: Polynomial, real_vars: List[str]) -> List[T
     if len(real_vars) > 0:
         result = []
         found_vars = weight.variables
+        print(found_vars)
         for v in real_vars:
             if v not in found_vars:
                 result.append((set(v), Polynomial.from_constant(1)))
@@ -311,15 +322,15 @@ def get_variable_groups_poly(weight: Polynomial, real_vars: List[str]) -> List[T
     elif len(weight.poly_dict) == 0:
         return [(set(), Polynomial.from_constant(0))]
     else:
-        result = []
+        result = defaultdict(lambda: Polynomial.from_constant(1))
         for name, value in weight.poly_dict.items():
             if len(name) == 0:
-                result.append((set(), Polynomial.from_constant(value)))
+                result[frozenset()] *= Polynomial.from_constant(value)
             else:
                 for v in name:
-                    result.append(({v}, Polynomial.from_smt(smt.Symbol(v, smt.REAL))))
-                result.append((set(), Polynomial.from_constant(value)))
-        return result
+                    result[frozenset(v,)] *= Polynomial.from_smt(smt.Symbol(v, smt.REAL))
+                result[frozenset()] *= Polynomial.from_constant(value)
+        return list(result.items())
 
 
 def get_variable_groups(weight: FNode) -> List[Tuple[Set[str], FNode]]:
@@ -352,6 +363,8 @@ def push_bounds_down(parent_to_children, node_to_groups, root_id, dependency, in
     print(prefix, "Root", root_id, "with vars:", node_to_groups[root_id], "tags", tags)
 
     if len(tags) == 0 or len(tags - node_to_groups[root_id]) != 0:
+        if len(tags - node_to_groups[root_id]) != 0:
+            print(prefix, "Could not find tags {}".format(tags - node_to_groups[root_id]))
         return
 
     if root_id not in parent_to_children:
@@ -385,12 +398,13 @@ def push_bounds_down(parent_to_children, node_to_groups, root_id, dependency, in
 
 
 class NativeXsddEngine(Engine):
-    def __init__(self, domain, support, weight, backend: IntegrationBackend, manager=None):
+    def __init__(self, domain, support, weight, backend: IntegrationBackend, manager=None, algebra=None):
         super().__init__(domain, support, weight, backend.exact)
         if SddManager is None:
             from pywmi.errors import InstallError
             raise InstallError("NativeXsddEngine requires the pysdd package")
         self.manager = manager or SddManager()
+        self.algebra = algebra or PSIAlgebra()
         self.backend = backend
 
     def get_samples(self, n):
@@ -423,7 +437,7 @@ class NativeXsddEngine(Engine):
         support_sdd = convert_formula(self.support, self.manager, algebra, abstractions, var_to_lit)
         piecewise_function = convert_function(self.weight, self.manager, algebra, abstractions, var_to_lit)
 
-        volume = 0
+        volume = self.algebra.zero()
         for world_weight, world_support in piecewise_function.sdd_dict.items():
 
             support = support_sdd & world_support
@@ -464,32 +478,50 @@ class NativeXsddEngine(Engine):
                 print("Tags", integration_tags)
 
                 group_to_vars_poly = {i: g for i, g in enumerate(variable_groups)}
-                print("RESULT",
-                      walk(FactorizedWMIWalker(self.domain, abstractions, var_to_lit, group_to_vars_poly, dependency,
-                                               integration_tags), support))
+                print("Group to vars - poly", group_to_vars_poly)
+                all_groups = frozenset(i for i, e in group_to_vars_poly.items() if len(e[0]) > 0)
 
-                exit(0)
-                continuous_vars = ContinuousVars(abstractions, var_to_lit)
-                amc(continuous_vars, support)
-                print(*["{}: {}".format(k, v) for k, v in continuous_vars.index_to_real_vars.items()], sep="\n")
+                constant_group_indices = [i for i, e in group_to_vars_poly.items() if len(e[0]) == 0]
+                walker = FactorizedWMIWalker(self.domain, abstractions, var_to_lit, group_to_vars_poly, dependency,
+                                             integration_tags, self.algebra)
+                root_id, expr_dict, bool_vars = walk(walker, support)
+                print(expr_dict, all_groups, expr_dict[all_groups], type(expr_dict[all_groups]))
+                missing_variable_count = len(self.domain.bool_vars) - len(bool_vars)
+                bool_worlds = self.algebra.power(self.algebra.real(2), missing_variable_count)
+                result_with_booleans = self.algebra.times(expr_dict[all_groups], bool_worlds)
+                if len(constant_group_indices) == 1:
+                    constant_poly = group_to_vars_poly[constant_group_indices[0]][1]
+                    constant = constant_poly.to_expression(self.algebra)
+                elif len(constant_group_indices) == 0:
+                    constant = self.algebra.one()
+                else:
+                    raise ValueError("Multiple constant groups: {}".format(constant_group_indices))
+                result = self.algebra.times(constant, result_with_booleans)
+                print("RESULT", result)
+                volume = self.algebra.plus(volume, result)
 
-                semiring_conprov = ContinuousProvenanceSemiring(abstractions, var_to_lit)
-                result = amc(semiring_conprov, support)
-                for index, variables in semiring_conprov.index_to_conprov.items():
-                    print(self.manager, variables)
-
-                import sys
-                sys.exit()
-                semiring_inttags = IntTagSemiring(abstractions, var_to_lit, semiring_conprov.index_to_conprov)
-                _ = amc(semiring_inttags, support)
-                int_tags = semiring_inttags.int_tags
-                int_tags = {}
-                # TODO fill int tags correctly
-                convex_supports = amc(WMISemiringPint(abstractions, var_to_lit, int_tags), support)
-                for convex_support, variables in convex_supports:
-                    missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                    vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
-                    volume += vol
+                # exit(0)
+                # continuous_vars = ContinuousVars(abstractions, var_to_lit)
+                # amc(continuous_vars, support)
+                # print(*["{}: {}".format(k, v) for k, v in continuous_vars.index_to_real_vars.items()], sep="\n")
+                #
+                # semiring_conprov = ContinuousProvenanceSemiring(abstractions, var_to_lit)
+                # result = amc(semiring_conprov, support)
+                # for index, variables in semiring_conprov.index_to_conprov.items():
+                #     print(self.manager, variables)
+                #
+                # import sys
+                # sys.exit()
+                # semiring_inttags = IntTagSemiring(abstractions, var_to_lit, semiring_conprov.index_to_conprov)
+                # _ = amc(semiring_inttags, support)
+                # int_tags = semiring_inttags.int_tags
+                # int_tags = {}
+                # # TODO fill int tags correctly
+                # convex_supports = amc(WMISemiringPint(abstractions, var_to_lit, int_tags), support)
+                # for convex_support, variables in convex_supports:
+                #     missing_variable_count = len(self.domain.bool_vars) - len(variables)
+                #     vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
+                #     volume += vol
             else:
                 convex_supports = amc(WMISemiring(abstractions, var_to_lit), support)
                 for convex_support, variables in convex_supports:
@@ -497,7 +529,7 @@ class NativeXsddEngine(Engine):
                     vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
                     volume += vol
 
-        return volume
+        return self.algebra.to_float(volume)
 
     def copy(self, domain, support, weight):
         return NativeXsddEngine(self.domain, support, weight, self.manager)

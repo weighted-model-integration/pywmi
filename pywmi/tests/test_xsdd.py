@@ -92,3 +92,73 @@ def test_trivial_weight_function_partial_0b_1r_overlap():
     should_be = XaddEngine(domain, support, weight).compute_volume()
     print(computed_volume, should_be)
     assert computed_volume == pytest.approx(should_be, rel=ERROR)
+
+
+def test_trivial_weight_function_partial_0b_1r_disjoint():
+    domain = Domain.make([], ["x"], real_bounds=(0, 1))
+    x, = domain.get_symbols(domain.variables)
+    support = (x >= 0.1) & (x <= 0.9) & ~((x >= 0.3) & (x <= 0.7))
+    weight = Real(2.0)
+
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
+    computed_volume = engine.compute_volume(pint=True)
+
+    should_be = XaddEngine(domain, support, weight).compute_volume()
+    print(computed_volume, should_be)
+    assert computed_volume == pytest.approx(should_be, rel=ERROR)
+
+
+def test_partial_0b_2r_trivial_weight():
+    domain = Domain.make([], ["x", "y"], real_bounds=(0, 1))
+    x, y = domain.get_symbols(domain.variables)
+    support = (x >= 0.1) & (x <= 0.9) & (y >= 0.3) & (y <= 0.7)
+    weight = Real(2.0)
+
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
+    computed_volume = engine.compute_volume(pint=True)
+
+    should_be = XaddEngine(domain, support, weight).compute_volume()
+    print(computed_volume, should_be)
+    assert computed_volume == pytest.approx(should_be, rel=ERROR)
+
+
+def test_partial_0b_2r_factorized_weight():
+    domain = Domain.make([], ["x", "y"], real_bounds=(0, 1))
+    x, y = domain.get_symbols(domain.variables)
+    support = (x >= 0.1) & (x <= 0.9) & (y >= 0.3) & (y <= 0.7)
+    weight = x * x * y * 3.17
+
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
+    computed_volume = engine.compute_volume(pint=True)
+
+    should_be = XaddEngine(domain, support, weight).compute_volume()
+    print(computed_volume, should_be)
+    assert computed_volume == pytest.approx(should_be, rel=ERROR)
+
+
+def test_partial_0b_2r_factorized_weight_common_test():
+    domain = Domain.make([], ["x", "y"], real_bounds=(0, 1))
+    x, y = domain.get_symbols(domain.variables)
+    support = (x >= 0.1) & (x <= 0.9) & (y >= 0.3) & (y <= 0.7) & (x <= y)
+    weight = x * x * y * 3.17
+
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
+    computed_volume = engine.compute_volume(pint=True)
+
+    should_be = XaddEngine(domain, support, weight).compute_volume()
+    print(computed_volume, should_be)
+    assert computed_volume == pytest.approx(should_be, rel=ERROR)
+
+
+def test_partial_0b_2r_branch_weight():
+    domain = Domain.make([], ["x", "y"], real_bounds=(0, 1))
+    x, y = domain.get_symbols(domain.variables)
+    support = (x >= 0.1) & (x <= 0.9) & (y >= 0.3) & (y <= 0.7)
+    weight = Ite(x <= y, x, y * 3.17)
+
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
+    computed_volume = engine.compute_volume(pint=True)
+
+    should_be = XaddEngine(domain, support, weight).compute_volume()
+    print(computed_volume, should_be)
+    assert computed_volume == pytest.approx(should_be, rel=ERROR)

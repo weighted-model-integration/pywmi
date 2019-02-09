@@ -26,7 +26,7 @@ def product(*elements):
 
 
 class SddConversionWalker(SmtWalker):
-    def __init__(self, manager, algebra: Type[AlgebraBackend], boolean_only, abstractions=None, var_to_lit=None):
+    def __init__(self, manager, algebra: AlgebraBackend, boolean_only, abstractions=None, var_to_lit=None):
         self.manager = manager  # type: SddManager
         self.algebra = algebra
         self.abstractions = abstractions if abstractions is not None else dict()
@@ -192,7 +192,7 @@ class PySmtConversion(Semiring):
         return self.reverse_abstractions[a] if a in self.reverse_abstractions else Symbol(self.lit_to_var[a], BOOL)
 
 
-def convert_formula(formula, sdd_manager, algebra: Type[AlgebraBackend], abstractions=None, var_to_lit=None)\
+def convert_formula(formula, sdd_manager, algebra: AlgebraBackend, abstractions=None, var_to_lit=None)\
         -> SddNode:
     if SddManager is None:
         raise InstallError("The pysdd package is required for this function but is not currently installed.")
@@ -200,7 +200,7 @@ def convert_formula(formula, sdd_manager, algebra: Type[AlgebraBackend], abstrac
     return converter.walk_smt(formula)
 
 
-def convert_function(formula, sdd_manager, algebra: Type[AlgebraBackend], abstractions=None, var_to_lit=None)\
+def convert_function(formula, sdd_manager, algebra: AlgebraBackend, abstractions=None, var_to_lit=None)\
         -> PiecewiseXSDD:
     if SddManager is None:
         raise InstallError("The pysdd package is required for this function but is not currently installed.")

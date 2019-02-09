@@ -67,6 +67,9 @@ class AlgebraBackend:
     def greater_than_equal(self, a, b):
         return self.less_than_equal(self.negate(a), self.negate(b))
 
+    def to_float(self, real_value):
+        raise NotImplementedError()
+
 
 class IntegrationBackend:
     def __init__(self, exact=True):
@@ -92,6 +95,9 @@ class PySmtAlgebra(AlgebraBackend):
     def less_than_equal(self, a, b):
         return smt.Ite(a <= b, self.one, self.zero())
 
+    def to_float(self, real_value):
+        return float(real_value.constant_value)
+
 
 class SympyAlgebra(AlgebraBackend):
     def times(self, a, b):
@@ -109,14 +115,18 @@ class SympyAlgebra(AlgebraBackend):
     def real(self, float_constant):
         return float_constant
 
+    def to_float(self, real_value):
+        return float(real_value)
 
-class PSIAlgebra(AlgebraBackend):
+
+class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     def __init__(self):
+        super().__init__()
         if psipy is None:
             raise InstallError("PSIAlgebra requires the psipy library to be installed")
 
     def times(self, a, b):
-        return psipy.mul(a,b)
+        return psipy.mul(a, b)
 
     def plus(self, a, b):
         return psipy.add(a,b)
@@ -129,16 +139,29 @@ class PSIAlgebra(AlgebraBackend):
         return psipy.S(name)
 
     def real(self, float_constant):
+        print(float_constant, type(float_constant))
         assert isinstance(float_constant, (float,int))
         return psipy.S(str(float_constant))
 
-    def power(self, a, power):
-        if not isinstance(power, int) and int(power) != power:
-            raise ValueError("Expected integer power, got {power}".format(power=power))
-        if power < 0:
-            raise ValueError("Unexpected negative power {power}".format(power=power))
-        result = psipy.pow(str(a), str(power))
-        return result
+    def less_than(self, a, b):
+        return psipy.less(a, b)
+
+    def less_than_equal(self, a, b):
+        return psipy.less_equal(a, b)
+
+    # def power(self, a, power):
+    #     if not isinstance(power, int) and int(power) != power:
+    #         raise ValueError("Expected integer power, got {power}".format(power=power))
+    #     if power < 0:
+    #         raise ValueError("Unexpected negative power {power}".format(power=power))
+    #     result = psipy.pow(str(a), str(power))
+    #     return result
+
+    def integrate(self, domain: Domain, expression, variables=None):
+        return psipy.integrate(variables, expression)
+
+    def to_float(self, real_value):
+        return float(str(psipy.simplify(real_value)))
 
 
 class StringAlgebra(AlgebraBackend, IntegrationBackend):
@@ -181,6 +204,9 @@ class StringAlgebra(AlgebraBackend, IntegrationBackend):
         variables = variables or domain.real_vars
         return "I[{}, d({})]".format(expression, " ".join(variables))
 
+    def to_float(self, real_value):
+        return float(real_value)
+
 
 class XaddAlgebra(AlgebraBackend, IntegrationBackend):
     def __init__(self):
@@ -221,3 +247,6 @@ class XaddAlgebra(AlgebraBackend, IntegrationBackend):
     def integrate(self, domain: Domain, expression, variables=None):
         variables = variables or domain.real_vars
         return "(int {} (list {})]".format(expression, " ".join(variables))
+
+    def to_float(self, real_value):
+        raise NotImplementedError()

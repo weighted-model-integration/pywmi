@@ -1,4 +1,4 @@
-from typing import Dict, Any, Type
+from typing import Dict, Any
 
 try:
     from pysdd.sdd import SddManager, SddNode
@@ -9,7 +9,7 @@ from pywmi.engines.algebraic_backend import AlgebraBackend
 
 
 class PiecewiseXSDD(object):
-    def __init__(self, sdd_dict: Dict[Any, SddNode], manager: SddManager, algebra: Type[AlgebraBackend]):
+    def __init__(self, sdd_dict: Dict[Any, SddNode], manager: SddManager, algebra: AlgebraBackend):
         if SddManager is None or SddNode is None:
             from pywmi.errors import InstallError
             raise InstallError("Piecewise XSDDs require the pysdd package")
@@ -81,11 +81,11 @@ class PiecewiseXSDD(object):
         return then_expression.condition(condition) + else_expression.condition(condition.negate())
 
     @staticmethod
-    def symbol(name, manager: SddManager, algebra: Type[AlgebraBackend]):
+    def symbol(name, manager: SddManager, algebra: AlgebraBackend):
         return PiecewiseXSDD({algebra.symbol(name): manager.true()}, manager, algebra)
 
     @staticmethod
-    def real(float_constant, manager: SddManager, algebra: Type[AlgebraBackend], convert=True):
+    def real(float_constant, manager: SddManager, algebra: AlgebraBackend, convert=True):
         if convert:
             float_constant = algebra.real(float_constant)
         return PiecewiseXSDD({float_constant: manager.true()}, manager, algebra)
