@@ -70,17 +70,20 @@ class XaddEngine(Engine):
         else:
             return result[0]
 
-    def copy(self, domain, support, weight, add_bounds=True):
+    def copy(self, domain, support, weight):
         return XaddEngine(domain, support, weight, self.mode, self.timeout)
 
     def get_samples(self, n):
         raise NotImplementedError()
 
-    def normalize(self, new_support, paths=True):
-        # type: (FNode, bool) -> Optional[FNode]
+    def normalize(self, new_support, conjoin_old_support=True, paths=True):
+        # type: (FNode, bool, bool) -> Optional[FNode]
 
         if not os.path.exists(XaddEngine.path()):
             raise RuntimeError("The XADD engine requires the XADD library JAR file which is currently not installed.")
+
+        if conjoin_old_support:
+            new_support = self.support & new_support
 
         with self.temp_file() as f:
             with TemporaryFile() as f2:
