@@ -31,6 +31,7 @@ def get_normalization_file(filename):
     return path.join(path.dirname(__file__), "res", "renorm_bug", filename)
 
 
+@pytest.mark.skipif(not xadd_installed, reason="XADD engine is not installed")
 def test_normalization():
     for i in range(5):
         domain = Domain.from_file(get_normalization_file("domain.json"))
