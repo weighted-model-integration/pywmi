@@ -147,6 +147,17 @@ class LinearInequality(object):
         fractions = {k: int(v / gcd) for k, v in fractions.items()}  # type: Dict[Tuple, int]
         return LinearInequality(fractions)
 
+    def normalize(self):
+        if self.inequality_dict.get(CONST_KEY, 0) != 0:
+            factor = self.inequality_dict.get(CONST_KEY, 0)
+        elif len(self.inequality_dict):
+            key = sorted(self.inequality_dict.keys())[0]
+            factor = self.inequality_dict[key]
+        else:
+            return self
+
+        return LinearInequality({k: v / abs(factor) for k, v in self.inequality_dict.items()})
+
 
 class MathDictConverter(SmtWalker):
     def __init__(self, force_linear=True):
