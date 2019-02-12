@@ -131,3 +131,9 @@ def test_linear_inequality_variables():
     print(inequality)
     assert inequality.variables == {"x", "y"}
 
+
+def test_linear_inequality_from_smt():
+    x, y = [Symbol(n, REAL) for n in "xy"]
+    inequality = LinearInequality.from_smt(x >= 0)
+    assert inequality.a("x") == -1
+    assert inequality.scale_to_integer().a("x") == -1

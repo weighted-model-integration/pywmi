@@ -176,7 +176,7 @@ class LinearInequality(object):
         denominators = [int(fraction.denominator) for fraction in fractions.values()]
         lcm = reduce(LinearInequality.lcm, denominators)
         fractions = {k: v * lcm for k, v in fractions.items()}  # type: Dict[Tuple, Fraction]
-        numerators = [int(fraction.numerator) for fraction in fractions.values()]
+        numerators = [abs(int(fraction.numerator)) for fraction in fractions.values()]
         gcd = reduce(lambda num1, num2: int(math.gcd(num1, num2)), numerators)
         fractions = {k: int(v / gcd) for k, v in fractions.items()}  # type: Dict[Tuple, int]
         return LinearInequality(fractions)

@@ -139,8 +139,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         return psipy.S(name)
 
     def real(self, float_constant):
-        print(float_constant, type(float_constant))
-        assert isinstance(float_constant, (float,int))
+        assert isinstance(float_constant, (float, int))
         return psipy.S(str(float_constant))
 
     def less_than(self, a, b):

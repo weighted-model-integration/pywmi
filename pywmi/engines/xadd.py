@@ -18,7 +18,6 @@ import pysmt.shortcuts as smt
 
 logger = logging.getLogger(__name__)
 
-
 class XaddEngine(Engine):
     pattern = re.compile(r"\n(-?\d+\.\d+E?-?\d*) (-?\d+\.\d+E?-?\d*)\n")
     path = os.path.join(os.path.dirname(__file__), "xadd.jar")
@@ -45,6 +44,7 @@ class XaddEngine(Engine):
                 output = subprocess.check_output(cmd_args, timeout=timeout).decode(sys.stdout.encoding)  # type: str
                 results = [(float(match[0]) if queries is not None else float(match[1]))
                            for match in XaddEngine.pattern.findall(output)]
+                print(output)
                 return results
             except subprocess.CalledProcessError as e:
                 logger.warning(e.output.decode(sys.stdout.encoding)

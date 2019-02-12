@@ -71,8 +71,8 @@ def test_trivial_weight_function_partial():
     a, b, x, y = domain.get_symbols(domain.variables)
     support = (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 1)
     weight = Real(1.0)
-    xsdd = NativeXsddEngine(domain, support, weight, XaddIntegrator())
-    computed_volume = xsdd.compute_volume(pint=True)
+    xsdd = NativeXsddEngine(domain, support, weight, XaddIntegrator(), factorized=True)
+    computed_volume = xsdd.compute_volume()
     correction_volume_rej = RejectionEngine(domain, support, weight, 1000000).compute_volume()
     correction_volume_xadd = XaddEngine(domain, support, weight).compute_volume()
     print(correction_volume_rej, correction_volume_xadd, computed_volume)
@@ -86,8 +86,8 @@ def test_trivial_weight_function_partial_0b_1r_overlap():
     support = (x >= 0.2) & (x <= 0.6) | (x >= 0.4) & (x <= 0.8)
     weight = Real(2.0)
 
-    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
-    computed_volume = engine.compute_volume(pint=True)
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator(), factorized=True)
+    computed_volume = engine.compute_volume()
 
     should_be = XaddEngine(domain, support, weight).compute_volume()
     print(computed_volume, should_be)
@@ -100,8 +100,8 @@ def test_trivial_weight_function_partial_0b_1r_disjoint():
     support = (x >= 0.1) & (x <= 0.9) & ~((x >= 0.3) & (x <= 0.7))
     weight = Real(2.0)
 
-    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
-    computed_volume = engine.compute_volume(pint=True)
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator(), factorized=True)
+    computed_volume = engine.compute_volume()
 
     should_be = XaddEngine(domain, support, weight).compute_volume()
     print(computed_volume, should_be)
@@ -114,8 +114,8 @@ def test_partial_0b_2r_trivial_weight():
     support = (x >= 0.1) & (x <= 0.9) & (y >= 0.3) & (y <= 0.7)
     weight = Real(2.0)
 
-    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
-    computed_volume = engine.compute_volume(pint=True)
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator(), factorized=True)
+    computed_volume = engine.compute_volume()
 
     should_be = XaddEngine(domain, support, weight).compute_volume()
     print(computed_volume, should_be)
@@ -128,8 +128,8 @@ def test_partial_0b_2r_factorized_weight():
     support = (x >= 0.1) & (x <= 0.9) & (y >= 0.3) & (y <= 0.7)
     weight = x * x * y * 3.17
 
-    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
-    computed_volume = engine.compute_volume(pint=True)
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator(), factorized=True)
+    computed_volume = engine.compute_volume()
 
     should_be = XaddEngine(domain, support, weight).compute_volume()
     print(computed_volume, should_be)
@@ -142,8 +142,8 @@ def test_partial_0b_2r_factorized_weight_common_test():
     support = (x >= 0.1) & (x <= 0.9) & (y >= 0.3) & (y <= 0.7) & (x <= y)
     weight = x * x * y * 3.17
 
-    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
-    computed_volume = engine.compute_volume(pint=True)
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator(), factorized=True)
+    computed_volume = engine.compute_volume()
 
     should_be = XaddEngine(domain, support, weight).compute_volume()
     print(computed_volume, should_be)
@@ -156,8 +156,8 @@ def test_partial_0b_2r_branch_weight():
     support = (x >= 0.1) & (x <= 0.9) & (y >= 0.3) & (y <= 0.7)
     weight = Ite(x <= y, x, y * 3.17)
 
-    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator())
-    computed_volume = engine.compute_volume(pint=True)
+    engine = NativeXsddEngine(domain, support, weight, XaddIntegrator(), factorized=True)
+    computed_volume = engine.compute_volume()
 
     should_be = XaddEngine(domain, support, weight).compute_volume()
     print(computed_volume, should_be)

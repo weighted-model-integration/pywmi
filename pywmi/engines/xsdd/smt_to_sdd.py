@@ -100,7 +100,9 @@ class SddConversionWalker(SmtWalker):
         converted = self.walk_smt_multiple(args)
 
         result = converted[0]
+        print(result)
         for c in converted[1:]:
+            print(c)
             result *= c
         return result
 
@@ -123,7 +125,16 @@ class SddConversionWalker(SmtWalker):
         return PiecewiseXSDD.ite(sdd, then_expression, else_expression)
 
     def walk_pow(self, base, exponent):
-        return Pow(base, exponent)
+        base, = self.walk_smt_multiple([base])
+        exponent = exponent.constant_value()
+        assert int(exponent) == exponent
+        exponent = int(exponent)
+        if exponent == 0:
+            return PiecewiseXSDD.real(1, self.manager, self.algebra)
+        result = base
+        for i in range(exponent - 1):
+            result *= base
+        return result
 
     def walk_lte(self, left: FNode, right: FNode):
         if not self.boolean_stack[-1]:

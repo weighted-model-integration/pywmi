@@ -279,7 +279,7 @@ class FactorizedWMIWalker(SddWalker):
         print("+", "LIT", node.id, l)
 
         if abs(l) in self.lit_to_var:
-            expr, bool_vars = smt.TRUE(), {self.lit_to_var[abs(l)]}
+            expr, bool_vars = self.algebra.one(), {self.lit_to_var[abs(l)]}
         else:
             f = self.reverse_abstractions[abs(l)]
             if l < 0:
@@ -398,11 +398,13 @@ def push_bounds_down(parent_to_children, node_to_groups, root_id, dependency, in
 
 
 class NativeXsddEngine(Engine):
-    def __init__(self, domain, support, weight, backend: IntegrationBackend, manager=None, algebra=None):
+    def __init__(self, domain, support, weight, backend: IntegrationBackend, factorized=False, manager=None,
+                 algebra=None):
         super().__init__(domain, support, weight, backend.exact)
         if SddManager is None:
             from pywmi.errors import InstallError
             raise InstallError("NativeXsddEngine requires the pysdd package")
+        self.factorized = factorized
         self.manager = manager or SddManager()
         self.algebra = algebra or PSIAlgebra()
         self.backend = backend
@@ -418,7 +420,10 @@ class NativeXsddEngine(Engine):
         except ZeroDivisionError:
             return 0
 
-    def compute_volume(self, pint=False):
+    def compute_volume(self, add_bounds=True):
+        if add_bounds:
+            return self.with_constraint(self.domain.get_bounds()).compute_volume(False)
+
         abstractions, var_to_lit = dict(), dict()
 
         # conflicts = []
@@ -441,9 +446,8 @@ class NativeXsddEngine(Engine):
         for world_weight, world_support in piecewise_function.sdd_dict.items():
 
             support = support_sdd & world_support
-            if pint:
+            if self.factorized:
                 print(pretty_print(recover_formula(support, abstractions, var_to_lit, False)))
-
                 print(world_weight)
                 variable_groups = get_variable_groups_poly(world_weight, self.domain.real_vars)
 
@@ -527,12 +531,12 @@ class NativeXsddEngine(Engine):
                 for convex_support, variables in convex_supports:
                     missing_variable_count = len(self.domain.bool_vars) - len(variables)
                     vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
-                    volume += vol
+                    volume = self.algebra.plus(volume, self.algebra.real(vol))
 
         return self.algebra.to_float(volume)
 
     def copy(self, domain, support, weight):
-        return NativeXsddEngine(self.domain, support, weight, self.manager)
+        return NativeXsddEngine(self.domain, support, weight, self.backend, self.factorized, self.manager, self.algebra)
 
     def __str__(self):
         return "n-xsdd:b{}".format(self.backend)

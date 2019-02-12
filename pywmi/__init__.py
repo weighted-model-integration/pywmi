@@ -15,6 +15,8 @@ from .engines.pa import PredicateAbstractionEngine
 # noinspection PyUnresolvedReferences
 from .engines.xadd import XaddEngine
 # noinspection PyUnresolvedReferences
+from .engines.xsdd.inference import NativeXsddEngine
+# noinspection PyUnresolvedReferences
 from .engines.adaptive_rejection import AdaptiveRejection, information_gain, entropy
 
 try:

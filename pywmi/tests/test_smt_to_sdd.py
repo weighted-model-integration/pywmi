@@ -15,7 +15,7 @@ pytestmark = pytest.mark.skipif(SddManager is None, reason="pysdd is not install
 
 
 def test_convert_weight():
-    converter = SddConversionWalker(SddManager(), PolynomialAlgebra, False)
+    converter = SddConversionWalker(SddManager(), PolynomialAlgebra(), False)
     x, y = smt.Symbol("x", smt.REAL), smt.Symbol("y", smt.REAL)
     a = smt.Symbol("a", smt.BOOL)
     formula = smt.Ite((a & (x > 0) & (x < 10) & (x * 2 <= 20) & (y > 0) & (y < 10)) | (x > 0) & (x < y) & (y < 20), x + y, x * y) + 2
@@ -26,7 +26,7 @@ def test_convert_weight():
 
 
 def test_convert_support():
-    converter = SddConversionWalker(SddManager(), PolynomialAlgebra, True)
+    converter = SddConversionWalker(SddManager(), PolynomialAlgebra(), True)
     x, y = smt.Symbol("x", smt.REAL), smt.Symbol("y", smt.REAL)
     a = smt.Symbol("a", smt.BOOL)
     formula = ((x <= 0) | (~a & (x <= -1))) | smt.Ite(a, x <= 4, x <= 8)
@@ -52,7 +52,7 @@ def test_convert_weight2():
     ite_x = smt.Ite(x >= smt.Real(0.5), smt.Real(0.5) * x + smt.Real(0.1) * y, smt.Real(0.1) * x + smt.Real(0.7) * y)
     weight = ite_a * ite_b * ite_x
 
-    algebra = PolynomialAlgebra
+    algebra = PolynomialAlgebra()
     abstractions_c, var_to_lit_c = dict(), dict()
     converted_c = convert_function(smt.Real(0.6), SddManager(), algebra, abstractions_c, var_to_lit_c)
     for p, s in converted_c.sdd_dict.items():
