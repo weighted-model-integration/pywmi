@@ -36,7 +36,7 @@ def test_normalization():
         domain = Domain.from_file(get_normalization_file("domain.json"))
         support = read_smtlib(get_normalization_file("vanilla.support"))
         weight = read_smtlib(get_normalization_file("vanilla.weight"))
-        new_support = support & read_smtlib(get_normalization_file("renorm_chi_{}.support".format(i)))
+        new_support = read_smtlib(get_normalization_file("renorm_chi_{}.support".format(i)))
         engine = XaddEngine(domain, support, weight)
         new_weight = engine.normalize(new_support, paths=False)
 
