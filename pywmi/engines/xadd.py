@@ -18,6 +18,7 @@ import pysmt.shortcuts as smt
 
 logger = logging.getLogger(__name__)
 
+# TODO Latte for integration
 class XaddEngine(Engine):
     pattern = re.compile(r"\n(-?\d+\.\d+E?-?\d*) (-?\d+\.\d+E?-?\d*)\n")
     path = os.path.join(os.path.dirname(__file__), "xadd.jar")
