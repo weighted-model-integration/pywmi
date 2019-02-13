@@ -51,9 +51,7 @@ class LatteIntegrator(IntegrationBackend):
         # TODO Use power of linear forms?
         b_geq_a = []
         for bound in convex_bounds:
-            print([(v, bound.a(v)) for v in domain.real_vars])
             integer_bound = bound.scale_to_integer()
-            print([(v, integer_bound.a(v)) for v in domain.real_vars])
 
             b_geq_a.append([integer_bound.b()] + [-integer_bound.a(v) for v in domain.real_vars])
 
@@ -69,14 +67,6 @@ class LatteIntegrator(IntegrationBackend):
                 with open(poly_file, "w") as poly_ref:
                     print("[{}]".format(",".join("[{},[{}]]".format(m[0], ",".join(map(str, m[1])))
                                                  for m in monomials)), file=poly_ref)
-
-                with open(bounds_file) as ref:
-                    for line in ref:
-                        print(line)
-
-                with open(poly_file) as ref:
-                    for line in ref:
-                        print(line)
 
                 command = "integrate --valuation=integrate {} --monomials={} {}"\
                     .format(self.algorithm, poly_file, bounds_file)

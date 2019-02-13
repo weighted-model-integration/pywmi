@@ -100,9 +100,7 @@ class SddConversionWalker(SmtWalker):
         converted = self.walk_smt_multiple(args)
 
         result = converted[0]
-        print(result)
         for c in converted[1:]:
-            print(c)
             result *= c
         return result
 
