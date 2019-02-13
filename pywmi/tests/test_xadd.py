@@ -40,6 +40,15 @@ def test_normalization():
         support = read_smtlib(get_normalization_file("vanilla.support"))
         weight = read_smtlib(get_normalization_file("vanilla.weight"))
         new_support = read_smtlib(get_normalization_file("renorm_chi_{}.support".format(i)))
+
+        # print(smt_to_nested(support))
+
+        clean_support = normalize_formula(support)
+        clean_new_support = normalize_formula(new_support)
+        clean_weight = normalize_formula(weight)
+
+        # print(smt_to_nested(support))
+
         engine = XaddEngine(domain, support, weight)
         new_weight = engine.normalize(new_support, paths=False)
 
