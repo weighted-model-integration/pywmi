@@ -59,7 +59,7 @@ class Engine:
         domain = domain or self.domain
         support = support or self.support
         weight = weight or self.weight
-        return self.copy(self.domain, support, self.weight)
+        return self.copy(domain, support, weight)
 
     def copy(self, domain, support, weight):
         # type: (T, Domain, FNode, FNode) -> T

@@ -8,6 +8,7 @@ import tabulate
 from pysmt.fnode import FNode
 from typing import Optional
 
+from pywmi.smt_print import pretty_print
 from .engine import Engine
 from .convert import Import
 from .domain import Density
@@ -212,6 +213,8 @@ def parse():
     plot_p.add_argument("-y", "--feat_y", type=str, help="Feature y", default=None)
     plot_p.add_argument("-d", "--difference", type=str, help="Path to density to compute difference for", default=None)
 
+    print_p = task_parsers.add_parser("print")
+
     parser.add_argument("-d", "--dialect", default=None, type=str, help="The dialect to use for import")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     args = parser.parse_args()
@@ -257,6 +260,18 @@ def parse():
             plot.plot_formula(output_file, domain, difference, (args.feat_x, args.feat_y))
         else:
             plot.plot_formula(output_file, domain, support, (args.feat_x, args.feat_y))
+
+    elif args.task == "print":
+        print("-- Domain ---")
+        print(density.domain)
+        print("--- Support ---")
+        print(pretty_print(density.support))
+        print("--- Weight ---")
+        print(pretty_print(density.weight))
+        if len(density.queries) > 0:
+            print("--- Queries ---")
+            for query in density.queries:
+                print("\t", pretty_print(query))
 
 
 if __name__ == "__main__":

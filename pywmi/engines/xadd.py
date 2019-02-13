@@ -21,28 +21,32 @@ logger = logging.getLogger(__name__)
 # TODO Latte for integration
 class XaddEngine(Engine):
     pattern = re.compile(r"\n(-?\d+\.\d+E?-?\d*) (-?\d+\.\d+E?-?\d*)\n")
-    path = os.path.join(os.path.dirname(__file__), "xadd.jar")
 
     def __init__(self, domain, support, weight, mode=None, timeout=None):
         super().__init__(domain, support, weight)
-        if not os.path.exists(XaddEngine.path):
+        if not os.path.exists(XaddEngine.path()):
             raise InstallError("The XADD engine requires the XADD library JAR file which is currently not installed.")
         self.mode = mode
         self.timeout = timeout
 
+    @staticmethod
+    def path():
+        return os.environ.get("XADD_PATH", os.path.join(os.path.dirname(__file__), "xadd.jar"))
+
     def call_wmi(self, queries=None, timeout=None):
         # type: (Optional[List[FNode]], Optional[int]) -> Optional[List[Optional[float]]]
 
-        if not os.path.exists(XaddEngine.path):
+        if not os.path.exists(XaddEngine.path()):
             raise RuntimeError("The XADD engine requires the XADD library JAR file which is currently not installed.")
 
         timeout = timeout if timeout else self.timeout
 
         with self.temp_file(queries) as f:
             try:
-                cmd_args = ["java", "-jar", XaddEngine.path, "inference", f] + ([self.mode] if self.mode else [])
+                cmd_args = ["java", "-jar", XaddEngine.path(), "inference", f] + ([self.mode] if self.mode else [])
                 logger.info("> {}".format(" ".join(cmd_args)))
                 output = subprocess.check_output(cmd_args, timeout=timeout).decode(sys.stdout.encoding)  # type: str
+                # print(output.replace("Academic license - for non-commercial use only\n", ""))
                 results = [(float(match[0]) if queries is not None else float(match[1]))
                            for match in XaddEngine.pattern.findall(output)]
                 print(output)
@@ -68,17 +72,20 @@ class XaddEngine(Engine):
         else:
             return result[0]
 
-    def copy(self, domain, support, weight, add_bounds=True):
+    def copy(self, domain, support, weight):
         return XaddEngine(domain, support, weight, self.mode, self.timeout)
 
     def get_samples(self, n):
         raise NotImplementedError()
 
-    def normalize(self, new_support, paths=True):
-        # type: (FNode, bool) -> Optional[FNode]
+    def normalize(self, new_support, conjoin_old_support=True, paths=True):
+        # type: (FNode, bool, bool) -> Optional[FNode]
 
-        if not os.path.exists(XaddEngine.path):
+        if not os.path.exists(XaddEngine.path()):
             raise RuntimeError("The XADD engine requires the XADD library JAR file which is currently not installed.")
+
+        if conjoin_old_support:
+            new_support = self.support & new_support
 
         with self.temp_file() as f:
             with TemporaryFile() as f2:
@@ -87,7 +94,7 @@ class XaddEngine(Engine):
                     Density(self.domain, TRUE(), Real(1.0)).to_file(f3)
 
                     try:
-                        cmd_args = ["java", "-jar", XaddEngine.path, "normalize", f, f2, "-p" if paths else "-t", f3]
+                        cmd_args = ["java", "-jar", XaddEngine.path(), "normalize", f, f2, "-p" if paths else "-t", f3]
                         logger.info("> {}".format(" ".join(cmd_args)))
                         output = subprocess.check_output(cmd_args, timeout=self.timeout).decode(sys.stdout.encoding)
                         return XaddEngine.import_normalized(f3)
