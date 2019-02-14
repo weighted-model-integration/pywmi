@@ -83,7 +83,7 @@ class SmtWalker(object):
             return self.walk_constant(formula.constant_value(), formula.constant_type())
         if formula.is_iff():
             return self.walk_and([smt.Implies(formula.arg(0), formula.arg(1)),
-                                  smt.Implies(formula.arg(1), formula.arg(1))])
+                                  smt.Implies(formula.arg(1), formula.arg(0))])
         raise RuntimeError("Cannot walk {} (of type {})".format(formula, formula.node_type()))
 
 
