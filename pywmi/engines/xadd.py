@@ -96,6 +96,7 @@ class XaddEngine(Engine):
                         cmd_args = ["java", "-jar", XaddEngine.path(), "normalize", f, f2, "-p" if paths else "-t", f3]
                         logger.info("> {}".format(" ".join(cmd_args)))
                         output = subprocess.check_output(cmd_args, timeout=self.timeout).decode(sys.stdout.encoding)
+                        # print(output.replace("Academic license - for non-commercial use only\n", ""))
                         return XaddEngine.import_normalized(f3)
                     except subprocess.CalledProcessError as e:
                         logger.warning(e.output)

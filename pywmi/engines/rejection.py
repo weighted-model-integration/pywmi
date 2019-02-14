@@ -35,7 +35,7 @@ class RejectionEngine(Engine):
         sample_count = sample_count if sample_count is not None else self.sample_count
         samples = uniform(self.domain, sample_count)
         labels = evaluate(self.domain, self.support, samples)
-        bound_volume = self.domain.get_volume()
+        bound_volume = self.domain.get_volume() if len(self.domain.real_vars) > 0 else 2 ** len(self.domain.bool_vars)
         approx_volume = bound_volume * sum(labels) / len(labels)
 
         if self.weight is not None:

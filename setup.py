@@ -11,7 +11,7 @@ URL = 'http://github.com/samuelkolb/pywmi'
 EMAIL = 'samuel.kolb@me.com'
 AUTHOR = 'Samuel Kolb'
 REQUIRES_PYTHON = '>=3.5.0'
-VERSION = "0.6.6"
+VERSION = "0.6.7"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
