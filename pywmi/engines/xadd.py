@@ -49,7 +49,7 @@ class XaddEngine(Engine):
                 # print(output.replace("Academic license - for non-commercial use only\n", ""))
                 results = [(float(match[0]) if queries is not None else float(match[1]))
                            for match in XaddEngine.pattern.findall(output)]
-                print(output)
+                # print(output)
                 return results
             except subprocess.CalledProcessError as e:
                 logger.warning(e.output.decode(sys.stdout.encoding)

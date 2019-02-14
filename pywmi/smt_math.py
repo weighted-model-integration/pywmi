@@ -1,6 +1,6 @@
 import math
 from fractions import Fraction
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple, Union, List
 
 from pysmt.exceptions import InternalSolverError
 from pysmt.shortcuts import Plus, Symbol, Real, Times, Solver, Ite
@@ -44,6 +44,9 @@ class Polynomial(object):
                     term = algebra.times(term, algebra.symbol(var))
             result = algebra.plus(result, algebra.times(term, algebra.real(factor)))
         return result
+
+    def get_terms(self) -> List['Polynomial']:
+        return [Polynomial({k: v}) for k, v in self.poly_dict.items()]
 
     def __add__(self, other: Union[object, int, float]):
         if isinstance(other, (float, int)):

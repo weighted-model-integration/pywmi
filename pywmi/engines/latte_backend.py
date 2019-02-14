@@ -4,11 +4,14 @@ import re
 import shutil
 import tempfile
 from fractions import Fraction
-from subprocess import check_output, DEVNULL
+from subprocess import check_output, DEVNULL, CalledProcessError
 from typing import List
+
+from pysmt.exceptions import InternalSolverError
 
 from pywmi.smt_math import LinearInequality, Polynomial
 from .integration_backend import IntegrationBackend
+import pysmt.shortcuts as smt
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +53,10 @@ class LatteIntegrator(IntegrationBackend):
     def integrate(self, domain, convex_bounds: List[LinearInequality], polynomial: Polynomial):
         # TODO Use power of linear forms?
         b_geq_a = []
+        formula = smt.TRUE()
         for bound in convex_bounds:
             integer_bound = bound.scale_to_integer()
-
+            formula &= integer_bound.to_smt()
             b_geq_a.append([integer_bound.b()] + [-integer_bound.a(v) for v in domain.real_vars])
 
         monomials = [(Fraction(value).limit_denominator(), self.key_to_exponents(domain, key))
@@ -68,12 +72,33 @@ class LatteIntegrator(IntegrationBackend):
                     print("[{}]".format(",".join("[{},[{}]]".format(m[0], ",".join(map(str, m[1])))
                                                  for m in monomials)), file=poly_ref)
 
+                # print(polynomial)
+                # with open(bounds_file) as ref:
+                #     print(*ref.readlines())
+
                 command = "integrate --valuation=integrate {} --monomials={} {}"\
                     .format(self.algorithm, poly_file, bounds_file)
-                output = check_output(command, shell=True, stderr=DEVNULL).decode()
+                try:
+                    output = check_output(command, shell=True, stderr=DEVNULL).decode()
+                except CalledProcessError:
+                    with smt.Solver() as solver:
+                        solver.add_assertion(formula)
+                        solver.solve()
+                        try:
+                            solver.get_model()
+                        except InternalSolverError:
+                            return 0.0
+                    raise
                 match = re.search(self.pattern, output)
                 if not match:
-                    raise RuntimeError("Could not find answer in Latte output: {output}".format(output=output))
+                    return 0.0
+                    #
+                    # with open(poly_file) as ref:
+                    #     print(*ref.readlines())
+                    # with open(bounds_file) as ref:
+                    #     print(*ref.readlines())
+                    # print(output)
+                    # raise RuntimeError("Could not find answer in Latte output: {output}".format(output=output))
                 return float(Fraction(int(match.group(1)), int(match.group(2))))
 
     def __str__(self):

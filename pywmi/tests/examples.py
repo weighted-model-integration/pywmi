@@ -64,7 +64,7 @@ def inspect_density(engine_factory, density, test_unweighted=True, test_weighted
 def inspect_manual(engine_factory, rel_error):
     domain = Domain.make(["a"], ["x"], [(0, 1)])
     a, x, = domain.get_symbols()
-    support = (a & (x <= 0.5)) | (x >= 0.2) & domain.get_bounds()
+    support = ((a & (x <= 0.5)) | (x >= 0.2)) & domain.get_bounds()
     weight = Ite(a, Real(0.3), Real(0.7)) * x
     # worlds:    a, x <= 0.5, x >= 0.2  integrate 0.3 * x, 0.2 <= x <= 0.5 = 0.0315
     #            a, x <= 0.5, x <= 0.2  integrate 0.3 * x, 0.0 <= x <= 0.2 = 0.006

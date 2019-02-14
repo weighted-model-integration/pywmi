@@ -443,94 +443,96 @@ class NativeXsddEngine(Engine):
         piecewise_function = convert_function(self.weight, self.manager, algebra, abstractions, var_to_lit)
 
         volume = self.algebra.zero()
-        for world_weight, world_support in piecewise_function.sdd_dict.items():
+        for w_weight, world_support in piecewise_function.sdd_dict.items():
 
             support = support_sdd & world_support
             if self.factorized:
-                print(pretty_print(recover_formula(support, abstractions, var_to_lit, False)))
-                print(world_weight)
-                variable_groups = get_variable_groups_poly(world_weight, self.domain.real_vars)
+                for term in w_weight.get_terms():
+                    print(pretty_print(recover_formula(support, abstractions, var_to_lit, False)))
+                    print(term)
+                    variable_groups = get_variable_groups_poly(term, self.domain.real_vars)
 
-                def get_group(_v):
-                    for i, (_vars, _node) in enumerate(variable_groups):
-                        if _v in _vars:
-                            return i
-                    raise ValueError("Variable {} not found in any group ({})".format(_v, variable_groups))
+                    def get_group(_v):
+                        for i, (_vars, _node) in enumerate(variable_groups):
+                            if _v in _vars:
+                                return i
+                        raise ValueError("Variable {} not found in any group ({})".format(_v, variable_groups))
 
-                print(variable_groups)
-                child_to_parents_mapping = ParentAnalysis.get_parents(abstractions, var_to_lit, support)
-                parent_to_children_mapping = ParentAnalysis.get_children(abstractions, var_to_lit, support)
-                print(parent_to_children_mapping)
+                    print(variable_groups)
+                    # child_to_parents_mapping = ParentAnalysis.get_parents(abstractions, var_to_lit, support)
+                    parent_to_children_mapping = ParentAnalysis.get_children(abstractions, var_to_lit, support)
+                    print(parent_to_children_mapping)
 
-                print()
-                literal_to_groups = dict()
-                for inequality, literal in abstractions.items():
-                    inequality_variables = LinearInequality.from_smt(inequality).variables
-                    inequality_groups = [get_group(v) for v in inequality_variables]
-                    literal_to_groups[literal] = inequality_groups
+                    print()
+                    literal_to_groups = dict()
+                    for inequality, literal in abstractions.items():
+                        inequality_variables = LinearInequality.from_smt(inequality).variables
+                        inequality_groups = [get_group(v) for v in inequality_variables]
+                        literal_to_groups[literal] = inequality_groups
 
-                print("Literal -> groups", literal_to_groups)
+                    print("Literal -> groups", literal_to_groups)
 
-                tag_analysis = VariableTagAnalysis(literal_to_groups)
-                walk(tag_analysis, support)
-                node_to_groups = tag_analysis.node_to_groups
-                print("Node -> groups", node_to_groups)
+                    tag_analysis = VariableTagAnalysis(literal_to_groups)
+                    walk(tag_analysis, support)
+                    node_to_groups = tag_analysis.node_to_groups
+                    print("Node -> groups", node_to_groups)
 
-                print()
-                dependency, integration_tags = tag_sdd(parent_to_children_mapping, node_to_groups, support.id)
-                print("Dependency", dependency)
-                print("Tags", integration_tags)
+                    print()
+                    dependency, integration_tags = tag_sdd(parent_to_children_mapping, node_to_groups, support.id)
+                    print("Dependency", dependency)
+                    print("Tags", integration_tags)
 
-                group_to_vars_poly = {i: g for i, g in enumerate(variable_groups)}
-                print("Group to vars - poly", group_to_vars_poly)
-                all_groups = frozenset(i for i, e in group_to_vars_poly.items() if len(e[0]) > 0)
+                    group_to_vars_poly = {i: g for i, g in enumerate(variable_groups)}
+                    print("Group to vars - poly", group_to_vars_poly)
+                    all_groups = frozenset(i for i, e in group_to_vars_poly.items() if len(e[0]) > 0)
 
-                constant_group_indices = [i for i, e in group_to_vars_poly.items() if len(e[0]) == 0]
-                walker = FactorizedWMIWalker(self.domain, abstractions, var_to_lit, group_to_vars_poly, dependency,
-                                             integration_tags, self.algebra)
-                root_id, expr_dict, bool_vars = walk(walker, support)
-                print(expr_dict, all_groups, expr_dict[all_groups], type(expr_dict[all_groups]))
-                missing_variable_count = len(self.domain.bool_vars) - len(bool_vars)
-                bool_worlds = self.algebra.power(self.algebra.real(2), missing_variable_count)
-                result_with_booleans = self.algebra.times(expr_dict[all_groups], bool_worlds)
-                if len(constant_group_indices) == 1:
-                    constant_poly = group_to_vars_poly[constant_group_indices[0]][1]
-                    constant = constant_poly.to_expression(self.algebra)
-                elif len(constant_group_indices) == 0:
-                    constant = self.algebra.one()
-                else:
-                    raise ValueError("Multiple constant groups: {}".format(constant_group_indices))
-                result = self.algebra.times(constant, result_with_booleans)
-                print("RESULT", result)
-                volume = self.algebra.plus(volume, result)
+                    constant_group_indices = [i for i, e in group_to_vars_poly.items() if len(e[0]) == 0]
+                    walker = FactorizedWMIWalker(self.domain, abstractions, var_to_lit, group_to_vars_poly, dependency,
+                                                 integration_tags, self.algebra)
+                    root_id, expr_dict, bool_vars = walk(walker, support)
+                    expression = expr_dict.get(all_groups, self.algebra.zero())
+                    print(expr_dict, all_groups, expression, type(expression))
+                    missing_variable_count = len(self.domain.bool_vars) - len(bool_vars)
+                    bool_worlds = self.algebra.power(self.algebra.real(2), missing_variable_count)
+                    result_with_booleans = self.algebra.times(expression, bool_worlds)
+                    if len(constant_group_indices) == 1:
+                        constant_poly = group_to_vars_poly[constant_group_indices[0]][1]
+                        constant = constant_poly.to_expression(self.algebra)
+                    elif len(constant_group_indices) == 0:
+                        constant = self.algebra.one()
+                    else:
+                        raise ValueError("Multiple constant groups: {}".format(constant_group_indices))
+                    result = self.algebra.times(constant, result_with_booleans)
+                    print("RESULT", result)
+                    volume = self.algebra.plus(volume, result)
 
-                # exit(0)
-                # continuous_vars = ContinuousVars(abstractions, var_to_lit)
-                # amc(continuous_vars, support)
-                # print(*["{}: {}".format(k, v) for k, v in continuous_vars.index_to_real_vars.items()], sep="\n")
-                #
-                # semiring_conprov = ContinuousProvenanceSemiring(abstractions, var_to_lit)
-                # result = amc(semiring_conprov, support)
-                # for index, variables in semiring_conprov.index_to_conprov.items():
-                #     print(self.manager, variables)
-                #
-                # import sys
-                # sys.exit()
-                # semiring_inttags = IntTagSemiring(abstractions, var_to_lit, semiring_conprov.index_to_conprov)
-                # _ = amc(semiring_inttags, support)
-                # int_tags = semiring_inttags.int_tags
-                # int_tags = {}
-                # # TODO fill int tags correctly
-                # convex_supports = amc(WMISemiringPint(abstractions, var_to_lit, int_tags), support)
-                # for convex_support, variables in convex_supports:
-                #     missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                #     vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
-                #     volume += vol
+                    # exit(0)
+                    # continuous_vars = ContinuousVars(abstractions, var_to_lit)
+                    # amc(continuous_vars, support)
+                    # print(*["{}: {}".format(k, v) for k, v in continuous_vars.index_to_real_vars.items()], sep="\n")
+                    #
+                    # semiring_conprov = ContinuousProvenanceSemiring(abstractions, var_to_lit)
+                    # result = amc(semiring_conprov, support)
+                    # for index, variables in semiring_conprov.index_to_conprov.items():
+                    #     print(self.manager, variables)
+                    #
+                    # import sys
+                    # sys.exit()
+                    # semiring_inttags = IntTagSemiring(abstractions, var_to_lit, semiring_conprov.index_to_conprov)
+                    # _ = amc(semiring_inttags, support)
+                    # int_tags = semiring_inttags.int_tags
+                    # int_tags = {}
+                    # # TODO fill int tags correctly
+                    # convex_supports = amc(WMISemiringPint(abstractions, var_to_lit, int_tags), support)
+                    # for convex_support, variables in convex_supports:
+                    #     missing_variable_count = len(self.domain.bool_vars) - len(variables)
+                    #     vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
+                    #     volume += vol
             else:
                 convex_supports = amc(WMISemiring(abstractions, var_to_lit), support)
                 for convex_support, variables in convex_supports:
                     missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                    vol = self.integrate_convex(convex_support, world_weight.to_smt()) * 2 ** missing_variable_count
+                    vol = self.integrate_convex(convex_support, w_weight.to_smt()) * 2 ** missing_variable_count
                     volume = self.algebra.plus(volume, self.algebra.real(vol))
 
         return self.algebra.to_float(volume)

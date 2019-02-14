@@ -1,6 +1,8 @@
 import pytest
 from pysmt.shortcuts import Ite, Real
 
+from pywmi.engines.latte_backend import LatteIntegrator
+from examples import inspect_manual, get_examples, inspect_density
 from pywmi import Domain, RejectionEngine, XaddEngine
 from pywmi.engines.xsdd.inference import NativeXsddEngine
 from pywmi.engines.xadd import XaddIntegrator
@@ -14,7 +16,7 @@ except ImportError:
 pytestmark = pytest.mark.skipif(not pysdd_installed, reason="pysdd is not installed")
 
 ERROR = 0.1
-
+REL_ERROR = 0.000001
 
 def test_volume():
     # Support:  (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 10)
@@ -162,3 +164,14 @@ def test_partial_0b_2r_branch_weight():
     should_be = XaddEngine(domain, support, weight).compute_volume()
     print(computed_volume, should_be)
     assert computed_volume == pytest.approx(should_be, rel=ERROR)
+
+
+def test_xsdd_manual():
+    for f in (False, True):
+        inspect_manual(lambda d, s, w: NativeXsddEngine(d, s, w, LatteIntegrator(), factorized=f), REL_ERROR)
+
+
+def test_xsdd_examples():
+    for f in (False, True):
+        for e in get_examples():
+            inspect_density(lambda d, s, w: NativeXsddEngine(d, s, w, LatteIntegrator(), factorized=f), e)
