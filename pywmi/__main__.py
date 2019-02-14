@@ -35,6 +35,8 @@ def parse_options(option_strings, *whitelist):
             n, v = "sample_count_build", int(option_string[1:])
         elif option_string=="pint":
             n, v = "pint", True
+        elif option_string == "factorized":
+            n, v = "factorized", True
         elif option_string=="collapse":
             n, v = "collapse", True
         elif option_string=="repeated":
@@ -69,7 +71,7 @@ def get_engine(description, domain, support, weight):
         from pywmi import XsddEngine
         return XsddEngine(domain, support, weight, **options)
     if parts[0].lower() == "n-xsdd":
-        options = parse_options(parts[1:], "backend")
+        options = parse_options(parts[1:], "backend", "factorized")
         backend_string = options.get("backend", None)
         if backend_string is None:
             backend = None
