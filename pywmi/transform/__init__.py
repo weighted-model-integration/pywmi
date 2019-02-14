@@ -1,1 +1,2 @@
 from .positive_coefficients import make_coefficients_positive
+from .smt_normalize import normalize_formula

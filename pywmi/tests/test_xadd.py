@@ -7,7 +7,7 @@ import pysmt.shortcuts as smt
 
 from pywmi.errors import InstallError
 from pywmi import Domain, XaddEngine, RejectionEngine, smt_to_nested, Density
-from pywmi.smt_normalize import normalize_formula
+from pywmi.transform import normalize_formula
 
 EXACT_REL_ERROR = 0.00000001
 

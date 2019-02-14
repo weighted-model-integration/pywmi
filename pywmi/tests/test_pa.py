@@ -3,7 +3,7 @@ import pytest
 from examples import get_examples, inspect_density, inspect_manual, inspect_infinite_without_domain_bounds
 from pywmi import PredicateAbstractionEngine, Domain, smt_to_nested, RejectionEngine
 from pywmi.engines.pa import WMI
-from pywmi.smt_normalize import normalize_formula
+from pywmi.transform import normalize_formula
 
 import pysmt.shortcuts as smt
 

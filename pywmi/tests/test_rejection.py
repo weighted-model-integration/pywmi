@@ -5,7 +5,7 @@ from pywmi import RejectionEngine, Domain, XaddEngine, smt_to_nested
 
 import pysmt.shortcuts as smt
 
-from pywmi.smt_normalize import normalize_formula
+from pywmi.transform import normalize_formula
 
 SAMPLE_COUNT = 1000000
 REL_ERROR = 0.01
