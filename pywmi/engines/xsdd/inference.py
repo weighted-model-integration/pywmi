@@ -311,10 +311,9 @@ def get_variable_groups_poly(weight: Polynomial, real_vars: List[str]) -> List[T
     if len(real_vars) > 0:
         result = []
         found_vars = weight.variables
-        print(found_vars)
         for v in real_vars:
             if v not in found_vars:
-                result.append((set(v), Polynomial.from_constant(1)))
+                result.append(({v}, Polynomial.from_constant(1)))
         return result + get_variable_groups_poly(weight, [])
 
     if len(weight.poly_dict) > 1:
@@ -451,7 +450,6 @@ class NativeXsddEngine(Engine):
                     print(pretty_print(recover_formula(support, abstractions, var_to_lit, False)))
                     print(term)
                     variable_groups = get_variable_groups_poly(term, self.domain.real_vars)
-
                     def get_group(_v):
                         for i, (_vars, _node) in enumerate(variable_groups):
                             if _v in _vars:
