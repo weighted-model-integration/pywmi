@@ -29,7 +29,7 @@ class Engine:
     def compute_probabilities(self, queries, add_bounds=True):
         # type: (List[FNode], bool) -> List[float]
         volume = self.compute_volume(add_bounds=add_bounds)
-        return [self.with_constraint(query).compute_volume(add_bounds=add_bounds) / volume
+        return [self.with_constraint(query).compute_volume(add_bounds=add_bounds) / volume if volume > 0 else None
                 for query in queries]
 
     def compute_probability(self, query, add_bounds=True):

@@ -59,13 +59,19 @@ class RejectionEngine(Engine):
             sample_weights = evaluate(self.domain, self.weight, positive_samples)
             total = sum(sample_weights)
             for query in queries:
-                query_labels = numpy.logical_and(evaluate(self.domain, query, positive_samples), labels[labels])
-                results.append(sum(sample_weights[query_labels]) / total)
+                if total > 0:
+                    query_labels = numpy.logical_and(evaluate(self.domain, query, positive_samples), labels[labels])
+                    results.append(sum(sample_weights[query_labels]) / total)
+                else:
+                    results.append(None)
         else:
             total = positive_samples.shape[0]
             for query in queries:
-                query_labels = numpy.logical_and(evaluate(self.domain, query, positive_samples), labels[labels])
-                results.append(sum(query_labels) / total)
+                if total > 0:
+                    query_labels = numpy.logical_and(evaluate(self.domain, query, positive_samples), labels[labels])
+                    results.append(sum(query_labels) / total)
+                else:
+                    results.append(None)
 
         return results
 
