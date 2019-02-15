@@ -327,7 +327,7 @@ def get_variable_groups_poly(weight: Polynomial, real_vars: List[str]) -> List[T
                 result[frozenset()] *= Polynomial.from_constant(value)
             else:
                 for v in name:
-                    result[frozenset(v,)] *= Polynomial.from_smt(smt.Symbol(v, smt.REAL))
+                    result[frozenset((v,))] *= Polynomial.from_smt(smt.Symbol(v, smt.REAL))
                 result[frozenset()] *= Polynomial.from_constant(value)
         return list(result.items())
 
