@@ -9,7 +9,7 @@ pysdd.iterator
 """
 from collections import deque
 import numpy as np
-from typing import Dict, Set, Optional, List, Tuple, Callable, Union
+from typing import Dict, Set, Optional, Callable, Union
 
 from pywmi.errors import InstallError
 

@@ -33,10 +33,18 @@ def parse_options(option_strings, *whitelist):
             n, v = "backend", option_string[1:]
         elif option_string.startswith("b") and "sample_count_build" in whitelist:
             n, v = "sample_count_build", int(option_string[1:])
+        elif option_string.startswith("v") and "balance" in whitelist:
+            n, v = "balance", option_string[1:]
+        elif option_string == "min" and "minimize" in whitelist:
+            n, v = "minimize", True
         elif option_string=="pint":
             n, v = "pint", True
         elif option_string == "factorized":
             n, v = "factorized", True
+        elif option_string == "prune":
+            n, v = "find_conflicts", True
+        elif option_string == "order":
+            n, v = "ordered", True
         elif option_string=="collapse":
             n, v = "collapse", True
         elif option_string=="repeated":
@@ -71,7 +79,7 @@ def get_engine(description, domain, support, weight):
         from pywmi import XsddEngine
         return XsddEngine(domain, support, weight, **options)
     if parts[0].lower() == "n-xsdd":
-        options = parse_options(parts[1:], "backend", "factorized")
+        options = parse_options(parts[1:], "backend", "factorized", "find_conflicts", "ordered", "balance", "minimize")
         backend_string = options.get("backend", None)
         if backend_string is None:
             backend = None
@@ -91,8 +99,8 @@ def get_engine(description, domain, support, weight):
                 raise ValueError("Please specify a valid backend instead of {}".format(parts[0]))
 
         del options["backend"]
-        from pywmi import NativeXsddEngine
-        return NativeXsddEngine(domain, support, weight, backend, **options)
+        from pywmi import XsddEngine
+        return XsddEngine(domain, support, weight, backend, **options)
 
 
 def get_volume(engines, queries=None, print_status=None):

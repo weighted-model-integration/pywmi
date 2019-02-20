@@ -72,6 +72,10 @@ class PiecewiseXSDD(object):
         }
         return PiecewiseXSDD(sdd_dict, self.manager, self.algebra)
 
+    def copy(self, manager: SddManager):
+        copied_dict = {weight: support.copy(manager) for weight, support in self.sdd_dict.items()}
+        return PiecewiseXSDD(copied_dict, manager, self.algebra)
+
     @staticmethod
     def ite(condition, then_expression, else_expression):
         assert isinstance(condition, SddNode)

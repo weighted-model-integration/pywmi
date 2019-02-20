@@ -1,9 +1,9 @@
-from typing import Type
+from typing import Tuple, Dict, Optional
 
 from pywmi.engines.algebraic_backend import AlgebraBackend
 from pywmi.engines.xsdd.piecewise import PiecewiseXSDD
-from .semiring import Semiring, amc
 from pywmi.smt_math import get_inequality_smt
+from .semiring import Semiring, amc
 
 try:
     from pysdd.sdd import SddManager, SddNode
@@ -12,7 +12,7 @@ except ImportError:
     SddNode = None
 
 from pysmt.fnode import FNode
-from pysmt.shortcuts import Symbol, Pow, TRUE, FALSE, simplify
+from pysmt.shortcuts import Symbol, TRUE, FALSE, simplify, Times
 from pysmt.typing import REAL, BOOL
 from pywmi import SmtWalker
 from pywmi.errors import InstallError
@@ -39,6 +39,7 @@ class SddConversionWalker(SmtWalker):
         return literal
 
     def to_canonical(self, test_node):
+        # TODO Use LinearInequality instead?
         return get_inequality_smt(test_node)
 
     def test_to_sdd(self, test_node):
@@ -220,3 +221,29 @@ def convert_function(formula, sdd_manager, algebra: AlgebraBackend, abstractions
 def recover_formula(sdd_node: SddNode, abstractions, var_to_lit, simplify_result=True) -> FNode:
     result = amc(PySmtConversion(abstractions, var_to_lit), sdd_node)
     return simplify(result) if simplify_result else result
+
+
+def get_bool_label(formula: FNode) -> Optional[Tuple[str, FNode, FNode]]:
+    if formula.is_ite():
+        c, t, e = formula.args()  # type: FNode
+        if c.is_symbol() and c.symbol_type() == BOOL:
+            return c.symbol_name(), t, e
+    return None
+
+
+label_dict_type = Dict[str, Tuple[FNode, FNode]]
+
+
+def extract_labels_and_weight(weight: FNode) -> Tuple[label_dict_type, FNode]:
+    labels = dict()
+    terms = []
+    if weight.is_times():
+        for arg in weight.args():  # type: FNode
+            label = get_bool_label(arg)
+            if label is not None:
+                labels[label[0]] = tuple(label[1:])
+            else:
+                terms.append(arg)
+        return labels, Times(*terms)
+    else:
+        return labels, weight
