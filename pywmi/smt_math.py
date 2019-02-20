@@ -3,7 +3,7 @@ from fractions import Fraction
 from typing import Dict, Tuple, Union, List
 
 from pysmt.exceptions import InternalSolverError
-from pysmt.shortcuts import Plus, Symbol, Real, Times, Solver, Ite
+from pysmt.shortcuts import Plus, Symbol, Real, Times, Solver
 from pysmt.typing import REAL, BOOL
 
 from pywmi.engines.algebraic_backend import AlgebraBackend

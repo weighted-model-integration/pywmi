@@ -1,11 +1,10 @@
+import pysmt.shortcuts as smt
 import pytest
 
 from examples import get_examples, inspect_density, inspect_manual, inspect_infinite_without_domain_bounds
-from pywmi import PredicateAbstractionEngine, Domain, smt_to_nested, RejectionEngine
+from pywmi import PredicateAbstractionEngine, Domain, smt_to_nested
 from pywmi.engines.pa import WMI
 from pywmi.transform import normalize_formula
-
-import pysmt.shortcuts as smt
 
 REL_ERROR = 0.000001
 
@@ -20,9 +19,9 @@ def test_manual():
 
 
 @pytest.mark.skipif(WMI is None, reason="PA solver is not installed")
-def test_pa():
-    for e in get_examples():
-        inspect_density(pa_factory, e)
+@pytest.mark.parametrize("e", get_examples())
+def test_pa(e):
+    inspect_density(pa_factory, e)
 
 
 @pytest.mark.skipif(WMI is None, reason="PA solver is not installed")

@@ -1,5 +1,3 @@
-import numpy as np
-
 # noinspection PyUnresolvedReferences
 from .domain import Domain, Density
 # noinspection PyUnresolvedReferences
@@ -9,20 +7,9 @@ from .smt_check import evaluate, evaluate_assignment
 # noinspection PyUnresolvedReferences
 from .smt_walk import SmtWalker
 # noinspection PyUnresolvedReferences
-from .engines.rejection import RejectionEngine
-# noinspection PyUnresolvedReferences
-from .engines.pa import PredicateAbstractionEngine
-# noinspection PyUnresolvedReferences
-from .engines.xadd import XaddEngine
-# noinspection PyUnresolvedReferences
-from .engines.xsdd.inference import NativeXsddEngine
-# noinspection PyUnresolvedReferences
-from .engines.adaptive_rejection import AdaptiveRejection, information_gain, entropy
+from .engines import *
 
-try:
-    from .engines.xsdd.xsdd import XsddEngine
-except ImportError:
-    pass
+import numpy as np
 
 
 def _change_polytope():
@@ -41,6 +28,7 @@ def _change_polytope():
         angle = angle * corr
         ind = np.argsort(angle)
         # create patch
+        # noinspection PyUnresolvedReferences
         patch = mpl.patches.Polygon(V[ind, :], True, **kwargs)
         patch.set_zorder(0)
         return patch

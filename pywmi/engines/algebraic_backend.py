@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 import pysmt.shortcuts as smt
 from pysmt.typing import REAL
 import sympy
@@ -140,7 +142,11 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
 
     def real(self, float_constant):
         assert isinstance(float_constant, (float, int))
-        return psipy.S("{:.32f}".format(float_constant))
+        if int(float_constant) == float_constant:
+            return psipy.S("{}".format(int(float_constant)))
+        # return psipy.S("{:.32f}".format(float_constant))
+        fraction = Fraction(float_constant).limit_denominator()
+        return psipy.S("{}/{}".format(fraction.numerator, fraction.denominator))
 
     def less_than(self, a, b):
         return psipy.less(a, b)
@@ -157,10 +163,15 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     #     return result
 
     def integrate(self, domain: Domain, expression, variables=None):
-        return psipy.integrate(variables, expression)
+        return psipy.integrate_poly(variables, expression)
+        # return psipy.integrate(variables, expression)
 
     def to_float(self, real_value):
-        return float(str(psipy.simplify(real_value)))
+        string_value = str(psipy.simplify(real_value))
+        if "/" in string_value:
+            parts = string_value.split("/", 1)
+            return float(parts[0]) / float(parts[1])
+        return float(string_value)
 
 
 class StringAlgebra(AlgebraBackend, IntegrationBackend):
@@ -206,6 +217,14 @@ class StringAlgebra(AlgebraBackend, IntegrationBackend):
     def to_float(self, real_value):
         return float(real_value)
 
+    def power(self, a, power):
+        if not isinstance(power, int) and int(power) != power:
+            raise ValueError("Expected integer power, got {power}".format(power=power))
+        if power < 0:
+            raise ValueError("Unexpected negative power {power}".format(power=power))
+        result = psipy.pow(str(a), str(power))
+        return result
+
 
 class XaddAlgebra(AlgebraBackend, IntegrationBackend):
     def __init__(self):
@@ -245,7 +264,7 @@ class XaddAlgebra(AlgebraBackend, IntegrationBackend):
 
     def integrate(self, domain: Domain, expression, variables=None):
         variables = variables or domain.real_vars
-        return "(int {} (list {})]".format(expression, " ".join(variables))
+        return "(int {} (list {}))".format(expression, " ".join(variables))
 
     def to_float(self, real_value):
         raise NotImplementedError()

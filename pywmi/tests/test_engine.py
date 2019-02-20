@@ -1,10 +1,8 @@
 import pytest
-
 from pysmt.exceptions import NoSolverAvailableError
 from pysmt.shortcuts import TRUE, Real, Solver, Ite
 
-from pywmi import RejectionEngine, Domain, PredicateAbstractionEngine
-from pywmi.smt_math import implies
+from pywmi import Domain, PredicateAbstractionEngine
 from pywmi.engines.pa import WMI
 
 try:

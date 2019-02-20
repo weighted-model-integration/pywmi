@@ -5,16 +5,6 @@ from pysmt.shortcuts import Real, Ite, Bool, Equals, Pow, REAL, BOOL
 from pywmi import Domain, RejectionEngine, evaluate
 
 
-@pytest.mark.skip(reason="The get_samples() method does not work properly at the moment")
-def test_simple():
-    domain = Domain.make(["a", "b"], {"x": (0, 100), "y": (0, 50)})
-    # noinspection SpellCheckingInspection
-    a, b, x, y = (domain.get_symbol(n) for n in "abxy")
-    support = (a & (20 <= x) & (y <= 30) & (x <= 2 * y)) | ((0 <= x) & (y <= 40) & (x <= 2 * y))
-    engine = RejectionEngine(domain, support, Real(1.0), 1000)
-    engine.get_samples(100)
-
-
 class TestCheckingBatch(object):
     domain = Domain.make(["a", "b"], ["x", "y"], [(0, 100), (0, 50)])
     a = domain.get_symbol("a")
