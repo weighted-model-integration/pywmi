@@ -12,7 +12,7 @@ from pywmi import Density
 from pywmi.errors import InstallError
 from pywmi.smt_math import LinearInequality, Polynomial
 from pywmi.temp import TemporaryFile
-from .integration_backend import IntegrationBackend
+from .convex_integrator import ConvexIntegrationBackend
 from pywmi.engine import Engine
 import pysmt.shortcuts as smt
 
@@ -121,7 +121,7 @@ class XaddEngine(Engine):
         return result
 
 
-class XaddIntegrator(IntegrationBackend):
+class XaddIntegrator(ConvexIntegrationBackend):
     def __init__(self, mode=None):
         super().__init__(True)
         self.mode = mode

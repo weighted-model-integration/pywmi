@@ -4,7 +4,7 @@ from pywmi import Domain
 from pywmi.smt_math import LinearInequality, Polynomial
 
 
-class IntegrationBackend(object):
+class ConvexIntegrationBackend(object):
     def __init__(self, exact=True):
         self.exact = exact
 

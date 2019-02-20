@@ -1,12 +1,11 @@
-import os
 from os import path
 
+import pysmt.shortcuts as smt
 import pytest
 from pysmt.shortcuts import Real, TRUE, read_smtlib, Iff
-import pysmt.shortcuts as smt
 
-from pywmi.errors import InstallError
 from pywmi import Domain, XaddEngine, RejectionEngine, smt_to_nested, Density
+from pywmi.errors import InstallError
 from pywmi.transform import normalize_formula
 
 EXACT_REL_ERROR = 0.00000001
