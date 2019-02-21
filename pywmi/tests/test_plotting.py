@@ -1,4 +1,5 @@
 import matplotlib as mpl
+import pytest
 from PIL import Image
 from pysmt.shortcuts import Real, Ite
 
@@ -43,6 +44,7 @@ def test_plot_boolean_or():
         assert image.getpixel((900, 900)) == image.getpixel((300, 900))
 
 
+@pytest.mark.skip(reason="Will not close")
 def test_plot_density():
     domain = Domain.make([], ["x", "y"], [(-2.5, 2.7), (0, 1)])
     x, y = domain.get_symbols()
