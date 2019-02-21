@@ -232,7 +232,8 @@ def plot_combined(feat_x: Union[str, int],
 
 
 def plot_density(density: Density, feat_x: Optional[str] = None, feat_y: Optional[str] = None,
-                 filename: Optional[str] = None, d3=False):
+                 filename: Optional[str] = None, d3=False, cmap=None):
+    cmap = cmap or "plasma"
     from matplotlib import cm
     from mpl_toolkits.mplot3d import axes3d, Axes3D
 
@@ -270,10 +271,10 @@ def plot_density(density: Density, feat_x: Optional[str] = None, feat_y: Optiona
         z[:, i] = evaluate(domain, weight, data) * labels
 
     if d3:
-        ax.plot_surface(x, y, z, cmap="plasma")
+        ax.plot_surface(x, y, z, cmap=cmap)
         ax.view_init(30, 70)
     else:
-        ax.scatter(x, y, c=z, cmap="plasma", s=1)
+        ax.scatter(x, y, c=z, cmap=cmap, s=1)
 
     plt.tick_params(axis='both', which='major', labelsize=6)
     ax.set_xlim(domain.var_domains[feat_x])
