@@ -1,11 +1,32 @@
+from typing import Union, Callable
+
 import pytest
-from pysmt.shortcuts import Ite, Real
+from pysmt.shortcuts import Ite, Real, TRUE
 
 from pywmi.errors import InstallError, InfiniteVolumeError
 from pywmi import Domain, RejectionEngine, XaddEngine, Density
+from pywmi.engine import Engine
 
 TEST_SAMPLE_COUNT = 1000000
 TEST_RELATIVE_TOLERANCE = 0.05
+
+
+def sanity_b1_r0():
+    domain = Domain.make(["a"])
+    a, = domain.get_symbols()
+    support = TRUE()
+    weight = Ite(a, Real(0.3), Real(0.7))
+    queries = [a, ~a]
+    return Density(domain, support, weight, queries)
+
+
+def sanity_b0_r1():
+    domain = Domain.make(real_variables=["x"], real_bounds=(0, 1))
+    x, = domain.get_symbols()
+    support = (x >= 0.25) & (x <= 0.75)
+    weight = x + 1
+    queries = [x >= 0.5]
+    return Density(domain, support, weight, queries)
 
 
 def ex1_b2_r2():
@@ -26,12 +47,22 @@ def ex2_b0_r2():
 
 
 def get_examples(exclude_boolean=False, exclude_continuous=False):
-    examples = [(ex1_b2_r2, True, True), (ex2_b0_r2, False, True)]
+    examples = [
+        (sanity_b1_r0, True, False),
+        (sanity_b0_r1, False, True),
+        (ex1_b2_r2, True, True),
+        (ex2_b0_r2, False, True)
+    ]
     return [e() for e, b, c in examples if (not exclude_boolean or not b) and (not exclude_continuous or not c)]
 
 
-def inspect_density(engine_factory, density, test_unweighted=True, test_weighted=True, test_volume=True,
+def inspect_density(engine_or_factory, density, test_unweighted=True, test_weighted=True, test_volume=True,
                     test_queries=True, test_engine=None):
+    if isinstance(engine_or_factory, Engine):
+        engine_factory = lambda d, s, w: engine_or_factory.copy(d, s, w)
+    else:
+        engine_factory = engine_or_factory
+
     if test_engine is None:
         try:
             test_engine = XaddEngine(density.domain, density.support, density.weight)
@@ -61,7 +92,12 @@ def inspect_density(engine_factory, density, test_unweighted=True, test_weighted
                 assert computed == pytest.approx(actual, rel=TEST_RELATIVE_TOLERANCE)
 
 
-def inspect_manual(engine_factory, rel_error):
+def inspect_manual(engine_or_factory: Union[Engine, Callable], rel_error):
+    if isinstance(engine_or_factory, Engine):
+        engine_factory = lambda d, s, w: engine_or_factory.copy(d, s, w)
+    else:
+        engine_factory = engine_or_factory
+
     domain = Domain.make(["a"], ["x"], [(0, 1)])
     a, x, = domain.get_symbols()
     support = ((a & (x <= 0.5)) | (x >= 0.2)) & domain.get_bounds()

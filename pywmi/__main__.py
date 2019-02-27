@@ -12,7 +12,8 @@ from pywmi.smt_print import pretty_print
 from .engine import Engine
 from .convert import Import
 from .domain import Density
-from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, plot, AdaptiveRejection
+from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, plot, AdaptiveRejection, \
+    PyXaddEngine, PyXaddAlgebra, PSIAlgebra
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,15 @@ def parse_options(option_strings, *whitelist):
             n, v = "sample_count", int(option_string[1:])
         elif option_string.startswith("m"):
             n, v = "mode", option_string[1:]
+        elif option_string.startswith("r") and "reduce" in whitelist:
+            from pywmi.engines.pyxadd.resolve import ResolveIntegrator
+            arg = option_string[1:]
+            if arg == "init_only":
+                n, v = "reduce_strategy", ResolveIntegrator.NO_SUM_PRODUCT_REDUCE
+            elif arg == "full":
+                n, v = "reduce_strategy", ResolveIntegrator.FULL_REDUCE
+            elif arg == "none":
+                n, v = "reduce_strategy", ResolveIntegrator.NO_REDUCE
         elif option_string.startswith("b") and "backend" in whitelist:
             n, v = "backend", option_string[1:]
         elif option_string.startswith("b") and "sample_count_build" in whitelist:
@@ -39,8 +49,20 @@ def parse_options(option_strings, *whitelist):
             n, v = "minimize", True
         elif option_string=="pint":
             n, v = "pint", True
-        elif option_string == "factorized":
+        elif option_string.startswith("factorized"):
             n, v = "factorized", True
+            parts = option_string.split(".")
+            if n in whitelist and len(parts) > 1:
+                if parts[1] == "psi":
+                    options["algebra"] = PSIAlgebra()
+                elif parts[1] == "pyxadd":
+                    reduce_strategy = None
+                    if len(parts) > 2:
+                        if parts[2] == "int_init_only":
+                            reduce_strategy = PyXaddAlgebra.ONLY_INIT_INTEGRATION_REDUCE
+                    options["algebra"] = PyXaddAlgebra(reduce_strategy=reduce_strategy)
+                else:
+                    raise ValueError("Invalid algebra string")
         elif option_string == "prune":
             n, v = "find_conflicts", True
         elif option_string == "order":
@@ -74,11 +96,10 @@ def get_engine(description, domain, support, weight):
     if parts[0].lower() == "xadd":
         options = parse_options(parts[1:], "mode", "timeout")
         return XaddEngine(domain, support, weight, **options)
+    if parts[0].lower() == "pyxadd":
+        options = parse_options(parts[1:], "reduce")
+        return PyXaddEngine(domain, support, weight, **options)
     if parts[0].lower() == "xsdd":
-        options = parse_options(parts[1:], "mode", "timeout", "pint", "collapse", "repeated")
-        from pywmi import XsddEngine
-        return XsddEngine(domain, support, weight, **options)
-    if parts[0].lower() == "n-xsdd":
         options = parse_options(parts[1:], "backend", "factorized", "find_conflicts", "ordered", "balance", "minimize")
         backend_string = options.get("backend", None)
         if backend_string is None:
@@ -98,7 +119,8 @@ def get_engine(description, domain, support, weight):
             else:
                 raise ValueError("Please specify a valid backend instead of {}".format(parts[0]))
 
-        del options["backend"]
+        if "backend" in options:
+            del options["backend"]
         from pywmi import XsddEngine
         return XsddEngine(domain, support, weight, backend, **options)
 

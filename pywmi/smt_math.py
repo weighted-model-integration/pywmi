@@ -155,10 +155,14 @@ class LinearInequality(object):
         return LinearInequality(MathDictConverter(force_linear=True).walk_smt(formula))
 
     def to_smt(self):
+        if len(self.inequality_dict) == 0:
+            return Real(0) <= Real(0)
+        elif len(self.inequality_dict) == 1 and CONST_KEY in self.inequality_dict:
+            return Real(0) <= Real(-self.inequality_dict.get(CONST_KEY, 0))
         return Plus(Times(Symbol(n, REAL) for n in name) * Real(factor)
                     if factor != 1 else Times(Symbol(n, REAL) for n in name)
                     for name, factor in self.inequality_dict.items() if name != CONST_KEY) \
-               <= Real(-self.inequality_dict.get(CONST_KEY, 0))
+               < Real(-self.inequality_dict.get(CONST_KEY, 0))
 
     def to_expression(self, algebra: AlgebraBackend):
         result = algebra.zero()
@@ -187,7 +191,7 @@ class LinearInequality(object):
     def __str__(self):
         terms = ["{}".format(("" if factor == 1 else str(factor)) + "".join(key))
                  for key, factor in self.inequality_dict.items() if key != CONST_KEY]
-        return "{} <= {}".format(" + ".join(terms), -self.inequality_dict.get(CONST_KEY, 0))
+        return "{} < {}".format(" + ".join(terms), -self.inequality_dict.get(CONST_KEY, 0))
 
     def normalize(self):
         if len(self.inequality_dict) == 0:
@@ -195,6 +199,9 @@ class LinearInequality(object):
 
         factor = max(abs(v) for v in self.inequality_dict.values())
         return LinearInequality({k: v / factor for k, v in self.inequality_dict.items()})
+
+    def inverted(self):
+        return LinearInequality({k: -v for k, v in self.inequality_dict.items()})
 
 
 class MathDictConverter(SmtWalker):
@@ -275,14 +282,6 @@ def get_inequality_dict(formula) -> Dict:
     return MathDictConverter(force_linear=True).walk_smt(formula)
 
 
-def get_inequality_smt(formula):
-    formula_dict = get_inequality_dict(formula)
-    return Plus(Times(Symbol(n, REAL) for n in name) * Real(factor)
-                if factor != 1 else Times(Symbol(n, REAL) for n in name)
-                for name, factor in formula_dict.items() if name != CONST_KEY) \
-           <= Real(-formula_dict.get(CONST_KEY, 0))
-
-
 class BoundsWalker(SmtWalker):
     def __init__(self, allow_or=False):
         self.allow_or = allow_or
@@ -328,10 +327,10 @@ class BoundsWalker(SmtWalker):
         raise ValueError("Invalid POW node")
 
     def walk_lte(self, left, right):
-        return {get_inequality_smt(left <= right)}
+        return {left < right}
 
     def walk_lt(self, left, right):
-        return {get_inequality_smt(left < right)}
+        return {left < right}
 
     def walk_equals(self, left, right):
         raise ValueError("Invalid EQ node")

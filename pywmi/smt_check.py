@@ -1,7 +1,7 @@
 import numpy as np
 import pysmt.shortcuts as smt
 
-from pywmi.smt_walk import SmtWalker
+from pywmi.smt_walk import SmtWalker, CachedSmtWalker
 
 
 class SmtChecker(SmtWalker):
@@ -65,8 +65,9 @@ class SmtChecker(SmtWalker):
         return self.walk_smt(formula)
 
 
-class SmtBatchChecker(SmtWalker):
+class SmtBatchChecker(CachedSmtWalker):
     def __init__(self, domain, values):
+        super().__init__()
         self.values = values
         self.length = self.values.shape[0]
         self.indices = {v: i for i, v in enumerate(domain.variables)}
@@ -80,14 +81,14 @@ class SmtBatchChecker(SmtWalker):
 
     def walk_or(self, args):
         args = self.walk_smt_multiple(args)
-        result = args[0]
+        result = np.copy(args[0])
         for i in range(1, len(args)):
             result |= args[i]
         return result
 
     def walk_and(self, args):
         args = self.walk_smt_multiple(args)
-        result = args[0]
+        result = np.copy(args[0])
         for i in range(1, len(args)):
             result &= args[i]
         return result
@@ -119,7 +120,7 @@ class SmtBatchChecker(SmtWalker):
         return self.walk_smt(base) ** self.walk_smt(exponent)
 
     def walk_symbol(self, name, v_type):
-        column = self.values[:, self.indices[name]]
+        column = np.copy(self.values[:, self.indices[name]])
         if v_type == smt.BOOL:
             column = column.astype(bool)
         return column

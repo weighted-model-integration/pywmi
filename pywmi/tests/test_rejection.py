@@ -1,7 +1,7 @@
 import pysmt.shortcuts as smt
 import pytest
 
-from examples import inspect_manual, inspect_density, inspect_infinite_without_domain_bounds, get_examples
+from .examples import inspect_manual, inspect_density, inspect_infinite_without_domain_bounds, get_examples
 from pywmi import RejectionEngine, Domain, XaddEngine
 from pywmi.transform import normalize_formula
 

@@ -1,6 +1,8 @@
 from fractions import Fraction
+from typing import TypeVar, Any
 
 import pysmt.shortcuts as smt
+from pysmt.fnode import FNode
 from pysmt.typing import REAL
 import sympy
 
@@ -13,14 +15,17 @@ except ImportError:
     psipy = None
 
 
+E = Any
+
+
 class AlgebraBackend:
-    def zero(self):
+    def zero(self) -> E:
         return self.real(0)
 
-    def one(self):
+    def one(self) -> E:
         return self.real(1)
 
-    def times(self, a, b):
+    def times(self, a: E, b: E) -> E:
         if a == self.zero() or b == self.zero():
             return self.zero()
         elif a == self.one():
@@ -30,7 +35,7 @@ class AlgebraBackend:
         else:
             return a * b
 
-    def plus(self, a, b):
+    def plus(self, a: E, b: E) -> E:
         if a == self.zero():
             return b
         elif b == self.zero():
@@ -38,16 +43,16 @@ class AlgebraBackend:
         else:
             return a + b
 
-    def symbol(self, name):
+    def symbol(self, name: str) -> E:
         raise NotImplementedError()
 
-    def real(self, float_constant):
+    def real(self, float_constant: float) -> E:
         raise NotImplementedError()
 
-    def negate(self, a):
+    def negate(self, a: E) -> E:
         return self.times(a, self.real(-1))
 
-    def power(self, a, power):
+    def power(self, a: E, power: int) -> E:
         if not isinstance(power, int) and int(power) != power:
             raise ValueError("Expected integer power, got {power}".format(power=power))
         if power < 0:
@@ -57,20 +62,27 @@ class AlgebraBackend:
             result = self.times(result, a)
         return result
 
-    def less_than(self, a, b):
+    def less_than(self, a: E, b: E) -> E:
         return a < b
 
-    def less_than_equal(self, a, b):
+    def less_than_equal(self, a: E, b: E) -> E:
         return a <= b
 
-    def greater_than(self, a, b):
+    def greater_than(self, a: E, b: E) -> E:
         return self.less_than(self.negate(a), self.negate(b))
 
-    def greater_than_equal(self, a, b):
+    def greater_than_equal(self, a: E, b: E) -> E:
         return self.less_than_equal(self.negate(a), self.negate(b))
 
-    def to_float(self, real_value):
+    def to_float(self, real_value: E) -> float:
         raise NotImplementedError()
+
+    def get_flat_expression(self, expression_with_conditions: E) -> E:
+        return expression_with_conditions
+
+    def parse_condition(self, condition: FNode) -> E:
+        from pywmi.smt_math import LinearInequality
+        return LinearInequality.from_smt(condition).to_expression(self)
 
 
 class IntegrationBackend:
@@ -163,7 +175,8 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     #     return result
 
     def integrate(self, domain: Domain, expression, variables=None):
-        return psipy.integrate_poly(variables, expression)
+        result = psipy.integrate_poly(variables, expression)
+        return result
         # return psipy.integrate(variables, expression)
 
     def to_float(self, real_value):
@@ -172,6 +185,10 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
             parts = string_value.split("/", 1)
             return float(parts[0]) / float(parts[1])
         return float(string_value)
+
+    def get_flat_expression(self, expression_with_conditions):
+        result = psipy.filter_iverson(expression_with_conditions)
+        return psipy.simplify(result)
 
 
 class StringAlgebra(AlgebraBackend, IntegrationBackend):
