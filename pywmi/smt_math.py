@@ -278,10 +278,6 @@ class MathDictConverter(SmtWalker):
             raise ValueError("Constant of type {v_type} not supported".format(v_type=v_type))
 
 
-def get_inequality_dict(formula) -> Dict:
-    return MathDictConverter(force_linear=True).walk_smt(formula)
-
-
 class BoundsWalker(SmtWalker):
     def __init__(self, allow_or=False):
         self.allow_or = allow_or
