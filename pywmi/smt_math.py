@@ -1,6 +1,6 @@
 import math
 from fractions import Fraction
-from typing import Dict, Tuple, Union
+from typing import Dict, Tuple, Union, List
 
 from pysmt.exceptions import InternalSolverError
 from pysmt.shortcuts import Plus, Symbol, Real, Times, Solver
@@ -15,8 +15,17 @@ CONST_KEY = ()
 
 class Polynomial(object):
     def __init__(self, poly_dict):
-        self.poly_dict = poly_dict  # type: Dict[Tuple[str], float]
+        self.poly_dict = {k: float(v) for k, v in poly_dict.items()}  # type: Dict[Tuple[str], float]
         self._hash_value = None
+
+    @property
+    def variables(self):
+        result = set()
+        for name in self.poly_dict:
+            if name != CONST_KEY:
+                for v in name:
+                    result.add(v)
+        return result
 
     def to_smt(self):
         keys = {key: Times(Symbol(n, REAL) for n in key) if key != CONST_KEY else Real(1.0)
@@ -25,6 +34,19 @@ class Polynomial(object):
             keys[key] * Real(value) if value != 1 else keys[key]
             for key, value in self.poly_dict.items()
         )
+
+    def to_expression(self, algebra: AlgebraBackend):
+        result = algebra.zero()
+        for variables, factor in self.poly_dict.items():
+            term = algebra.one()
+            for var in variables:
+                if var != CONST_KEY:
+                    term = algebra.times(term, algebra.symbol(var))
+            result = algebra.plus(result, algebra.times(term, algebra.real(factor)))
+        return result
+
+    def get_terms(self) -> List['Polynomial']:
+        return [Polynomial({k: v}) for k, v in self.poly_dict.items()]
 
     def __add__(self, other: Union[object, int, float]):
         if isinstance(other, (float, int)):
@@ -101,18 +123,23 @@ class Polynomial(object):
 
 
 class PolynomialAlgebra(AlgebraBackend):
-    @classmethod
-    def symbol(cls, name):
+    def symbol(self, name):
         return Polynomial({(name,): 1})
 
-    @classmethod
-    def real(cls, float_constant):
+    def real(self, float_constant):
         return Polynomial.from_constant(float_constant)
+
+    def to_float(self, real_value):
+        raise NotImplementedError()
 
 
 class LinearInequality(object):
     def __init__(self, inequality_dict):
-        self.inequality_dict = inequality_dict
+        self.inequality_dict = {k: v for k, v in inequality_dict.items() if v != 0}
+
+    @property
+    def variables(self):
+        return {v for key in self.inequality_dict for v in key}
 
     def coefficient(self, *args):
         return self.inequality_dict.get(tuple(args), 0)
@@ -128,10 +155,24 @@ class LinearInequality(object):
         return LinearInequality(MathDictConverter(force_linear=True).walk_smt(formula))
 
     def to_smt(self):
+        if len(self.inequality_dict) == 0:
+            return Real(0) <= Real(0)
+        elif len(self.inequality_dict) == 1 and CONST_KEY in self.inequality_dict:
+            return Real(0) <= Real(-self.inequality_dict.get(CONST_KEY, 0))
         return Plus(Times(Symbol(n, REAL) for n in name) * Real(factor)
                     if factor != 1 else Times(Symbol(n, REAL) for n in name)
                     for name, factor in self.inequality_dict.items() if name != CONST_KEY) \
-               <= Real(-self.inequality_dict.get(CONST_KEY, 0))
+               < Real(-self.inequality_dict.get(CONST_KEY, 0))
+
+    def to_expression(self, algebra: AlgebraBackend):
+        result = algebra.zero()
+        for variables, factor in self.inequality_dict.items():
+            if variables != CONST_KEY:
+                term = algebra.one()
+                for var in variables:
+                    term = algebra.times(term, algebra.symbol(var))
+                result = algebra.plus(result, algebra.times(term, algebra.real(factor)))
+        return algebra.less_than_equal(result, algebra.real(self.b()))
 
     @staticmethod
     def lcm(num1, num2):
@@ -142,10 +183,15 @@ class LinearInequality(object):
         denominators = [int(fraction.denominator) for fraction in fractions.values()]
         lcm = reduce(LinearInequality.lcm, denominators)
         fractions = {k: v * lcm for k, v in fractions.items()}  # type: Dict[Tuple, Fraction]
-        numerators = [int(fraction.numerator) for fraction in fractions.values()]
+        numerators = [abs(int(fraction.numerator)) for fraction in fractions.values()]
         gcd = reduce(lambda num1, num2: int(math.gcd(num1, num2)), numerators)
         fractions = {k: int(v / gcd) for k, v in fractions.items()}  # type: Dict[Tuple, int]
         return LinearInequality(fractions)
+
+    def __str__(self):
+        terms = ["{}".format(("" if factor == 1 else str(factor)) + "".join(key))
+                 for key, factor in self.inequality_dict.items() if key != CONST_KEY]
+        return "{} < {}".format(" + ".join(terms), -self.inequality_dict.get(CONST_KEY, 0))
 
     def normalize(self):
         if len(self.inequality_dict) == 0:
@@ -153,6 +199,9 @@ class LinearInequality(object):
 
         factor = max(abs(v) for v in self.inequality_dict.values())
         return LinearInequality({k: v / factor for k, v in self.inequality_dict.items()})
+
+    def inverted(self):
+        return LinearInequality({k: -v for k, v in self.inequality_dict.items()})
 
 
 class MathDictConverter(SmtWalker):
@@ -233,14 +282,6 @@ def get_inequality_dict(formula) -> Dict:
     return MathDictConverter(force_linear=True).walk_smt(formula)
 
 
-def get_inequality_smt(formula):
-    formula_dict = get_inequality_dict(formula)
-    return Plus(Times(Symbol(n, REAL) for n in name) * Real(factor)
-                if factor != 1 else Times(Symbol(n, REAL) for n in name)
-                for name, factor in formula_dict.items() if name != CONST_KEY) \
-           <= Real(-formula_dict.get(CONST_KEY, 0))
-
-
 class BoundsWalker(SmtWalker):
     def __init__(self, allow_or=False):
         self.allow_or = allow_or
@@ -286,10 +327,10 @@ class BoundsWalker(SmtWalker):
         raise ValueError("Invalid POW node")
 
     def walk_lte(self, left, right):
-        return {get_inequality_smt(left <= right)}
+        return {left < right}
 
     def walk_lt(self, left, right):
-        return {get_inequality_smt(left < right)}
+        return {left < right}
 
     def walk_equals(self, left, right):
         raise ValueError("Invalid EQ node")

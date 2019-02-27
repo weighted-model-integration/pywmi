@@ -1,7 +1,7 @@
 import pysmt.shortcuts as smt
 import pytest
 
-from examples import get_examples, inspect_density, inspect_manual, inspect_infinite_without_domain_bounds
+from .examples import get_examples, inspect_density, inspect_manual, inspect_infinite_without_domain_bounds
 from pywmi import PredicateAbstractionEngine, Domain, smt_to_nested
 from pywmi.engines.pa import WMI
 from pywmi.transform import normalize_formula
