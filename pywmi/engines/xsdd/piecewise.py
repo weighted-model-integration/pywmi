@@ -46,7 +46,7 @@ class PiecewiseXSDD(object):
         assert other.algebra == self.algebra
 
         if len(self.sdd_dict) == 0 or len(other.sdd_dict) == 0:
-            return dict()
+            return PiecewiseXSDD(dict(), self.manager, self.algebra)
         else:
             new_result = {}
             for expression1, sdd1 in self.sdd_dict.items():

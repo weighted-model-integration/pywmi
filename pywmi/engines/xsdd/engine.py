@@ -23,6 +23,8 @@ from .smt_to_sdd import convert_formula, convert_function, extract_labels_and_we
 from pywmi import Domain
 from pywmi.engine import Engine
 from .semiring import amc, Semiring, SddWalker, walk
+from pywmi.engines.pyxadd.algebra import PyXaddAlgebra
+from pywmi.engines.pyxadd.decision import Decision
 
 import pysmt.shortcuts as smt
 import logging
@@ -35,6 +37,44 @@ class ConvexWMISemiring(Semiring):
     def __init__(self, abstractions: Dict, var_to_lit: Dict):
         self.reverse_abstractions = {v: k for k, v in abstractions.items()}
         self.lit_to_var = {v: k for k, v in var_to_lit.items()}
+
+    def times_neutral(self):
+        return [(smt.TRUE(), set())]
+
+    def plus_neutral(self):
+        return []
+
+    def times(self, a, b, index=None):
+        result = []
+        for f1, v1 in a:
+            for f2, v2 in b:
+                result.append((f1 & f2, v1 | v2))
+        return result
+
+    def plus(self, a, b, index=None):
+        return a + b
+
+    def negate(self, a):
+        raise NotImplementedError()
+
+    def weight(self, a):
+        if abs(a) in self.lit_to_var:
+            return [(smt.TRUE(), {self.lit_to_var[abs(a)]})]
+        else:
+            f = self.reverse_abstractions[abs(a)]
+            if a < 0:
+                f = ~f
+            return [(f, set())]
+
+    def positive_weight(self, a):
+        raise NotImplementedError()
+
+
+class BooleanCount(Semiring):
+    def __init__(self, abstractions: Dict, var_to_lit: Dict):
+        self.reverse_abstractions = {v: k for k, v in abstractions.items()}
+        self.lit_to_var = {v: k for k, v in var_to_lit.items()}
+        self.node
 
     def times_neutral(self):
         return [(smt.TRUE(), set())]
@@ -154,7 +194,7 @@ class FactorizedIntegrator:
                 result = self.algebra.plus(result, self.walk_and(prime, sub, tags, cache, order))
         else:
             expression = self.walk_literal(node)
-            logger.debug(node.id)
+            logger.debug("node LIT(%s)", node.id)
             result = self.integrate(expression, tags)
 
         cache[key] = result
@@ -177,7 +217,7 @@ class FactorizedIntegrator:
             tags_shared |= (tags & set(order[first_index:]))
         prime_result = self.recursive(prime, tags_prime - tags_shared, cache, order)
         sub_result = self.recursive(sub, tags_sub - tags_shared, cache, order)
-        logger.debug(prime.id, sub.id)
+        logger.debug("node AND(%s, %s)", prime.id, sub.id)
         return self.integrate(self.algebra.times(prime_result, sub_result),
                               [e for e in order if e in tags_shared] if order else tags_shared)
 
@@ -194,7 +234,7 @@ class FactorizedIntegrator:
             if literal < 0:
                 f = ~f
             # expr = LinearInequality.from_smt(f).scale_to_integer().to_expression(self.algebra)
-            expr = LinearInequality.from_smt(f).to_expression(self.algebra)
+            expr = self.algebra.parse_condition(f)
 
         return expr
 
@@ -275,22 +315,24 @@ class XsddEngine(Engine):
 
     def collect_conflicts(self):
         conflicts = []
+        print(self.support)
+        print(self.weight)
         inequalities = list(BoundsWalker(True).walk_smt(self.support) | BoundsWalker(True).walk_smt(self.weight))
         for i in range(len(inequalities) - 1):
             for j in range(i + 1, len(inequalities)):
                 if inequalities[i].get_free_variables() == inequalities[j].get_free_variables():
                     if implies(inequalities[i], inequalities[j]):
                         conflicts.append(smt.Implies(inequalities[i], inequalities[j]))
-                        logger.debug(inequalities[i], "=>", inequalities[j])
+                        logger.debug("%s => %s", inequalities[i], inequalities[j])
                     if implies(~inequalities[i], inequalities[j]):
                         conflicts.append(smt.Implies(~inequalities[i], inequalities[j]))
-                        logger.debug(~inequalities[i], "=>", inequalities[j])
+                        logger.debug("%s => %s", ~inequalities[i], inequalities[j])
                     if implies(inequalities[j], inequalities[i]):
                         conflicts.append(smt.Implies(inequalities[j], inequalities[i]))
-                        logger.debug(inequalities[j], "=>", inequalities[i])
+                        logger.debug("%s => %s", inequalities[j], inequalities[i])
                     if implies(~inequalities[j], inequalities[i]):
                         conflicts.append(smt.Implies(~inequalities[j], inequalities[i]))
-                        logger.debug(~inequalities[j], "=>", inequalities[i])
+                        logger.debug("%s => %s", ~inequalities[j], inequalities[i])
         return conflicts
 
     def compute_volume(self, add_bounds=True):
@@ -317,7 +359,13 @@ class XsddEngine(Engine):
             support_sdd = convert_formula(support, self.manager, algebra, abstractions, var_to_lit)
             piecewise_function = convert_function(weight, self.manager, algebra, abstractions, var_to_lit)
 
-        volume = self.algebra.zero()
+        factorized_algebra = self.algebra
+        if factorized_algebra is not None and isinstance(factorized_algebra, PyXaddAlgebra):
+            # TODO Booleans in order?
+            for test, lit in sorted(abstractions.items(), key=lambda t: t[1]):
+                factorized_algebra.pool.bool_test(Decision(test))
+
+        volume = factorized_algebra.zero()
         if self.factorized:
             terms_dict = dict()
             for w_weight, world_support in piecewise_function.sdd_dict.items():
@@ -386,23 +434,23 @@ class XsddEngine(Engine):
 
                 constant_group_indices = [i for i, e in group_to_vars_poly.items() if len(e[0]) == 0]
                 integrator = FactorizedIntegrator(self.domain, abstractions, var_to_lit, group_to_vars_poly,
-                                                  node_to_groups, labels, self.algebra)
+                                                  node_to_groups, labels, factorized_algebra)
                 logger.debug("group order %s", group_order)
                 expression = integrator.recursive(support, order=group_order)
                 # expression = integrator.integrate(expression, node_to_groups[support.id])
                 logger.debug("hits %s misses %s", integrator.hits, integrator.misses)
-                missing_variable_count = len(self.domain.bool_vars) - len(self.domain.bool_vars)  # TODO - len(bool_vars)
-                bool_worlds = self.algebra.power(self.algebra.real(2), missing_variable_count)
-                result_with_booleans = self.algebra.times(expression, bool_worlds)
+                missing_variable_count = len(self.domain.bool_vars) - len(bool_vars)
+                bool_worlds = factorized_algebra.power(factorized_algebra.real(2), missing_variable_count)
+                result_with_booleans = factorized_algebra.times(expression, bool_worlds)
                 if len(constant_group_indices) == 1:
                     constant_poly = group_to_vars_poly[constant_group_indices[0]][1]
-                    constant = constant_poly.to_expression(self.algebra)
+                    constant = constant_poly.to_expression(factorized_algebra)
                 elif len(constant_group_indices) == 0:
-                    constant = self.algebra.one()
+                    constant = factorized_algebra.one()
                 else:
                     raise ValueError("Multiple constant groups: {}".format(constant_group_indices))
-                result = self.algebra.times(constant, result_with_booleans)
-                volume = self.algebra.plus(volume, result)
+                result = factorized_algebra.times(constant, result_with_booleans)
+                volume = factorized_algebra.plus(volume, result)
 
             for support in terms_dict.values():
                 support.deref()
@@ -414,8 +462,8 @@ class XsddEngine(Engine):
                 for convex_support, variables in convex_supports:
                     missing_variable_count = len(self.domain.bool_vars) - len(variables)
                     vol = self.integrate_convex(convex_support, w_weight.to_smt()) * 2 ** missing_variable_count
-                    volume = self.algebra.plus(volume, self.algebra.real(vol))
-        return self.algebra.to_float(volume)
+                    volume = factorized_algebra.plus(volume, factorized_algebra.real(vol))
+        return factorized_algebra.to_float(volume)
 
     def copy(self, domain, support, weight):
         return XsddEngine(

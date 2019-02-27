@@ -2,7 +2,7 @@ import pytest
 from pysmt.shortcuts import Ite, Real
 
 from pywmi.engines.latte_backend import LatteIntegrator
-from examples import inspect_manual, get_examples, inspect_density
+from .examples import inspect_manual, get_examples, inspect_density
 from pywmi import Domain, RejectionEngine, XaddEngine
 from pywmi import XsddEngine
 from pywmi.engines.xadd import XaddIntegrator

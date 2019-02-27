@@ -2,7 +2,7 @@ from typing import Tuple, Dict, Optional
 
 from pywmi.engines.algebraic_backend import AlgebraBackend
 from pywmi.engines.xsdd.piecewise import PiecewiseXSDD
-from pywmi.smt_math import get_inequality_smt
+from pywmi.smt_math import LinearInequality
 from .semiring import Semiring, amc
 
 try:
@@ -14,7 +14,7 @@ except ImportError:
 from pysmt.fnode import FNode
 from pysmt.shortcuts import Symbol, TRUE, FALSE, simplify, Times
 from pysmt.typing import REAL, BOOL
-from pywmi import SmtWalker
+from pywmi.smt_walk import CachedSmtWalker
 from pywmi.errors import InstallError
 
 
@@ -25,8 +25,9 @@ def product(*elements):
     return result
 
 
-class SddConversionWalker(SmtWalker):
+class SddConversionWalker(CachedSmtWalker):
     def __init__(self, manager, algebra: AlgebraBackend, boolean_only, abstractions=None, var_to_lit=None):
+        super().__init__()
         self.manager = manager  # type: SddManager
         self.algebra = algebra
         self.abstractions = abstractions if abstractions is not None else dict()
@@ -40,7 +41,9 @@ class SddConversionWalker(SmtWalker):
 
     def to_canonical(self, test_node):
         # TODO Use LinearInequality instead?
-        return get_inequality_smt(test_node)
+
+        return LinearInequality.from_smt(test_node).normalize().to_smt()
+        # return get_inequality_smt(test_node)
 
     def test_to_sdd(self, test_node):
         test_node = self.to_canonical(test_node)
@@ -81,7 +84,6 @@ class SddConversionWalker(SmtWalker):
         if self.boolean_stack[-1]:
             raise ValueError("Parsing mode must be non-boolean")
         converted = self.walk_smt_multiple(args)
-
         result = converted[0]
         for c in converted[1:]:
             result += c

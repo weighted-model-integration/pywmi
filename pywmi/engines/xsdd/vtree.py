@@ -9,6 +9,8 @@ from pywmi.smt_print import pretty_print
 
 def get_new_manager(domain: Domain, abstractions: Dict[FNode, int], var_to_lit: Dict[str, int], strategy: str):
     def key(_t):
+        if len(_t[0].get_free_variables()) == 0:
+            return len(domain.real_vars), -1
         return len(domain.real_vars)-len(_t[0].get_free_variables()), min(domain.real_vars.index(str(v)) for v in _t[0].get_free_variables())
 
     var_count = max(list(abstractions.values()) + list(var_to_lit.values()))
