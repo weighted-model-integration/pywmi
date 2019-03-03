@@ -29,7 +29,7 @@ def test_convert_support():
     converter = SddConversionWalker(SddManager(), PolynomialAlgebra(), True)
     x, y = smt.Symbol("x", smt.REAL), smt.Symbol("y", smt.REAL)
     a = smt.Symbol("a", smt.BOOL)
-    formula = ((x <= 0) | (~a & (x <= -1))) | smt.Ite(a, x <= 4, x <= 8)
+    formula = ((x < 0) | (~a & (x < -1))) | smt.Ite(a, x < 4, x < 8)
     print(pretty_print(formula))
     result = converter.walk_smt(formula)
     print(result)
@@ -39,6 +39,8 @@ def test_convert_support():
     print(pretty_print(recovered))
     with smt.Solver() as solver:
         solver.add_assertion(~smt.Iff(formula, recovered))
+        print(pretty_print(formula))
+        print(pretty_print(recovered))
         if solver.solve():
             print(solver.get_model())
             assert False
