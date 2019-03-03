@@ -1,6 +1,4 @@
-import time
 from collections import defaultdict
-from functools import reduce
 from typing import Dict, List, Tuple, Set, Union, Any, Optional
 from typing import Iterable
 
@@ -70,39 +68,31 @@ class ConvexWMISemiring(Semiring):
         raise NotImplementedError()
 
 
-class BooleanCount(Semiring):
+class BooleanFinder(Semiring):
     def __init__(self, abstractions: Dict, var_to_lit: Dict):
         self.reverse_abstractions = {v: k for k, v in abstractions.items()}
         self.lit_to_var = {v: k for k, v in var_to_lit.items()}
-        self.node
 
     def times_neutral(self):
-        return [(smt.TRUE(), set())]
+        return set()
 
     def plus_neutral(self):
-        return []
+        return set()
 
     def times(self, a, b, index=None):
-        result = []
-        for f1, v1 in a:
-            for f2, v2 in b:
-                result.append((f1 & f2, v1 | v2))
-        return result
+        return a | b
 
     def plus(self, a, b, index=None):
-        return a + b
+        return a | b
 
     def negate(self, a):
         raise NotImplementedError()
 
     def weight(self, a):
         if abs(a) in self.lit_to_var:
-            return [(smt.TRUE(), {self.lit_to_var[abs(a)]})]
+            return {self.lit_to_var[abs(a)]}
         else:
-            f = self.reverse_abstractions[abs(a)]
-            if a < 0:
-                f = ~f
-            return [(f, set())]
+            return set()
 
     def positive_weight(self, a):
         raise NotImplementedError()
@@ -439,6 +429,7 @@ class XsddEngine(Engine):
                 expression = integrator.recursive(support, order=group_order)
                 # expression = integrator.integrate(expression, node_to_groups[support.id])
                 logger.debug("hits %s misses %s", integrator.hits, integrator.misses)
+                bool_vars = amc(BooleanFinder(abstractions, var_to_lit), support)
                 missing_variable_count = len(self.domain.bool_vars) - len(bool_vars)
                 bool_worlds = factorized_algebra.power(factorized_algebra.real(2), missing_variable_count)
                 result_with_booleans = factorized_algebra.times(expression, bool_worlds)
