@@ -7,3 +7,4 @@ from .algebraic_backend import AlgebraBackend, IntegrationBackend, PySmtAlgebra,
 from .adaptive_rejection import AdaptiveRejection
 from .pyxadd.engine import PyXaddEngine
 from .pyxadd.algebra import PyXaddAlgebra
+from .praise import PraiseEngine

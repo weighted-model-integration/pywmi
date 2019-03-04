@@ -13,7 +13,7 @@ from .engine import Engine
 from .convert import Import
 from .domain import Density
 from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, plot, AdaptiveRejection, \
-    PyXaddEngine, PyXaddAlgebra, PSIAlgebra
+    PyXaddEngine, PyXaddAlgebra, PSIAlgebra, PraiseEngine
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ def parse_options(option_strings, *whitelist):
     whitelist = set(whitelist)
     options = {}
     for option_string in option_strings:
+        n, v = None, None
         if option_string.startswith("t"):
             n, v = "timeout", int(option_string[1:])
         elif option_string.startswith("n"):
@@ -99,6 +100,9 @@ def get_engine(description, domain, support, weight):
     if parts[0].lower() == "pyxadd":
         options = parse_options(parts[1:], "reduce")
         return PyXaddEngine(domain, support, weight, **options)
+    if parts[0].lower() == "praise":
+        # options = parse_options(parts[1:])
+        return PraiseEngine(domain, support, weight)
     if parts[0].lower() == "xsdd":
         options = parse_options(parts[1:], "backend", "factorized", "find_conflicts", "ordered", "balance", "minimize")
         backend_string = options.get("backend", None)
