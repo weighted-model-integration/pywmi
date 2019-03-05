@@ -67,7 +67,7 @@ class PredicateAbstractionEngine(Engine):
         raise NotImplementedError()
 
     def copy(self, domain, support, weight):
-        return PredicateAbstractionEngine(domain, support, weight)
+        return PredicateAbstractionEngine(domain, support, weight, directory=self.directory, timeout=self.timeout)
 
     def __str__(self):
         return "pa" + ("" if self.timeout is None else ":t{}".format(self.timeout))
