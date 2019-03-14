@@ -5,7 +5,7 @@ from .antlr.minizincParser import minizincParser
 from .antlr.minizincVisitor import minizincVisitor
 from pysmt.shortcuts import *
 from pysmt.typing import REAL, BOOL, INT
-from wmipa.wmiexception import WMIParsingFileException, WMIRuntimeException
+from pywmi.errors import ParsingFileError
 
 # This class defines a complete listener for a parse tree produced by minizincParser.
 class Visitor(minizincVisitor):
@@ -17,8 +17,8 @@ class Visitor(minizincVisitor):
 
     def __init__(self, mode, domA=[], domX=[]):
         if mode not in Visitor.MODES:
-            err = "{}, use one: {}".format(mode, ", ".join(Visitor.MODES))
-            raise WMIRuntimeException(WMIRuntimeException.INVALID_MODE, err)
+            err = "Invalid mode: {}, use one: {}".format(mode, ", ".join(Visitor.MODES))
+            raise RuntimeError(err)
         self.variables = {}
         self.boolean_variables = domA
         self.real_variables = domX
@@ -104,7 +104,7 @@ class Visitor(minizincVisitor):
 
     # Visit a parse tree produced by minizincParser#include_item.
     def visitInclude_item(self, ctx:minizincParser.Include_itemContext):
-        raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('include', ctx))
+        raise ParsingFileError("Operation not supported: {}".format(self._err('include', ctx)))
 
 
     # Visit a parse tree produced by minizincParser#var_decl_item.
@@ -119,7 +119,7 @@ class Visitor(minizincVisitor):
         
         # check if the variable is already declared
         if id_ in self.variables:
-            raise WMIParsingFileException(WMIParsingFileException.DOUBLE_DECLARATION, self._err(id_, ctx))
+            raise ParsingFileError("Double declaration: {}".format(self._err(id_, ctx)))
             
         if ctx.expr() != None:
             expr = self.visitExpr(ctx.expr())
@@ -128,7 +128,7 @@ class Visitor(minizincVisitor):
             # if the variable is initiated as parameter and the expression depends on a decision variable
             if (not decl['var'] and expr['var']):
                 err = 'Expected decision variabile, found parameter: '+id_
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
         
             if (decl['type'] != expr['type']):
                 # cast expression to float if it is int
@@ -136,7 +136,7 @@ class Visitor(minizincVisitor):
                     expr['value'] = ToReal(expr['value'])
                 else:
                     err = 'Expected {}, found {}: \'{}\''.format(decl['type'], expr['type'], self._ctx_text(ctx.expr()))
-                    raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                    raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
                     
         if decl['var']:
             if decl['type'] == 'float':
@@ -152,7 +152,7 @@ class Visitor(minizincVisitor):
                 self.variables[id_] = {"value":variable, "type":'int', "var":True, "obj":"variable"}
                 self.real_variables.append(variable)
             elif decl['type'] == 'string':
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('string', ctx))
+                raise ParsingFileError("Type not supported: {}".format(self._err('string', ctx)))
             
             # add range of variable to support
             if decl['obj'] == "range_type":
@@ -166,7 +166,7 @@ class Visitor(minizincVisitor):
             
         else:
             if decl['type'] == 'string':
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('string', ctx))
+                raise ParsingFileError("Type not supported: {}".format(self._err('string', ctx)))
             else:
                 value = None
                 if expr:
@@ -176,7 +176,7 @@ class Visitor(minizincVisitor):
 
     # Visit a parse tree produced by minizincParser#enum_item.
     def visitEnum_item(self, ctx:minizincParser.Enum_itemContext):
-        raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('enum', ctx))
+        raise ParsingFileError("Operation not supported: {}".format(self._err('enum', ctx)))
 
 
     # Visit a parse tree produced by minizincParser#enum_cases.
@@ -190,16 +190,16 @@ class Visitor(minizincVisitor):
         expr = self.visitExpr(ctx.expr())
         
         if id_ not in self.variables:
-            raise WMIParsingFileException(WMIParsingFileException.VARIABLE_NOT_DECLARED, self._err(id_, ctx))
+            raise ParsingFileError("Variable not declared: {}".format(self._err(id_, ctx)))
         ident = self.variables[id_]
         
         if ident['value'] != None:
-            raise WMIParsingFileException(WMIParsingFileException.DOUBLE_DECLARATION, self._err(id_, ctx))
+            raise ParsingFileError("Double declaration: {}".format(self._err(id_, ctx)))
         
         # if the variable is initiated as parameter and the expression depends on a decision variable
         if (not ident['var'] and expr['var']):
             err = 'Expected decision variabile, found parameter: '+id_
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+            raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
     
         if (ident['type'] != expr['type']):
             # cast expression to float if it is int
@@ -207,7 +207,7 @@ class Visitor(minizincVisitor):
                 expr['value'] = ToReal(expr['value'])
             else:
                 err = 'Expected {}, found {}: \'{}\''.format(ident['type'], expr['type'], self._ctx_text(ctx.expr()))
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
                 
         expr['value'] = simplify(expr['value'])
                 
@@ -222,45 +222,45 @@ class Visitor(minizincVisitor):
         expr = self.visitExpr(ctx.expr())
         if expr['type'] != "bool":
             err = 'Expected bool, found {}: \'{}\''.format(expr['type'], self._ctx_text(ctx.expr()))
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+            raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
         self.support.append( expr['value'] )
 
 
     # Visit a parse tree produced by minizincParser#solve_item.
     def visitSolve_item(self, ctx:minizincParser.Solve_itemContext):
-        raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('solve', ctx))
+        raise ParsingFileError("Operation not supported: {}".format(self._err('solve', ctx)))
 
 
     # Visit a parse tree produced by minizincParser#output_item.
     def visitOutput_item(self, ctx:minizincParser.Output_itemContext):
-        raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('output', ctx))
+        raise ParsingFileError("Operation not supported: {}".format(self._err('output', ctx)))
 
 
     # Visit a parse tree produced by minizincParser#predicate_item.
     def visitPredicate_item(self, ctx:minizincParser.Predicate_itemContext):
-        raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('predicate', ctx))
+        raise ParsingFileError("Operation not supported: {}".format(self._err('predicate', ctx)))
 
 
     # Visit a parse tree produced by minizincParser#test_item.
     def visitTest_item(self, ctx:minizincParser.Test_itemContext):
-        raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('test', ctx))
+        raise ParsingFileError("Operation not supported: {}".format(self._err('test', ctx)))
 
 
     # Visit a parse tree produced by minizincParser#function_item.
     def visitFunction_item(self, ctx:minizincParser.Function_itemContext):
-        raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('function', ctx))
+        raise ParsingFileError("Operation not supported: {}".format(self._err('function', ctx)))
 
 
     # Visit a parse tree produced by minizincParser#annotation_item.
     def visitAnnotation_item(self, ctx:minizincParser.Annotation_itemContext):
-        raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('annotation', ctx))
+        raise ParsingFileError("Operation not supported: {}".format(self._err('annotation', ctx)))
 
 
     # Visit a parse tree produced by minizincParser#weight_item.
     def visitWeight_item(self, ctx:minizincParser.Weight_itemContext):
         expr = self.visitExpr(ctx.expr())
         if self.weight != None:
-            raise WMIParsingFileException(WMIParsingFileException.DOUBLE_WEIGHT_DECLARATION, self._err('', ctx))
+            raise ParsingFileError("Double weight declaration: {}".format(self._err('', ctx)))
             
         if expr['type'] != 'float':
             # cast weight to float
@@ -268,7 +268,7 @@ class Visitor(minizincVisitor):
                 expr['value'] = ToReal(expr['value'])
             else:
                 err = 'Expected real or int, found {}: \'{}\''.format(expr['type'], self._ctx_text(ctx.expr()))
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
         
         self.weight = expr['value']
         
@@ -276,13 +276,13 @@ class Visitor(minizincVisitor):
     # Visit a parse tree produced by minizincParser#query_item.
     def visitQuery_item(self, ctx:minizincParser.Query_itemContext):
         if not self.query:
-            raise WMIParsingFileException(WMIParsingFileException.QUERY_IN_MODEL, self._err('', ctx))
+            raise ParsingFileError("Query in model: {}".format(self._err('', ctx)))
         
         expr = self.visitExpr(ctx.expr())
             
         if expr['type'] != 'bool':
             err = 'Expected bool, found {}: \'{}\''.format(expr['type'], self._ctx_text(ctx.expr()))
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+            raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
         
         self.queries.append(expr['value'])
 
@@ -308,12 +308,12 @@ class Visitor(minizincVisitor):
         type_ = self.visitBase_ti_expr_tail(ctx.base_ti_expr_tail())
         
         if type_['value'] == "string":
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('string', ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err('string', ctx)))
         
         if type_['obj'] == "range_type":
             if not var:
                 err = 'Only decision variable can be initialized with intervals,'
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
                 
             min_ = type_['min']
             max_ = type_['max']
@@ -353,26 +353,26 @@ class Visitor(minizincVisitor):
         if ctx.base_type():
             return self.visitBase_type(ctx.base_type())
         elif ctx.set_ti_expr_tail():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err(err, ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err(err, ctx)))
         elif ctx.ti_variable_expr_tail():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err(err, ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err(err, ctx)))
         elif ctx.array_ti_expr_tail():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err(err, ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err(err, ctx)))
         elif ctx.ANN():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err(err, ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err(err, ctx)))
         elif ctx.OPT():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err(err, ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err(err, ctx)))
         elif ctx.expr():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err(err, ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err(err, ctx)))
         elif ctx.num_expr():
             min_ = self.visitNum_expr(ctx.num_expr()[0])
             max_ = self.visitNum_expr(ctx.num_expr()[1])
             if not self._cast(min_, max_):
                 err = 'Endpoints of interval must be int or float,'
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
             if min_['type'] != 'int' and min_['type'] != 'float':
                 err = 'Endpoints of interval must be int or float,'
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
             return {"value":min_['type'], "min":min_, "max":max_, "obj":"range_type"}
 
 
@@ -401,27 +401,27 @@ class Visitor(minizincVisitor):
             
             if not self._cast(left, right):
                 err = 'Expected same type, found {} and {}: {}'.format(left['type'], right['type'], self._ctx_text(ctx))
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
                 
             left_v = left['value']
             right_v = right['value']
             var = (left['var'] or right['var'])
             
             if ctx.BACKTICK():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.BACKTICK(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.BACKTICK(), ctx)))
             elif ctx.PLUSPLUS():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.PLUSPLUS(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.PLUSPLUS(), ctx)))
             elif ctx.INTERSECT():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.INTERSECT(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.INTERSECT(), ctx)))
             elif ctx.DIV():
                 left_v = ToReal(left_v)
                 right_v = ToReal(right_v)
                 value = Div(left_v, right_v)
                 return {"value":value, "type":"float", "var":var, "obj":"expr"}
             elif ctx.MOD():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.MOD(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.MOD(), ctx)))
             elif ctx.IDIV():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.IDIV(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.IDIV(), ctx)))
             elif ctx.MULT():
                 value = Times(left_v, right_v)
                 return {"value":value, "type":left['type'], "var":var, "obj":"expr"}
@@ -432,19 +432,19 @@ class Visitor(minizincVisitor):
                 value = Plus(left_v, right_v)
                 return {"value":value, "type":left['type'], "var":var, "obj":"expr"}
             elif ctx.DOTDOT():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.DOTDOT(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.DOTDOT(), ctx)))
             elif ctx.SYMDIFF():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.SYMDIFF(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.SYMDIFF(), ctx)))
             elif ctx.DIFF():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.DIFF(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.DIFF(), ctx)))
             elif ctx.UNION():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.UNION(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.UNION(), ctx)))
             elif ctx.SUPERSET():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.SUPERSET(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.SUPERSET(), ctx)))
             elif ctx.SUBSET():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.SUBSET(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.SUBSET(), ctx)))
             elif ctx.IN():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.IN(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.IN(), ctx)))
             elif ctx.NQ():
                 value = NotEquals(left_v, right_v)
                 return {"value":value, "type":"bool", "var":var, "obj":"expr"}
@@ -503,7 +503,7 @@ class Visitor(minizincVisitor):
                     value = Not(value)
                 else:
                     err = 'Expected bool, found {}: \'{}\''.format(expr['type'], self._ctx_text(ctx.expr_atom()))
-                    raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                    raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
             elif op == '-':
                 if expr['type'] == "float":
                     value = Times(value, Real(-1))
@@ -511,20 +511,20 @@ class Visitor(minizincVisitor):
                     value = Times(value, Int(-1))
                 else:
                     err = 'Expected int or float, found {}: \'{}\''.format(expr['type'], self._ctx_text(ctx.expr_atom()))
-                    raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                    raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
             return {"value":value, "type":expr['type'], "var":expr['var'], "obj":"expr"}
         elif ctx.expr():
             return self.visitExpr(ctx.expr())
         elif ctx.ident():
             id_ = self.visitIdent(ctx.ident())
             if id_ not in self.variables:
-                raise WMIParsingFileException(WMIParsingFileException.VARIABLE_NOT_DECLARED, self._err(id_, ctx))
+                raise ParsingFileError("Variable not declared: {}".format(self._err(id_, ctx)))
             ident = self.variables[id_]
             if ident['value'] == None:
-                raise WMIParsingFileException(WMIParsingFileException.VARIABLE_NOT_INITIALIZED, self._err(id_, ctx))
+                raise ParsingFileError("Variable not initialized: {}".format(self._err(id_, ctx)))
             return {"value":ident['value'], "type":ident['type'], "var":ident['var'], "obj":"expr"}
         elif ctx.UNDERSCORE():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.UNDERSCORE, ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.UNDERSCORE, ctx)))
         elif ctx.bool_literal():
             return self.visitBool_literal(ctx.bool_literal())
         elif ctx.int_literal():
@@ -532,33 +532,33 @@ class Visitor(minizincVisitor):
         elif ctx.float_literal():
             return self.visitFloat_literal(ctx.float_literal())
         elif ctx.string_literal():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('string', ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err('string', ctx)))
         elif ctx.set_literal():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('set', ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err('set', ctx)))
         elif ctx.set_comp():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('set', ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err('set', ctx)))
         elif ctx.array_literal():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('array', ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err('array', ctx)))
         elif ctx.array_literal_2d():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('array', ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err('array', ctx)))
         elif ctx.array_comp():
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('array', ctx))
+            raise ParsingFileError("Type not supported: {}".format(self._err('array', ctx)))
         elif ctx.ann_literal():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('annotation', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('annotation', ctx)))
         elif ctx.if_then_else_expr():
             return self.visitIf_then_else_expr(ctx.if_then_else_expr())
         elif ctx.let_expr():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('let', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('let', ctx)))
         elif ctx.call_expr():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('function', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('function', ctx)))
         elif ctx.gen_call_expr():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('function', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('function', ctx)))
                 
 
     # Visit a parse tree produced by minizincParser#expr_atom_tail.
     def visitExpr_atom_tail(self, ctx:minizincParser.Expr_atom_tailContext):
         if ctx.array_access_tail():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('array', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('array', ctx)))
 
 
     # Visit a parse tree produced by minizincParser#num_expr.
@@ -571,7 +571,7 @@ class Visitor(minizincVisitor):
             
             if not self._cast(left, right):
                 err = 'Expected same type, found {} and {}: {}'.format(left['type'], right['type'], self._ctx_text(ctx))
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
                 
             left_v = left['value']
             right_v = right['value']
@@ -579,16 +579,16 @@ class Visitor(minizincVisitor):
             var = (left['var'] or right['var'])
             
             if ctx.BACKTICK():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.BACKTICK(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.BACKTICK(), ctx)))
             elif ctx.DIV():
                 left_v = ToReal(left_v)
                 right_v = ToReal(right_v)
                 value = Div(left_v, right_v)
                 return {"value":value, "type":"float", "var":var, "obj":"expr"}
             elif ctx.MOD():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.MOD(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.MOD(), ctx)))
             elif ctx.IDIV():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(ctx.IDIV(), ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(ctx.IDIV(), ctx)))
             elif ctx.MULT():
                 value = Times(left_v, right_v)
                 return {"value":value, "type":type_, "var":var, "obj":"expr"}
@@ -620,17 +620,17 @@ class Visitor(minizincVisitor):
                     expr['value'] = Times(expr['value'], Real(-1))
                 else:
                     err = 'Expected int or float, found {}: \'{}\''.format(expr['type'], self._ctx_text(ctx.num_expr_atom()))
-                    raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                    raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
             return {"value":expr['value'], "type":expr['type'], "var":expr['var'], "obj":"expr"}
         elif ctx.num_expr():
             return self.visitNum_expr(ctx.num_expr())
         elif ctx.ident():
             id_ = self.visitIdent(ctx.ident())
             if id_ not in self.variables:
-                raise WMIParsingFileException(WMIParsingFileException.VARIABLE_NOT_DECLARED, self._err(id_, ctx))
+                raise ParsingFileError("Variable not declared: {}".format(self._err(id_, ctx)))
             ident = self.variables[id_]
             if ident['value'] == None:
-                raise WMIParsingFileException(WMIParsingFileException.VARIABLE_NOT_INITIALIZED, self._err(id_, ctx))
+                raise ParsingFileError("Variable not initialized: {}".format(self._err(id_, ctx)))
             return {"value":ident['value'], "type":ident['type'], "var":ident['var'], "obj":"expr"}
         elif ctx.int_literal():
             return self.visitInt_literal(ctx.int_literal())
@@ -639,11 +639,11 @@ class Visitor(minizincVisitor):
         elif ctx.if_then_else_expr():
             return self.visitIf_then_else_expr(ctx.if_then_else_expr())
         elif ctx.let_expr():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('let', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('let', ctx)))
         elif ctx.call_expr():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('function', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('function', ctx)))
         elif ctx.gen_call_expr():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('function', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('function', ctx)))
 
 
     # Visit a parse tree produced by minizincParser#builtin_un_op.
@@ -747,12 +747,12 @@ class Visitor(minizincVisitor):
         # check that condition is boolean
         if cond['type'] != "bool":
             err = 'Expected bool, found {}: \'{}\''.format(cond['type'], self._ctx_text(expr[index-2]))
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+            raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
         
         # check that then and else parts are of the same type
         if not self._cast(then, else_):
             err = 'THEN and ELSE parts must be of the same type: {}'.format(self._ctx_text(ctx))
-            raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+            raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
             
         value = Ite ( cond['value'], then['value'], else_['value'] )
         var = cond['var'] or then['var'] or else_['var']
@@ -766,12 +766,12 @@ class Visitor(minizincVisitor):
             # check that condition is boolean
             if cond['type'] != "bool":
                 err = 'Expected bool, found {}: \'{}\''.format(cond['type'], self._ctx_text(expr[index-1]))
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
             
             # check that then and else parts are of the same type
             if not self._cast(then, ite):
                 err = 'THEN and ELSE parts must be of the same type: {}'.format(self._ctx_text(ctx))
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
             
             
             value = Ite ( cond['value'], then['value'], ite['value'] )
@@ -820,7 +820,7 @@ class Visitor(minizincVisitor):
     # Visit a parse tree produced by minizincParser#annotations.
     def visitAnnotations(self, ctx:minizincParser.AnnotationsContext):
         if ctx.annotation():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('annotation', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('annotation', ctx)))
 
 
     # Visit a parse tree produced by minizincParser#annotation.

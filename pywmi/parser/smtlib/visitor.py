@@ -5,7 +5,7 @@ from .antlr.smtlibParser import smtlibParser
 from .antlr.smtlibVisitor import smtlibVisitor
 from pysmt.shortcuts import *
 from pysmt.typing import REAL, BOOL, INT
-from wmipa.wmiexception import WMIParsingFileException, WMIRuntimeException
+from pywmi.errors import ParsingFileError
 
 # This class defines a complete generic visitor for a parse tree produced by smtlibParser.
 class Visitor(ParseTreeVisitor):
@@ -17,8 +17,8 @@ class Visitor(ParseTreeVisitor):
 
     def __init__(self, mode, domA=[], domX=[]):
         if mode not in Visitor.MODES:
-            err = "{}, use one: {}".format(mode, ", ".join(Visitor.MODES))
-            raise WMIRuntimeException(WMIRuntimeException.INVALID_MODE, err)
+            err = "Invalid mode: {}, use one: {}".format(mode, ", ".join(Visitor.MODES))
+            raise RuntimeError(err)
         self.variables = {}
         self.boolean_variables = domA
         self.real_variables = domX
@@ -119,7 +119,7 @@ class Visitor(ParseTreeVisitor):
         elif t == 'Bool':
             return {"value":"Bool", "obj":"symbol"}
         else:
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(t, ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err(t, ctx)))
 
 
     # Visit a parse tree produced by smtlibParser#predefKeyword.
@@ -161,7 +161,7 @@ class Visitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by smtlibParser#string.
     def visitString(self, ctx:smtlibParser.StringContext):
-        raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('string', ctx))
+        raise ParsingFileError("Type not supported: {}".format(self._err('string', ctx)))
 
 
     # Visit a parse tree produced by smtlibParser#keyword.
@@ -180,7 +180,7 @@ class Visitor(ParseTreeVisitor):
         elif ctx.binary():
             return self.visitBinary(ctx.binary())
         elif ctx.string():
-             raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('string', ctx))
+             raise ParsingFileError("Type not supported: {}".format(self._err('string', ctx)))
 
 
     # Visit a parse tree produced by smtlibParser#s_expr.
@@ -196,7 +196,7 @@ class Visitor(ParseTreeVisitor):
     # Visit a parse tree produced by smtlibParser#identifier.
     def visitIdentifier(self, ctx:smtlibParser.IdentifierContext):
         if ctx.ParOpen():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('_', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('_', ctx)))
         else:
             return self.visitSymbol(ctx.symbol())
 
@@ -214,7 +214,7 @@ class Visitor(ParseTreeVisitor):
     # Visit a parse tree produced by smtlibParser#sort.
     def visitSort(self, ctx:smtlibParser.SortContext):
         if ctx.ParOpen():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, ctx.getText())
+            raise ParsingFileError("Operation not supported: {}".format(ctx.getText()))
         else:
             return self.visitIdentifier(ctx.identifier())
 
@@ -222,7 +222,7 @@ class Visitor(ParseTreeVisitor):
     # Visit a parse tree produced by smtlibParser#qual_identifer.
     def visitQual_identifer(self, ctx:smtlibParser.Qual_identiferContext):
         if ctx.ParOpen():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('as', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('as', ctx)))
         else:
             return self.visitIdentifier(ctx.identifier())
 
@@ -269,14 +269,14 @@ class Visitor(ParseTreeVisitor):
                             if op in same_type_op:
                                 if not self._cast(last, term):
                                     err = 'Expected same type, found {} and {}: {}'.format(last['type'], term['type'], self._ctx_text(ctx))
-                                    raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                                    raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
                                 last = term
                         if term['var']:
                             var = True
                         terms.append(term)
                     else:
                         err = self._ctx_text(t)
-                        raise WMIParsingFileException(WMIParsingFileException.SYNTAX_ERROR, self._err(err, ctx))
+                        raise ParsingFileError("Syntax error: {}".format(self._err(err, ctx)))
                         
                 terms_value = [t['value'] for t in terms]
                 
@@ -286,42 +286,42 @@ class Visitor(ParseTreeVisitor):
                         type_ = 'bool'
                     else:
                         err = '{} operator takes two parameters but {} were given'.format(op, len(terms))
-                        raise WMIParsingFileException(WMIParsingFileException.SYNTAX_ERROR, self._err(err, ctx))
+                        raise ParsingFileError("Syntax error: {}".format(self._err(err, ctx)))
                 elif op == '>':
                     if len(terms)==2:
                         value = GT(terms_value[0], terms_value[1])
                         type_ = 'bool'
                     else:
                         err = '{} operator takes two parameters but {} were given'.format(op, len(terms))
-                        raise WMIParsingFileException(WMIParsingFileException.SYNTAX_ERROR, self._err(err, ctx))
+                        raise ParsingFileError("Syntax error: {}".format(self._err(err, ctx)))
                 elif op == '>=':
                     if len(terms)==2:
                         value = GE(terms_value[0], terms_value[1])
                         type_ = 'bool'
                     else:
                         err = '{} operator takes two parameters but {} were given'.format(op, len(terms))
-                        raise WMIParsingFileException(WMIParsingFileException.SYNTAX_ERROR, self._err(err, ctx))
+                        raise ParsingFileError("Syntax error: {}".format(self._err(err, ctx)))
                 elif op == '<':
                     if len(terms)==2:
                         value = LT(terms_value[0], terms_value[1])
                         type_ = 'bool'
                     else:
                         err = '{} operator takes two parameters but {} were given'.format(op, len(terms))
-                        raise WMIParsingFileException(WMIParsingFileException.SYNTAX_ERROR, self._err(err, ctx))
+                        raise ParsingFileError("Syntax error: {}".format(self._err(err, ctx)))
                 elif op == '<=':
                     if len(terms)==2:
                         value = LE(terms_value[0], terms_value[1])
                         type_ = 'bool'
                     else:
                         err = '{} operator takes two parameters but {} were given'.format(op, len(terms))
-                        raise WMIParsingFileException(WMIParsingFileException.SYNTAX_ERROR, self._err(err, ctx))
+                        raise ParsingFileError("Syntax error: {}".format(self._err(err, ctx)))
                 elif op == '=>':
                     if len(terms)==2:
                         value = Implies(terms_value[0], terms_value[1])
                         type_ = 'bool'
                     else:
                         err = '{} operator takes two parameters but {} were given'.format(op, len(terms))
-                        raise WMIParsingFileException(WMIParsingFileException.SYNTAX_ERROR, self._err(err, ctx))
+                        raise ParsingFileError("Syntax error: {}".format(self._err(err, ctx)))
                 elif op == '+':
                     value = Plus(terms_value)
                     type_ = terms[0]['type']
@@ -338,10 +338,10 @@ class Visitor(ParseTreeVisitor):
                             type_ = 'float'
                         else:
                             err = 'Expected int or float, found {}: \'{}\''.format(terms[0]['type'], self._ctx_text(ctx.term()[0]))
-                            raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                            raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
                     else:
                         err = '{} operator takes one or two parameters but {} were given'.format(op, len(terms))
-                        raise WMIParsingFileException(WMIParsingFileException.SYNTAX_ERROR, self._err(err, ctx))
+                        raise ParsingFileError("Syntax error: {}".format(self._err(err, ctx)))
                 elif op == '*':
                     value = Times(terms_value)
                     type_ = terms[0]['type']
@@ -351,7 +351,7 @@ class Visitor(ParseTreeVisitor):
                         type_ = 'float'
                     else:
                         err = '{} operator takes two parameters but {} were given'.format(op, len(terms))
-                        raise WMIParsingFileException(WMIParsingFileException.SYNTAX_ERROR, self._err(err, ctx))
+                        raise ParsingFileError("Syntax error: {}".format(self._err(err, ctx)))
                 elif op == 'and':
                     value = And(terms_value)
                     type_ = 'bool'
@@ -364,7 +364,7 @@ class Visitor(ParseTreeVisitor):
                         type_ = 'bool'
                     else:
                         err = '{} operator takes one parameter but {} were given'.format(op, len(terms))
-                        raise WMIParsingFileException(WMIParsingFileException.SYNTAX_ERROR, self._err(err, ctx))
+                        raise ParsingFileError("Syntax error: {}".format(self._err(err, ctx)))
                 elif op == 'ite':
                     if len(terms)==3:
                         cond = terms[0]
@@ -373,32 +373,32 @@ class Visitor(ParseTreeVisitor):
                         
                         if cond['type'] != "bool":
                             err = 'Expected bool, found {}: \'{}\''.format(cond['type'], self._ctx_text(ctx.term()[0]))
-                            raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                            raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
                         
                         # check that then and else parts are of the same type
                         if not self._cast(then, else_):
                             err = 'THEN and ELSE parts must be of the same type: {}'.format(self._ctx_text(ctx))
-                            raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                            raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
                             
                         value = Ite(cond['value'], then['value'], else_['value'])
                         type_ = then['type']
                     else:
                         err = '{} operator takes three parameters but {} were given'.format(op, len(terms))
-                        raise WMIParsingFileException(WMIParsingFileException.SYNTAX_ERROR, self._err(err, ctx))
+                        raise ParsingFileError("Syntax error: {}".format(self._err(err, ctx)))
                 else:
-                    raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(op, ctx))
+                    raise ParsingFileError("Operation not supported: {}".format(self._err(op, ctx)))
                 
                 return {'value': value, 'type':type_, 'var':var, 'obj':'expr'}
             elif ctx.GRW_Let():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('let', ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err('let', ctx)))
             elif ctx.GRW_Forall():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('forall', ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err('forall', ctx)))
             elif ctx.GRW_Exists():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('exists', ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err('exists', ctx)))
             elif ctx.GRW_Match():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('match', ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err('match', ctx)))
             elif ctx.GRW_Exclamation():
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('!', ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err('!', ctx)))
         elif ctx.spec_constant():
             return self.visitSpec_constant(ctx.spec_constant())
         elif ctx.qual_identifer():
@@ -660,17 +660,17 @@ class Visitor(ParseTreeVisitor):
             term = self.visitTerm(ctx.term()[0])
             if term['type'] != "bool":
                 err = 'Expected bool, found {}: \'{}\''.format(term['type'], self._ctx_text(ctx.term()[0]))
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
             self.support.append( term['value'] )
         elif ctx.cmd_checkSat():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('check-sat', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('check-sat', ctx)))
         elif ctx.cmd_checkSatAssuming():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('check-sat-assuming', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('check-sat-assuming', ctx)))
         elif ctx.cmd_declareConst():
             symbol = self.visitSymbol(ctx.symbol()[0])
             id_ = symbol['value']
             if id_ in self.variables:
-                raise WMIParsingFileException(WMIParsingFileException.DOUBLE_DECLARATION, self._err(id_, ctx))
+                raise ParsingFileError("Double declaration: {}".format(self._err(id_, ctx)))
                 
             type_ = self.visitSort(ctx.sort()[0])
             if type_['value'] == 'Int':
@@ -687,21 +687,21 @@ class Visitor(ParseTreeVisitor):
                 self.boolean_variables.append(variable)
             else:
                 err = self._ctx_text(ctx)
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err(err, ctx))
+                raise ParsingFileError("Type not supported: {}".format(self._err(err, ctx)))
         elif ctx.cmd_declareDatatype():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('declare-datatpye', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('declare-datatpye', ctx)))
         elif ctx.cmd_declareDatatypes():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('declare-datatpyes', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('declare-datatpyes', ctx)))
         elif ctx.cmd_declareFun():
             symbol = self.visitSymbol(ctx.symbol()[0])
             id_ = symbol['value']
             if id_ in self.variables:
-                raise WMIParsingFileException(WMIParsingFileException.DOUBLE_DECLARATION, self._err(id_, ctx))
+                raise ParsingFileError("Double declaration: {}".format(self._err(id_, ctx)))
                 
             sort = ctx.sort()
             if len(sort)>1:
                 err = ", ".join([self._ctx_text(s) for s in ctx.sort()[:-1]])
-                raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(err, ctx))
+                raise ParsingFileError("Operation not supported: {}".format(self._err(err, ctx)))
             type_ = self.visitSort(sort[-1])
             if type_['value'] == 'Int':
                 variable = Symbol(id_, INT)
@@ -717,58 +717,58 @@ class Visitor(ParseTreeVisitor):
                 self.boolean_variables.append(variable)
             else:
                 err = self._ctx_text(ctx)
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err(err, ctx))
+                raise ParsingFileError("Type not supported: {}".format(self._err(err, ctx)))
         elif ctx.cmd_declareSort():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('declare-sort', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('declare-sort', ctx)))
         elif ctx.cmd_defineFun():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('define-fun', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('define-fun', ctx)))
         elif ctx.cmd_defineFunRec():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('define-fun-rec', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('define-fun-rec', ctx)))
         elif ctx.cmd_defineFunsRec():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('define-funs-rec', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('define-funs-rec', ctx)))
         elif ctx.cmd_defineSort():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('define-sort', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('define-sort', ctx)))
         elif ctx.cmd_echo():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('echo', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('echo', ctx)))
         elif ctx.cmd_exit():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('exit', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('exit', ctx)))
         elif ctx.cmd_getAssertions():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('get-assertions', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('get-assertions', ctx)))
         elif ctx.cmd_getAssignment():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('get-assignment', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('get-assignment', ctx)))
         elif ctx.cmd_getInfo():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('get-info', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('get-info', ctx)))
         elif ctx.cmd_getModel():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('get-model', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('get-model', ctx)))
         elif ctx.cmd_getOption():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('get-option', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('get-option', ctx)))
         elif ctx.cmd_getProof():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('get-proof', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('get-proof', ctx)))
         elif ctx.cmd_getUnsatAssumptions():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('get-unsat-assumptions', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('get-unsat-assumptions', ctx)))
         elif ctx.cmd_getUnsatCore():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('get-unsat-core', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('get-unsat-core', ctx)))
         elif ctx.cmd_getValue():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('get-value', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('get-value', ctx)))
         elif ctx.cmd_pop():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('pop', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('pop', ctx)))
         elif ctx.cmd_push():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('push', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('push', ctx)))
         elif ctx.cmd_reset():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('reset', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('reset', ctx)))
         elif ctx.cmd_resetAssertions():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('reset-assertions', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('reset-assertions', ctx)))
         elif ctx.cmd_setInfo():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('set-info', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('set-info', ctx)))
         elif ctx.cmd_setLogic():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('set-logic', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('set-logic', ctx)))
         elif ctx.cmd_setOption():
-            raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err('set-option', ctx))
+            raise ParsingFileError("Operation not supported: {}".format(self._err('set-option', ctx)))
         elif ctx.cmd_weight():
             term = self.visitTerm(ctx.term()[0])
             
             if self.weight != None:
-                raise WMIParsingFileException(WMIParsingFileException.DOUBLE_WEIGHT_DECLARATION, self._err('', ctx))
+                raise ParsingFileError("Double weight declaration: {}".format(self._err('', ctx)))
                 
             if term['type'] != 'float':
                 # cast weight to float
@@ -776,12 +776,12 @@ class Visitor(ParseTreeVisitor):
                     term['value'] = ToReal(term['value'])
                 else:
                     err = 'Expected real or int, found {}: \'{}\''.format(term['type'], self._ctx_text(ctx.expr()))
-                    raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                    raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
                     
             self.weight = term['value']
         elif ctx.cmd_query():
             if not self.query:
-                raise WMIParsingFileException(WMIParsingFileException.QUERY_IN_MODEL, self._err('', ctx))
+                raise ParsingFileError("Query in model: {}".format(self._err('', ctx)))
                 
             term = self.visitTerm(ctx.term()[0])
             
@@ -791,7 +791,7 @@ class Visitor(ParseTreeVisitor):
                     term['value'] = ToReal(term['value'])
                 else:
                     err = 'Expected bool, found {}: \'{}\''.format(term['type'], self._ctx_text(ctx.expr()))
-                    raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
+                    raise ParsingFileError("Type error: {}".format(self._err(err, ctx)))
                     
             self.queries.append(term['value'])
             
