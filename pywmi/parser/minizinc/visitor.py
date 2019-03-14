@@ -4,7 +4,7 @@ from antlr4 import *
 from .antlr.minizincParser import minizincParser
 from .antlr.minizincVisitor import minizincVisitor
 from pysmt.shortcuts import *
-from pysmt.typing import REAL, BOOL
+from pysmt.typing import REAL, BOOL, INT
 from wmipa.wmiexception import WMIParsingFileException, WMIRuntimeException
 
 # This class defines a complete listener for a parse tree produced by minizincParser.
@@ -148,7 +148,9 @@ class Visitor(minizincVisitor):
                 self.variables[id_] = {"value":variable, "type":'bool', "var":True, "obj":"variable"}
                 self.boolean_variables.append(variable)
             elif decl['type'] == 'int':
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('int', ctx))
+                variable = Symbol(id_, INT)
+                self.variables[id_] = {"value":variable, "type":'int', "var":True, "obj":"variable"}
+                self.real_variables.append(variable)
             elif decl['type'] == 'string':
                 raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('string', ctx))
             
@@ -310,7 +312,7 @@ class Visitor(minizincVisitor):
         
         if type_['obj'] == "range_type":
             if not var:
-                err = 'Only decision variable can be initialized with interval,'
+                err = 'Only decision variable can be initialized with intervals,'
                 raise WMIParsingFileException(WMIParsingFileException.TYPE_ERROR, self._err(err, ctx))
                 
             min_ = type_['min']

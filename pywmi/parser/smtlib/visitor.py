@@ -4,7 +4,7 @@ from antlr4 import *
 from .antlr.smtlibParser import smtlibParser
 from .antlr.smtlibVisitor import smtlibVisitor
 from pysmt.shortcuts import *
-from pysmt.typing import REAL, BOOL
+from pysmt.typing import REAL, BOOL, INT
 from wmipa.wmiexception import WMIParsingFileException, WMIRuntimeException
 
 # This class defines a complete generic visitor for a parse tree produced by smtlibParser.
@@ -674,7 +674,9 @@ class Visitor(ParseTreeVisitor):
                 
             type_ = self.visitSort(ctx.sort()[0])
             if type_['value'] == 'Int':
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('int', ctx))
+                variable = Symbol(id_, INT)
+                self.variables[id_] = {"value":variable, "type":'int', "var":True, "obj":"variable"}
+                self.real_variables.append(variable)
             elif type_['value'] == 'Real':
                 variable = Symbol(id_, REAL)
                 self.variables[id_] = {"value":variable, "type":'float', "var":True, "obj":"variable"}
@@ -702,7 +704,9 @@ class Visitor(ParseTreeVisitor):
                 raise WMIParsingFileException(WMIParsingFileException.OPERATION_NOT_SUPPORTED, self._err(err, ctx))
             type_ = self.visitSort(sort[-1])
             if type_['value'] == 'Int':
-                raise WMIParsingFileException(WMIParsingFileException.TYPE_NOT_SUPPORTED, self._err('int', ctx))
+                variable = Symbol(id_, INT)
+                self.variables[id_] = {"value":variable, "type":'int', "var":True, "obj":"variable"}
+                self.real_variables.append(variable)
             elif type_['value'] == 'Real':
                 variable = Symbol(id_, REAL)
                 self.variables[id_] = {"value":variable, "type":'float', "var":True, "obj":"variable"}
