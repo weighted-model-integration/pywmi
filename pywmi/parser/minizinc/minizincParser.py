@@ -10,7 +10,7 @@ from .minizincErrorListener import MinizincErrorListener
 class MinizincParser():
 
     @staticmethod
-    def parse(path, mode, domA=[], domX=[]):
+    def parse(path, mode, domA=[], domX={}):
         # init lexer and parser
         mzn_file = FileStream(path)
         lexer = minizincLexer(mzn_file)

@@ -15,7 +15,7 @@ class Visitor(minizincVisitor):
     MODEL_QUERY = "model_query"
     MODES = [MODEL, QUERY, MODEL_QUERY]
 
-    def __init__(self, mode, domA=[], domX=[]):
+    def __init__(self, mode, domA=[], domX={}):
         if mode not in Visitor.MODES:
             err = "Invalid mode: {}, use one: {}".format(mode, ", ".join(Visitor.MODES))
             raise RuntimeError(err)
@@ -76,7 +76,7 @@ class Visitor(minizincVisitor):
             if self.weight == None:
                 self.weight = Real(1)
             self.weight = simplify(self.weight)
-            ret = [self.support, self.weight, set(self.boolean_variables), set(self.real_variables)]
+            ret = [self.support, self.weight, set(self.boolean_variables), self.real_variables]
             if self.query:
                 ret.append(self.queries)
             return ret
@@ -142,7 +142,7 @@ class Visitor(minizincVisitor):
             if decl['type'] == 'float':
                 variable = Symbol(id_, REAL)
                 self.variables[id_] = {"value":variable, "type":'float', "var":True, "obj":"variable"}
-                self.real_variables.append(variable)
+                self.real_variables[variable] = [None, None]
             elif decl['type'] == 'bool':
                 variable = Symbol(id_, BOOL)
                 self.variables[id_] = {"value":variable, "type":'bool', "var":True, "obj":"variable"}
@@ -150,7 +150,7 @@ class Visitor(minizincVisitor):
             elif decl['type'] == 'int':
                 variable = Symbol(id_, INT)
                 self.variables[id_] = {"value":variable, "type":'int', "var":True, "obj":"variable"}
-                self.real_variables.append(variable)
+                self.real_variables[variable] = [None, None]
             elif decl['type'] == 'string':
                 raise ParsingFileError("Type not supported: {}".format(self._err('string', ctx)))
             
@@ -158,7 +158,7 @@ class Visitor(minizincVisitor):
             if decl['obj'] == "range_type":
                 min_ = decl['min']
                 max_ = decl['max']
-                self.support.extend( [GE(variable, min_), LE(variable, max_)] )
+                self.real_variables[variable] = [simplify(min_), simplify(max_)]
                 
             # add value of variable to support
             if expr:

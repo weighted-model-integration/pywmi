@@ -90,7 +90,7 @@ def import_smt(filename):
 
 def import_mzn(filename):
     support, weights, domA, domX, queries = MinizincParser.parseAll(filename)
-    domain = Domain.make(real_variables={v.symbol_name(): [None, None] for v in domX},
+    domain = Domain.make(real_variables={v.symbol_name(): domX[v] for v in domX},
                          boolean_variables=[v.symbol_name() for v in domA])
     return Density(domain, support, weights, queries)
 
