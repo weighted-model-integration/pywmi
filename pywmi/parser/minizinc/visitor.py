@@ -18,7 +18,7 @@ class Visitor(minizincVisitor):
     def __init__(self, mode, domA=[], domX={}):
         if mode not in Visitor.MODES:
             err = "Invalid mode: {}, use one: {}".format(mode, ", ".join(Visitor.MODES))
-            raise RuntimeError(err)
+            raise ParsingFileError(err)
         self.variables = {}
         self.boolean_variables = domA
         self.real_variables = domX
