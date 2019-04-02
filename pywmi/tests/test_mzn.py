@@ -42,27 +42,31 @@ query (true);
     except ParsingFileError:
         assert True
 
-def test_no_weight_decl_error():
+def test_correct_parsing1():
     content = """
-var float:x;
+var -1.5..1.0:x;
 var 0.0..2.0:y;
 
-constraint (  y<1       -> (0<x /\ x<=2)  )
-        /\ (  not (y<1) -> (1<x /\ x<3)  );
-        
-query (x>1.5);
-query (x<=1.5);
-query (true);
+constraint x < y ;       
 """
     tmp = temporary_file(content)
-    try:
-        _ = MinizincParser.parseAll(tmp.name)
-        assert False
-    except ParsingFileError:
-        assert True
 
+    support, weights, domA, domX, queries = MinizincParser.parseAll(tmp.name)
 
-def test_correct_parsing1():
+    x, y = sorted(domX.keys(), key=lambda x : x.symbol_name())
+    chi = LT(x, y)
+
+    # chi == support
+    assert not is_sat(Or(And(chi, Not(support)), And(Not(chi), support)))
+
+    w = Real(1)
+
+    assert w == weights
+        
+    assert domX[x] == [-1.5, 1.0]
+    assert domX[y] == [0.0, 2.0]
+
+def test_correct_parsing2():
     content = """
 var float:x;
 var 0.0..2.0:y;
@@ -92,6 +96,8 @@ query (true);
             Times(y, Real(2)))
 
     assert w == weights
+
+    assert domX[y] == [0.0, 2.0]
         
     phi1 = GT(x, Real(1.5))
     phi2 = LE(x, Real(1.5))
