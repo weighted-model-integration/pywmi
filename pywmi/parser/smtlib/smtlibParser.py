@@ -10,7 +10,12 @@ from .smtlibErrorListener import SmtlibErrorListener
 class SmtlibParser():
 
     @staticmethod
-    def parse(path, mode, domA=[], domX=[]):
+    def parse(path, mode, domA=None, domX=None):
+        if domA is None:
+            domA = []
+        if domX is None:
+            domX = []
+        
         # init lexer and parser
         smt_file = FileStream(path)
         lexer = smtlibLexer(smt_file)

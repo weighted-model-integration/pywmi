@@ -15,10 +15,14 @@ class Visitor(minizincVisitor):
     MODEL_QUERY = "model_query"
     MODES = [MODEL, QUERY, MODEL_QUERY]
 
-    def __init__(self, mode, domA=[], domX={}):
+    def __init__(self, mode, domA=None, domX=None):
         if mode not in Visitor.MODES:
             err = "Invalid mode: {}, use one: {}".format(mode, ", ".join(Visitor.MODES))
             raise ParsingFileError(err)
+        if domA is None:
+            domA = []
+        if domX is None:
+            domX = {}
         self.variables = {}
         self.boolean_variables = domA
         self.real_variables = domX
