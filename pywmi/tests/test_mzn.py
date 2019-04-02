@@ -63,8 +63,8 @@ constraint x < y ;
 
     assert w == weights
         
-    assert domX[x] == [-1.5, 1.0]
-    assert domX[y] == [0.0, 2.0]
+    assert domX[x] == [Real(-1.5), Real(1.0)]
+    assert domX[y] == [Real(0.0), Real(2.0)]
 
 def test_correct_parsing2():
     content = """
@@ -97,10 +97,115 @@ query (true);
 
     assert w == weights
 
-    assert domX[y] == [0.0, 2.0]
+    assert domX[y] == [Real(0.0), Real(2.0)]
         
     phi1 = GT(x, Real(1.5))
     phi2 = LE(x, Real(1.5))
     phi3 = Bool(True)
 
     assert queries == [phi1, phi2, phi3]
+    
+def test_correct_parsing3():
+    content = """
+var 0.0..10.0:x;
+var bool:a;
+
+weight : if a then 2*x else x endif;
+
+constraint (a -> (x>5));
+        
+query (x>2);
+query (x<=8);
+"""
+    
+    tmp = temporary_file(content)
+
+    support, weights, domA, domX, queries = MinizincParser.parseAll(tmp.name)
+
+    x = list(domX.keys())[0]
+    a = list(domA)[0]
+    
+    chi = Implies(a, LT(Real(5), x))
+
+    # chi == support
+    assert not is_sat(Or(And(chi, Not(support)), And(Not(chi), support)))
+
+    w = Ite(a,
+            Times(x, Real(2)),
+            x)
+
+    assert w == weights
+
+    assert domX[x] == [Real(0.0), Real(10.0)]
+        
+    phi1 = GT(x, Real(2))
+    phi2 = LE(x, Real(8))
+
+    assert queries == [phi1, phi2]
+    
+def test_correct_type_parsing():
+    content = """
+var -5..5.0:x;      % here the first element is int
+var -5.0..5:y;      % here the second element is int
+"""
+
+    tmp = temporary_file(content)
+
+    support, weights, domA, domX, queries = MinizincParser.parseAll(tmp.name)
+    
+    x, y = sorted(domX.keys(), key=lambda x : x.symbol_name())
+    
+    chi = Bool(True)
+    
+    # chi == support
+    assert not is_sat(Or(And(chi, Not(support)), And(Not(chi), support)))
+    
+    w = Real(1)
+    
+    assert w == weights
+    
+    assert domX[x] == [Real(-5.0), Real(5.0)]
+    assert domX[y] == [Real(-5.0), Real(5.0)]
+    
+    assert queries == []
+    
+def test_parameter_and_variable():
+    content = """
+float:min = 0.0;
+par float:max = 10.0;
+var min..max:x;
+"""
+    
+    tmp = temporary_file(content)
+
+    support, weights, domA, domX, queries = MinizincParser.parseAll(tmp.name)
+    
+    x = list(domX.keys())[0]
+    
+    chi = Bool(True)
+    
+    # chi == support
+    assert not is_sat(Or(And(chi, Not(support)), And(Not(chi), support)))
+    
+    w = Real(1)
+    
+    assert w == weights
+    
+    assert domX[x] == [Real(0.0), Real(10.0)]
+    
+    assert queries == []
+    
+def test_error_parameter_with_range():
+    content = """
+float:min = 0.0;
+par float:max = 10.0;
+par min..max:x;         % here x is defined as a parameter (and not a variable)
+"""
+
+    tmp = temporary_file(content)
+    
+    try:
+        _ = MinizincParser.parseAll(tmp.name)
+        assert False
+    except ParsingFileError:
+        assert True
