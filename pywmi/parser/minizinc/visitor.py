@@ -620,7 +620,7 @@ class Visitor(minizincVisitor):
             if op == '-':
                 if expr['type'] == "int":
                     expr['value'] = Times(expr['value'], Int(-1))
-                elif expr['type'] == "real":
+                elif expr['type'] == "float":
                     expr['value'] = Times(expr['value'], Real(-1))
                 else:
                     err = 'Expected int or float, found {}: \'{}\''.format(expr['type'], self._ctx_text(ctx.num_expr_atom()))
