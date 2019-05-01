@@ -24,7 +24,6 @@ class Visitor(minizincVisitor):
         self.support = []
         self.weight = weight
         self.queries = []
-        print("PATH:", path)
         self.path = abspath(path)
         
         for b in domA:

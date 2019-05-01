@@ -1,10 +1,17 @@
-
+import pytest
 from pysmt.shortcuts import *
+from pysmt.exceptions import NoSolverAvailableError
 from pywmi import Domain
 from pywmi.errors import ParsingFileError
 from pywmi.parser import MinizincParser#, SmtlibParser
 from tempfile import NamedTemporaryFile
 
+try:
+    is_sat(Bool(True))
+    solver_available = True
+except NoSolverAvailableError:
+    solver_available = False
+    
 def temporary_file(content):
     f = NamedTemporaryFile(mode='w+')
     f.write(content)
@@ -42,6 +49,7 @@ query (true);
     except ParsingFileError:
         assert True
 
+@pytest.mark.skipif(not solver_available, reason="No Solver is available")
 def test_correct_parsing1():
     content = """
 var -1.5..1.0:x;
@@ -66,6 +74,8 @@ constraint x < y ;
     assert domX[x] == [Real(-1.5), Real(1.0)]
     assert domX[y] == [Real(0.0), Real(2.0)]
 
+
+@pytest.mark.skipif(not solver_available, reason="No Solver is available")
 def test_correct_parsing2():
     content = """
 var float:x;
@@ -105,6 +115,8 @@ query (true);
 
     assert queries == [phi1, phi2, phi3]
     
+    
+@pytest.mark.skipif(not solver_available, reason="No Solver is available")
 def test_correct_parsing3():
     content = """
 var 0.0..10.0:x;
@@ -142,7 +154,9 @@ query (x<=8);
     phi2 = LE(x, Real(8))
 
     assert queries == [phi1, phi2]
-    
+
+
+@pytest.mark.skipif(not solver_available, reason="No Solver is available")
 def test_correct_type_parsing():
     content = """
 var -5..5.0:x;      % here the first element is int
@@ -169,6 +183,8 @@ var -5.0..5:y;      % here the second element is int
     
     assert queries == []
     
+    
+@pytest.mark.skipif(not solver_available, reason="No Solver is available")
 def test_parameter_and_variable():
     content = """
 float:min = 0.0;
@@ -195,6 +211,7 @@ var min..max:x;
     
     assert queries == []
     
+
 def test_error_parameter_with_range():
     content = """
 float:min = 0.0;
