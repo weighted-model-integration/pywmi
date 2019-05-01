@@ -10,7 +10,7 @@ from .smtlibErrorListener import SmtlibErrorListener
 class SmtlibParser():
 
     @staticmethod
-    def parse(path, mode, domA=None, domX=None):
+    def parse(path, domA=None, domX=None):
         if domA is None:
             domA = []
         if domX is None:
@@ -31,20 +31,5 @@ class SmtlibParser():
         tree = parser.start()
         
         # visit the tree
-        visitor = Visitor(mode, domA, domX)
+        visitor = Visitor(domA=domA, domX=domX)
         return visitor.visit(tree)
-        
-
-    @staticmethod
-    def parseAll(path):
-        return SmtlibParser.parse(path, Visitor.MODEL_QUERY)
-        
-        
-    @staticmethod
-    def parseModel(path):
-        return SmtlibParser.parse(path, Visitor.MODEL)
-        
-        
-    @staticmethod
-    def parseQuery(path, domA, domX):
-        return SmtlibParser.parse(path, Visitor.QUERY, domA, domX)

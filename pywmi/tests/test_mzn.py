@@ -3,10 +3,10 @@ from pysmt.shortcuts import *
 from pywmi import Domain
 from pywmi.errors import ParsingFileError
 from pywmi.parser import MinizincParser#, SmtlibParser
-from tempfile import TemporaryFile
+from tempfile import NamedTemporaryFile
 
 def temporary_file(content):
-    f = TemporaryFile(mode='w+')
+    f = NamedTemporaryFile(mode='w+')
     f.write(content)
     f.seek(0)
     return f
@@ -15,7 +15,7 @@ def test_syntax_error():
     content = "this should raise a ParsingFileError!"
     tmp = temporary_file(content)
     try:
-        _ = MinizincParser.parseAll(tmp.name)
+        _ = MinizincParser.parse(tmp.name)
         assert False
     except ParsingFileError:
         assert True
@@ -37,7 +37,7 @@ query (true);
 """
     tmp = temporary_file(content)
     try:
-        _ = MinizincParser.parseAll(tmp.name)
+        _ = MinizincParser.parse(tmp.name)
         assert False
     except ParsingFileError:
         assert True
@@ -51,7 +51,7 @@ constraint x < y ;
 """
     tmp = temporary_file(content)
 
-    support, weights, domA, domX, queries = MinizincParser.parseAll(tmp.name)
+    support, weights, domA, domX, queries, _ = MinizincParser.parse(tmp.name)
 
     x, y = sorted(domX.keys(), key=lambda x : x.symbol_name())
     chi = LT(x, y)
@@ -82,7 +82,7 @@ query (true);
 """
     tmp = temporary_file(content)
 
-    support, weights, domA, domX, queries = MinizincParser.parseAll(tmp.name)
+    support, weights, domA, domX, queries, _ = MinizincParser.parse(tmp.name)
 
     x, y = sorted(domX.keys(), key=lambda x : x.symbol_name())
     chi = And(Implies(LT(y, Real(1)), And(LT(Real(0), x), LE(x, Real(2)))),
@@ -120,7 +120,7 @@ query (x<=8);
     
     tmp = temporary_file(content)
 
-    support, weights, domA, domX, queries = MinizincParser.parseAll(tmp.name)
+    support, weights, domA, domX, queries, _ = MinizincParser.parse(tmp.name)
 
     x = list(domX.keys())[0]
     a = list(domA)[0]
@@ -151,7 +151,7 @@ var -5.0..5:y;      % here the second element is int
 
     tmp = temporary_file(content)
 
-    support, weights, domA, domX, queries = MinizincParser.parseAll(tmp.name)
+    support, weights, domA, domX, queries, _ = MinizincParser.parse(tmp.name)
     
     x, y = sorted(domX.keys(), key=lambda x : x.symbol_name())
     
@@ -178,7 +178,7 @@ var min..max:x;
     
     tmp = temporary_file(content)
 
-    support, weights, domA, domX, queries = MinizincParser.parseAll(tmp.name)
+    support, weights, domA, domX, queries, _ = MinizincParser.parse(tmp.name)
     
     x = list(domX.keys())[0]
     
@@ -205,7 +205,7 @@ par min..max:x;         % here x is defined as a parameter (and not a variable)
     tmp = temporary_file(content)
     
     try:
-        _ = MinizincParser.parseAll(tmp.name)
+        _ = MinizincParser.parse(tmp.name)
         assert False
     except ParsingFileError:
         assert True

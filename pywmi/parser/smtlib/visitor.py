@@ -10,17 +10,11 @@ from pywmi.errors import ParsingFileError
 # This class defines a complete generic visitor for a parse tree produced by smtlibParser.
 class Visitor(ParseTreeVisitor):
 
-    MODEL = "model"
-    QUERY = "query"
-    MODEL_QUERY = "model_query"
-    MODES = [MODEL, QUERY, MODEL_QUERY]
-
-    def __init__(self, mode, domA=None, domX=None):
-        if mode not in Visitor.MODES:
-            err = "Invalid mode: {}, use one: {}".format(mode, ", ".join(Visitor.MODES))
-            raise ParsingFileError(err)
+    def __init__(self, domA=None, domX=None):
         if domA is None:
             domA = []
+        elif isinstance(domA, set):
+            domA = list(domA)
         if domX is None:
             domX = []
         self.variables = {}
@@ -29,8 +23,6 @@ class Visitor(ParseTreeVisitor):
         self.support = []
         self.weight = None
         self.queries = []
-        self.model = "model" in mode
-        self.query = "query" in mode
         
         for b in domA:
             self.variables[b.symbol_name()] = {"value":b, "type":'bool', "var":True, "obj":"variable"}
@@ -76,16 +68,10 @@ class Visitor(ParseTreeVisitor):
         self.support = And(self.support)
         self.support = simplify(self.support)
         
-        if self.model:
-            if self.weight == None:
-                self.weight = Real(1)
-            self.weight = simplify(self.weight)
-            ret = [self.support, self.weight, set(self.boolean_variables), set(self.real_variables)]
-            if self.query:
-                ret.append(self.queries)
-            return ret
-        else:
-            return self.queries
+        if self.weight == None:
+            self.weight = Real(1)
+        self.weight = simplify(self.weight)
+        return [self.support, self.weight, set(self.boolean_variables), set(self.real_variables), self.queries]
 
 
     # Visit a parse tree produced by smtlibParser#response.
@@ -656,10 +642,6 @@ class Visitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by smtlibParser#command.
     def visitCommand(self, ctx:smtlibParser.CommandContext):
-        if not self.model and not ctx.cmd_query():
-            warnings.warn("in query file every command except 'query' will be ignored", RuntimeWarning)
-            return
-        
         if ctx.cmd_assert():
             term = self.visitTerm(ctx.term()[0])
             if term['type'] != "bool":
@@ -784,9 +766,6 @@ class Visitor(ParseTreeVisitor):
                     
             self.weight = term['value']
         elif ctx.cmd_query():
-            if not self.query:
-                raise ParsingFileError("Query in model: {}".format(self._err('', ctx)))
-                
             term = self.visitTerm(ctx.term()[0])
             
             if term['type'] != 'bool':

@@ -10,7 +10,7 @@ from .minizincErrorListener import MinizincErrorListener
 class MinizincParser():
 
     @staticmethod
-    def parse(path, mode, domA=None, domX=None):
+    def parse(path, domA=None, domX=None, weight=None):
         if domA is None:
             domA = []
         if domX is None:
@@ -31,20 +31,5 @@ class MinizincParser():
         tree = parser.minizinc()
         
         # visit the tree
-        visitor = Visitor(mode, domA, domX)
+        visitor = Visitor(path, domA=domA, domX=domX, weight=weight)
         return visitor.visit(tree)
-        
-
-    @staticmethod
-    def parseAll(path):
-        return MinizincParser.parse(path, Visitor.MODEL_QUERY)
-        
-        
-    @staticmethod
-    def parseModel(path):
-        return MinizincParser.parse(path, Visitor.MODEL)
-        
-        
-    @staticmethod
-    def parseQuery(path, domA, domX):
-        return MinizincParser.parse(path, Visitor.QUERY, domA, domX)

@@ -1,5 +1,6 @@
 import sys
 import warnings
+from os.path import join, abspath, normpath
 from antlr4 import *
 from .antlr.minizincParser import minizincParser
 from .antlr.minizincVisitor import minizincVisitor
@@ -10,27 +11,21 @@ from pywmi.errors import ParsingFileError
 # This class defines a complete listener for a parse tree produced by minizincParser.
 class Visitor(minizincVisitor):
 
-    MODEL = "model"
-    QUERY = "query"
-    MODEL_QUERY = "model_query"
-    MODES = [MODEL, QUERY, MODEL_QUERY]
-
-    def __init__(self, mode, domA=None, domX=None):
-        if mode not in Visitor.MODES:
-            err = "Invalid mode: {}, use one: {}".format(mode, ", ".join(Visitor.MODES))
-            raise ParsingFileError(err)
+    def __init__(self, path, domA=None, domX=None, weight=None):
         if domA is None:
             domA = []
+        elif isinstance(domA, set):
+            domA = list(domA)
         if domX is None:
             domX = {}
         self.variables = {}
         self.boolean_variables = domA
         self.real_variables = domX
         self.support = []
-        self.weight = None
+        self.weight = weight
         self.queries = []
-        self.model = "model" in mode
-        self.query = "query" in mode
+        print("PATH:", path)
+        self.path = abspath(path)
         
         for b in domA:
             self.variables[b.symbol_name()] = {"value":b, "type":'bool', "var":True, "obj":"variable"}
@@ -55,7 +50,8 @@ class Visitor(minizincVisitor):
     def _err(self, s, ctx):
         token = ctx.start
         line = token.line
-        return '{} at line {}'.format(s, line)
+        mzn_file = self.path
+        return '{} in "{}" at line {}'.format(s, mzn_file, line)
         
         
     def _ctx_text(self, ctx):
@@ -73,27 +69,19 @@ class Visitor(minizincVisitor):
     # Visit a parse tree produced by minizincParser#minizinc.
     def visitMinizinc(self, ctx:minizincParser.MinizincContext):
         self.visitChildren(ctx)
+        
         self.support = And(self.support)
         self.support = simplify(self.support)
         
-        if self.model:
-            if self.weight == None:
-                self.weight = Real(1)
-            self.weight = simplify(self.weight)
-            ret = [self.support, self.weight, set(self.boolean_variables), self.real_variables]
-            if self.query:
-                ret.append(self.queries)
-            return ret
-        else:
-            return self.queries
-
+        if self.weight == None:
+            self.weight = Real(1)
+        self.weight = simplify(self.weight)
+        
+        return [self.support, self.weight, set(self.boolean_variables), self.real_variables, self.queries, self.variables]
+        
 
     # Visit a parse tree produced by minizincParser#item.
     def visitItem(self, ctx:minizincParser.ItemContext):
-        if not self.model and not ctx.query_item():
-            warnings.warn("in query file every command except 'query' will be ignored", RuntimeWarning)
-            return
-        
         return self.visitChildren(ctx)
         
 
@@ -108,9 +96,24 @@ class Visitor(minizincVisitor):
 
     # Visit a parse tree produced by minizincParser#include_item.
     def visitInclude_item(self, ctx:minizincParser.Include_itemContext):
-        raise ParsingFileError("Operation not supported: {}".format(self._err('include', ctx)))
-
-
+        from .minizincParser import MinizincParser
+        
+        relative_path = self.visitString_literal(ctx.string_literal())['value']
+        absolute_path = normpath(join(self.path, '../', relative_path))
+        
+        domA = self.boolean_variables
+        domX = self.real_variables
+        weight = self.weight
+        
+        support, weight, domA, domX, queries, variables = MinizincParser.parse(absolute_path, domA=domA, domX=domX, weight=weight)
+            
+        self.support.append(support)
+        self.queries += queries
+        self.variables = variables
+        if weight != Real(1):
+            self.weight = weight
+        
+        
     # Visit a parse tree produced by minizincParser#var_decl_item.
     def visitVar_decl_item(self, ctx:minizincParser.Var_decl_itemContext):
         # id (str): the name of the variable
@@ -279,9 +282,6 @@ class Visitor(minizincVisitor):
 
     # Visit a parse tree produced by minizincParser#query_item.
     def visitQuery_item(self, ctx:minizincParser.Query_itemContext):
-        if not self.query:
-            raise ParsingFileError("Query in model: {}".format(self._err('', ctx)))
-        
         expr = self.visitExpr(ctx.expr())
             
         if expr['type'] != 'bool':
@@ -690,7 +690,9 @@ class Visitor(minizincVisitor):
 
     # Visit a parse tree produced by minizincParser#string_literal.
     def visitString_literal(self, ctx:minizincParser.String_literalContext):
-        pass # function never called
+        # remove surrounding quotes
+        value = ctx.getText()[1:-1]
+        return {"value":value, "type":"string", "var":False, "obj":"expr"}
 
 
     # Visit a parse tree produced by minizincParser#set_literal.

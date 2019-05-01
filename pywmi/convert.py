@@ -82,14 +82,14 @@ def import_wmi_generate_100(filename):
 
 
 def import_smt(filename):
-    support, weights, domA, domX, queries = SmtlibParser.parseAll(filename)
+    support, weights, domA, domX, queries = SmtlibParser.parse(filename)
     domain = Domain.make(real_variables={v.symbol_name(): [None, None] for v in domX},
                          boolean_variables=[v.symbol_name() for v in domA])
     return Density(domain, support, weights, queries)
 
 
 def import_mzn(filename):
-    support, weights, domA, domX, queries = MinizincParser.parseAll(filename)
+    support, weights, domA, domX, queries, _ = MinizincParser.parse(filename)
     domain = Domain.make(real_variables={v.symbol_name(): domX[v] for v in domX},
                          boolean_variables=[v.symbol_name() for v in domA])
     return Density(domain, support, weights, queries)
