@@ -2,6 +2,7 @@ import json
 import os
 
 from .domain import Density
+from .parser import MinizincParser, SmtlibParser
 from pywmi import Domain, nested_to_smt
 from pysmt import shortcuts as smt
 
@@ -80,6 +81,20 @@ def import_wmi_generate_100(filename):
     return Density(domain, support, weights, queries)
 
 
+def import_smt(filename):
+    support, weights, domA, domX, queries = SmtlibParser.parse(filename)
+    domain = Domain.make(real_variables={v.symbol_name(): [None, None] for v in domX},
+                         boolean_variables=[v.symbol_name() for v in domA])
+    return Density(domain, support, weights, queries)
+
+
+def import_mzn(filename):
+    support, weights, domA, domX, queries, _ = MinizincParser.parse(filename)
+    domain = Domain.make(real_variables={v.symbol_name(): domX[v] for v in domX},
+                         boolean_variables=[v.symbol_name() for v in domA])
+    return Density(domain, support, weights, queries)
+
+
 def import_wrap(filename):
     return Density.from_file(filename)
 
@@ -92,6 +107,8 @@ class Import(object):
         "smt_synthetic": import_smt_synthetic,
         "wmi_generate_tree": import_wmi_generate_tree,
         "wmi_generate_100": import_wmi_generate_100,
+        "smt": import_smt,
+        "mzn": import_mzn,
     }
 
     dialects = sorted(k for k in _dialects.keys() if k is not None)
