@@ -10,7 +10,7 @@ from pywmi.engines.xsdd.vtree import get_new_manager
 from pywmi.engines.xsdd.draw import sdd_to_dot_file, sdd_to_png_file
 from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend
 from pywmi.engines.convex_integrator import ConvexIntegrationBackend
-from pywmi.engines.algebraic_backend import StringAlgebra, XaddAlgebra, PSIAlgebra
+from pywmi.engines.algebraic_backend import PSIAlgebra
 
 try:
     from pysdd.sdd import SddManager, SddNode
@@ -599,6 +599,3 @@ class NativeXsddEngine(Engine):
         if self.ordered:
             solver_string += ":order"
         return solver_string
-
-
-
