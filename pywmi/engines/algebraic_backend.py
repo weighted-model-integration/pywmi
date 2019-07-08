@@ -134,8 +134,9 @@ class SympyAlgebra(AlgebraBackend):
 
 
 class PSIAlgebra(AlgebraBackend, IntegrationBackend):
-    def __init__(self):
+    def __init__(self, integrate_poly=True):
         super().__init__()
+        self.integrate_poly = integrate_poly
         if psipy is None:
             raise InstallError("PSIAlgebra requires the psipy library to be installed")
 
@@ -175,7 +176,10 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     #     return result
 
     def integrate(self, domain: Domain, expression, variables=None):
-        result = psipy.integrate_poly(variables, expression)
+        if self.integrate_poly:
+            result = psipy.integrate_poly(variables, expression)
+        else:
+            result = psipy.integrate(variables, expression)
         return result
         # return psipy.integrate(variables, expression)
 

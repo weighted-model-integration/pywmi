@@ -68,6 +68,43 @@ class ConvexWMISemiring(Semiring):
         raise NotImplementedError()
 
 
+class NonConvexWMISemiring(Semiring):
+    def __init__(self, algebra, abstractions: Dict, var_to_lit: Dict):
+        self.algebra = algebra
+        self.reverse_abstractions = {v: k for k, v in abstractions.items()}
+        self.lit_to_var = {v: k for k, v in var_to_lit.items()}
+
+    def times_neutral(self):
+        return self.algebra.one(), set()
+
+    def plus_neutral(self):
+        return self.algebra.zero(), set()
+
+    def times(self, a, b, index=None):
+        return self.algebra.times(a[0], b[0]), a[1] | b[1]
+
+    def plus(self, a, b, index=None):
+        return self.algebra.plus(a[0], b[0]), a[1] | b[1]
+
+    def negate(self, a):
+        raise NotImplementedError()
+
+    def weight(self, a):
+        if abs(a) in self.lit_to_var:
+            return self.algebra.one(), {self.lit_to_var[abs(a)]}
+        else:
+            f = self.reverse_abstractions[abs(a)]
+            if a < 0:
+                f = ~f
+            return LinearInequality.from_smt(f).to_expression(self.algebra), set()
+
+    def positive_weight(self, a):
+        raise NotImplementedError()
+
+
+
+
+
 class BooleanFinder(Semiring):
     def __init__(self, abstractions: Dict, var_to_lit: Dict):
         self.reverse_abstractions = {v: k for k, v in abstractions.items()}
@@ -448,12 +485,22 @@ class XsddEngine(Engine):
         else:
             for w_weight, world_support in piecewise_function.sdd_dict.items():
                 support = support_sdd & world_support
-                convex_supports = amc(ConvexWMISemiring(abstractions, var_to_lit), support)
-                logger.debug("#convex regions %s", len(convex_supports))
-                for convex_support, variables in convex_supports:
+                if not self.backend:
+                    semiring = NonConvexWMISemiring(factorized_algebra, abstractions, var_to_lit)
+                    expression, variables = amc(semiring, support)
+                    expression = factorized_algebra.times(expression, w_weight.to_expression(factorized_algebra))
+                    volume = factorized_algebra.integrate(self.domain, expression, self.domain.real_vars)
+
                     missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                    vol = self.integrate_convex(convex_support, w_weight.to_smt()) * 2 ** missing_variable_count
-                    volume = factorized_algebra.plus(volume, factorized_algebra.real(vol))
+                    bool_worlds = factorized_algebra.power(factorized_algebra.real(2), missing_variable_count)
+                    volume = factorized_algebra.times(volume, bool_worlds)
+                else:
+                    convex_supports = amc(ConvexWMISemiring(abstractions, var_to_lit), support)
+                    logger.debug("#convex regions %s", len(convex_supports))
+                    for convex_support, variables in convex_supports:
+                        missing_variable_count = len(self.domain.bool_vars) - len(variables)
+                        vol = self.integrate_convex(convex_support, w_weight.to_smt()) * 2 ** missing_variable_count
+                        volume = factorized_algebra.plus(volume, factorized_algebra.real(vol))
         return factorized_algebra.to_float(volume)
 
     def copy(self, domain, support, weight):

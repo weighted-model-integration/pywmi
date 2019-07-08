@@ -50,8 +50,8 @@ def parse_options(option_strings, *whitelist):
             n, v = "minimize", True
         elif option_string=="pint":
             n, v = "pint", True
-        elif option_string.startswith("factorized"):
-            n, v = "factorized", True
+        elif option_string.startswith("factorized") or option_string.startswith("unfactorized"):
+            n, v = "factorized", option_string.startswith("factorized")
             parts = option_string.split(".")
             if n in whitelist and len(parts) > 1:
                 if parts[1] == "psi":

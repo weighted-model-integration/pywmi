@@ -165,14 +165,17 @@ class LinearInequality(object):
                < Real(-self.inequality_dict.get(CONST_KEY, 0))
 
     def to_expression(self, algebra: AlgebraBackend):
-        result = algebra.zero()
-        for variables, factor in self.inequality_dict.items():
-            if variables != CONST_KEY:
-                term = algebra.one()
-                for var in variables:
-                    term = algebra.times(term, algebra.symbol(var))
-                result = algebra.plus(result, algebra.times(term, algebra.real(factor)))
-        return algebra.less_than_equal(result, algebra.real(self.b()))
+        try:
+            result = algebra.zero()
+            for variables, factor in self.inequality_dict.items():
+                if variables != CONST_KEY:
+                    term = algebra.one()
+                    for var in variables:
+                        term = algebra.times(term, algebra.symbol(var))
+                    result = algebra.plus(result, algebra.times(term, algebra.real(factor)))
+            return algebra.less_than_equal(result, algebra.real(self.b()))
+        except NotImplementedError:
+            return algebra.parse_condition(self.to_smt())
 
     @staticmethod
     def lcm(num1, num2):
