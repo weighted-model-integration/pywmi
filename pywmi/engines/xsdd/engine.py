@@ -5,6 +5,8 @@ from typing import Iterable
 from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend
 from pywmi.engines.algebraic_backend import PSIAlgebra
 from pywmi.engines.convex_integrator import ConvexIntegrationBackend
+#opt
+from pywmi.engines.convex_optimizer import ConvexOptimizationBackend
 from pywmi.engines.xsdd.draw import sdd_to_png_file
 from pywmi.engines.xsdd.vtree import get_new_manager
 
@@ -28,6 +30,9 @@ import pysmt.shortcuts as smt
 import logging
 
 IntegratorAndAlgebra = Union[AlgebraBackend, IntegrationBackend]
+#opt
+OptimizerAndAlgebra = Union[AlgebraBackend, IntegrationBackend]
+
 logger = logging.getLogger(__name__)
 
 
@@ -392,7 +397,7 @@ class XsddEngine(Engine):
             for test, lit in sorted(abstractions.items(), key=lambda t: t[1]):
                 factorized_algebra.pool.bool_test(Decision(test))
 
-        volume = factorized_algebra.zero()
+        optimum = factorized_algebra.zero()
         if self.factorized:
             terms_dict = dict()
             for w_weight, world_support in piecewise_function.sdd_dict.items():
@@ -498,10 +503,10 @@ class XsddEngine(Engine):
                     convex_supports = amc(ConvexWMISemiring(abstractions, var_to_lit), support)
                     logger.debug("#convex regions %s", len(convex_supports))
                     for convex_support, variables in convex_supports:
-                        missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                        vol = self.integrate_convex(convex_support, w_weight.to_smt()) * 2 ** missing_variable_count
-                        volume = factorized_algebra.plus(volume, factorized_algebra.real(vol))
-        return factorized_algebra.to_float(volume)
+                        # missing_variable_count = len(self.domain.bool_vars) - len(variables)
+                        opt = self.optimize_convex(convex_support, w_weight.to_smt()) # * 2 ** missing_variable_count
+                        optimum = factorized_algebra.max(optimum, factorized_algebra.real(opt))
+        return factorized_algebra.to_float(optimum)
 
     def copy(self, domain, support, weight):
         return XsddEngine(

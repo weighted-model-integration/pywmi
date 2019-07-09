@@ -91,6 +91,14 @@ class IntegrationBackend:
 
     def integrate(self, domain: Domain, expression, variables=None):
         raise NotImplementedError()
+    
+#opt
+class OptimizationBackend:
+    def __init__(self, exact=True):
+        self.exact=exact
+    
+    def optimize(self, domain: Domain, expression, variables=None):
+        raise NotImplementedError()
 
 
 class PySmtAlgebra(AlgebraBackend):
@@ -132,7 +140,7 @@ class SympyAlgebra(AlgebraBackend):
     def to_float(self, real_value):
         return float(real_value)
 
-
+#maybe needs coding
 class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     def __init__(self, integrate_poly=True):
         super().__init__()
@@ -194,11 +202,12 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         result = psipy.filter_iverson(expression_with_conditions)
         return psipy.simplify(result)
 
-
-class StringAlgebra(AlgebraBackend, IntegrationBackend):
+#added opt stuff
+class StringAlgebra(AlgebraBackend, IntegrationBackend, OptimizationBackend):
     def __init__(self):
         AlgebraBackend.__init__(self)
         IntegrationBackend.__init__(self, True)
+        OptimizationBackend.__init__(self, True)
 
     def times(self, a, b):
         if a == self.one():
@@ -234,6 +243,11 @@ class StringAlgebra(AlgebraBackend, IntegrationBackend):
     def integrate(self, domain: Domain, expression, variables=None):
         variables = variables or domain.real_vars
         return "I[{}, d({})]".format(expression, " ".join(variables))
+    
+    #opt
+    def optimize(self, domain: Domain, expression, variables=None):
+        variables = variables or domain.real_vars
+        return "OPT[{} over ({})]".format(expression, " ".join(variables))
 
     def to_float(self, real_value):
         return float(real_value)
@@ -286,6 +300,11 @@ class XaddAlgebra(AlgebraBackend, IntegrationBackend):
     def integrate(self, domain: Domain, expression, variables=None):
         variables = variables or domain.real_vars
         return "(int {} (list {}))".format(expression, " ".join(variables))
+
+    #opt
+    def optimize(self, domain: Domain, expression, variables=None):
+        variables = variables or domain.real_vars
+        return "(opt {} (list {}))".format(expression, " ".join(variables))
 
     def to_float(self, real_value):
         raise NotImplementedError()
