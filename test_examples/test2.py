@@ -24,14 +24,14 @@ def main():
     # density = FileDensity.from_file("data/click/click_10")
     # density = Density.from_file("data/queries_volume/sequential_2_4_4_2.txt.json")
     # density = Density.from_file("data/dual_paths/dual_paths_4_0.json")
-    density = FileDensity.from_file("data/dual/dual_9")
-    # print("Support")
-    # print(pretty_print(density.support))
-    # print()
-    # print("Weight")
-    # print(pretty_print(density.weight))
-    # print()
-    # print(density.support.to_smtlib())
+    density = FileDensity.from_file("test1/xor_3")
+    print("Support")
+    print(pretty_print(density.support))
+    print()
+    print("Weight")
+    print(pretty_print(density.weight))
+    print()
+    print(density.support.to_smtlib())
     times = [time.time()]
     # result = NativeXsddEngine(density.domain, density.support, density.weight, LatteIntegrator(), factorized=False, find_conflicts=False, ordered=True).compute_volume()
 
@@ -84,7 +84,11 @@ def main():
     print("Time PyXADD: {:.4f}s".format(times[-1] - times[-2]))
 
     # print(pretty_print(simplify(density.support)))
-
+    
+    #opt
+    #print("Result Opt: ", PyXsddEngine(density.domain, density.support, density.weight).compute_optimum(add_bounds=False))
+    #times.append(time.time())
+    #print("Time Opt: {:.4f}s".format(times[-1] - times[-2]))
 
 if __name__ == '__main__':
     main()
