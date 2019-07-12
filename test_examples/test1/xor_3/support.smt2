@@ -1,7 +1,0 @@
-(set-logic QF_RDL)
-(declare-fun x () Real)
-(declare-fun x0 () Real)
-(declare-fun x1 () Real)
-(declare-fun x2 () Real)
-(assert (let ((.def_0 (<= x x2))) (let ((.def_1 (<= x x1))) (let ((.def_2 (<= x x0))) (let ((.def_3 (and false .def_2))) (let ((.def_4 (not .def_3))) (let ((.def_5 (or false .def_2))) (let ((.def_6 (and .def_5 .def_4))) (let ((.def_7 (and .def_6 .def_1))) (let ((.def_8 (not .def_7))) (let ((.def_9 (or .def_6 .def_1))) (let ((.def_10 (and .def_9 .def_8))) (let ((.def_11 (and .def_10 .def_0))) (let ((.def_12 (not .def_11))) (let ((.def_13 (or .def_10 .def_0))) (let ((.def_14 (and .def_13 .def_12))) (let ((.def_15 (<= x2 (/ 7746191359077253 9007199254740992)))) (let ((.def_16 (<= (/ 5764607523034235 36028797018963968) x2))) (let ((.def_17 (<= x1 (/ 7836263351624663 9007199254740992)))) (let ((.def_18 (<= (/ 5404319552844595 36028797018963968) x1))) (let ((.def_19 (<= x0 (/ 7926335344172073 9007199254740992)))) (let ((.def_20 (<= (/ 1261007895663739 9007199254740992) x0))) (let ((.def_21 (<= x (/ 8016407336719483 9007199254740992)))) (let ((.def_22 (<= (/ 1170935903116329 9007199254740992) x))) (let ((.def_23 (and true .def_22))) (let ((.def_24 (and .def_23 .def_21))) (let ((.def_25 (and .def_24 .def_20))) (let ((.def_26 (and .def_25 .def_19))) (let ((.def_27 (and .def_26 .def_18))) (let ((.def_28 (and .def_27 .def_17))) (let ((.def_29 (and .def_28 .def_16))) (let ((.def_30 (and .def_29 .def_15))) (let ((.def_31 (and .def_30 .def_14))) .def_31)))))))))))))))))))))))))))))))))
-(check-sat)

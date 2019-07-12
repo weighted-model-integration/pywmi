@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Dict, List, Tuple, Set, Union, Any, Optional
 from typing import Iterable
 
-from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend
+from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend, OptimizationBackend
 from pywmi.engines.algebraic_backend import PSIAlgebra
 from pywmi.engines.convex_integrator import ConvexIntegrationBackend
 #opt
@@ -397,7 +397,7 @@ class XsddEngine(Engine):
             for test, lit in sorted(abstractions.items(), key=lambda t: t[1]):
                 factorized_algebra.pool.bool_test(Decision(test))
 
-        optimum = factorized_algebra.zero()
+        volume = factorized_algebra.zero()
         if self.factorized:
             terms_dict = dict()
             for w_weight, world_support in piecewise_function.sdd_dict.items():
@@ -503,10 +503,10 @@ class XsddEngine(Engine):
                     convex_supports = amc(ConvexWMISemiring(abstractions, var_to_lit), support)
                     logger.debug("#convex regions %s", len(convex_supports))
                     for convex_support, variables in convex_supports:
-                        # missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                        opt = self.optimize_convex(convex_support, w_weight.to_smt()) # * 2 ** missing_variable_count
-                        optimum = factorized_algebra.max(optimum, factorized_algebra.real(opt))
-        return factorized_algebra.to_float(optimum)
+                        missing_variable_count = len(self.domain.bool_vars) - len(variables)
+                        vol = self.integrate_convex(convex_support, w_weight.to_smt()) * 2 ** missing_variable_count
+                        volume = factorized_algebra.plus(volume, factorized_algebra.real(vol))
+        return factorized_algebra.to_float(volume)
 
     def copy(self, domain, support, weight):
         return XsddEngine(
@@ -536,3 +536,57 @@ class XsddEngine(Engine):
         if self.minimize:
             solver_string += ":minimize"
         return solver_string
+        
+        
+class XsddOptimizationEngine(Engine):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+    def optimize_convex(self, convex_support, polynomial_weight):
+        try:
+            domain = Domain(self.domain.real_vars, {v: REAL for v in self.domain.real_vars}, self.domain.var_domains)
+            return self.backend.optimize(domain, BoundsWalker.get_inequalities(convex_support),
+                                          Polynomial.from_smt(polynomial_weight))
+        except ZeroDivisionError:
+            return 0
+        
+    def compute_optimum(self, add_bounds=True):
+        if add_bounds:
+            return self.with_constraint(self.domain.get_bounds()).compute_optimum(False)
+        abstractions, var_to_lit = dict(), dict()
+
+        algebra = PolynomialAlgebra()
+        support = (smt.And(*self.collect_conflicts()) & self.support) if self.find_conflicts else self.support
+        if self.factorized:
+            print("Not factorized")
+            raise NotImplementedError()
+        else:
+            labels, weight = None, self.weight
+
+        support_sdd = convert_formula(support, self.manager, algebra, abstractions, var_to_lit)
+        piecewise_function = convert_function(weight, self.manager, algebra, abstractions, var_to_lit)
+
+        if self.balance:
+            self.manager = get_new_manager(self.domain, abstractions, var_to_lit, self.balance)
+            support_sdd = convert_formula(support, self.manager, algebra, abstractions, var_to_lit)
+            piecewise_function = convert_function(weight, self.manager, algebra, abstractions, var_to_lit)
+
+        factorized_algebra = self.algebra
+        if factorized_algebra is not None and isinstance(factorized_algebra, PyXaddAlgebra):
+            raise NotImplementedError()
+        optimum = factorized_algebra.zero()
+        if self.factorized:
+            raise NotImplementedError()
+        else:
+            for w_weight, world_support in piecewise_function.sdd_dict.items():
+                support = support_sdd & world_support
+                if not self.backend:
+                    raise NotImplementedError()
+                else:
+                    convex_supports = amc(ConvexWMISemiring(abstractions, var_to_lit), support)
+                    logger.debug("#convex regions %s", len(convex_supports))
+                    for convex_support, variables in convex_supports:
+                        #missing_variable_count = len(self.domain.bool_vars) - len(variables)
+                        opt = self.optimize_convex(convex_support, w_weight.to_smt()) # * 2 ** missing_variable_count
+                        optimum = factorized_algebra.max(optimum, factorized_algebra.real(opt))
+        return factorized_algebra.to_float(optimum)

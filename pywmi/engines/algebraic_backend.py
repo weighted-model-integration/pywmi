@@ -42,6 +42,14 @@ class AlgebraBackend:
             return a
         else:
             return a + b
+        
+    #opt
+    def min(self, a: E, b: E) -> E:
+        return a if self.less_than_equal(a, b) else b
+    
+    #opt 
+    def max(self, a: E, b: E) -> E:
+        return a if self.greater_than_equal(a, b) else b
 
     def symbol(self, name: str) -> E:
         raise NotImplementedError()
@@ -140,8 +148,8 @@ class SympyAlgebra(AlgebraBackend):
     def to_float(self, real_value):
         return float(real_value)
 
-#maybe needs coding
-class PSIAlgebra(AlgebraBackend, IntegrationBackend):
+
+class PSIAlgebra(AlgebraBackend, IntegrationBackend, OptimizationBackend):
     def __init__(self, integrate_poly=True):
         super().__init__()
         self.integrate_poly = integrate_poly
@@ -190,6 +198,9 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
             result = psipy.integrate(variables, expression)
         return result
         # return psipy.integrate(variables, expression)
+        
+    def optimize(self, domain: Domain, expression, variables=None):
+        return "OK"
 
     def to_float(self, real_value):
         string_value = str(psipy.simplify(real_value))

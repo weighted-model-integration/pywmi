@@ -29,6 +29,7 @@ class Engine:
     #opt
     def compute_optimum(self, add_bounds=True):
         # type: (bool) -> float
+        print("Wrong (in engine)")
         raise NotImplementedError()
     
     def compute_probabilities(self, queries, add_bounds=True):

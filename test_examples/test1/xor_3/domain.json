@@ -1,1 +1,0 @@
-{"variables": ["x2", "x1", "x0", "x"], "var_types": {"x": "real", "x0": "real", "x1": "real", "x2": "real"}, "var_domains": {"x": [0, 1], "x0": [0, 1], "x1": [0, 1], "x2": [0, 1]}}

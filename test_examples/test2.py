@@ -2,7 +2,7 @@ import time
 
 from pysmt.shortcuts import simplify
 from pywmi import XsddEngine, Density, PredicateAbstractionEngine, XaddEngine, PyXaddEngine, PyXaddAlgebra, \
-    RejectionEngine
+    RejectionEngine, XsddOptimizationEngine
 from pywmi.domain import FileDensity
 from pywmi.engines.latte_backend import LatteIntegrator
 from pywmi.smt_print import pretty_print
@@ -24,14 +24,14 @@ def main():
     # density = FileDensity.from_file("data/click/click_10")
     # density = Density.from_file("data/queries_volume/sequential_2_4_4_2.txt.json")
     # density = Density.from_file("data/dual_paths/dual_paths_4_0.json")
-    density = FileDensity.from_file("test1/xor_3")
+    density = FileDensity.from_file("example1/xor_5")
     print("Support")
-    print(pretty_print(density.support))
+    #print(pretty_print(density.support))
     print()
     print("Weight")
-    print(pretty_print(density.weight))
+    #print(pretty_print(density.weight))
     print()
-    print(density.support.to_smtlib())
+    #print(density.support.to_smtlib())
     times = [time.time()]
     # result = NativeXsddEngine(density.domain, density.support, density.weight, LatteIntegrator(), factorized=False, find_conflicts=False, ordered=True).compute_volume()
 
@@ -49,11 +49,16 @@ def main():
     print("Result XSDD(PSI):", XsddEngine(density.domain, density.support, density.weight).compute_volume(add_bounds=False))
     times.append(time.time())
     print("Time XSDD(PSI): {:.4f}s".format(times[-1] - times[-2]))
+    
+    # XSDD_OPT:PSI
+    print("Result XSDD_OPT(PSI):", XsddOptimizationEngine(density.domain, density.support, density.weight).compute_optimum(add_bounds=False))
+    times.append(time.time())
+    print("Time XSDD_OPT(PSI): {:.4f}s".format(times[-1] - times[-2]))
 
     # XSDD:BR
-    print("Result XSDD(BR):", XsddEngine(density.domain, density.support, density.weight, algebra=PyXaddAlgebra()).compute_volume(add_bounds=False))
-    times.append(time.time())
-    print("Time XSDD(BR): {:.4f}s".format(times[-1] - times[-2]))
+    #print("Result XSDD(BR):", XsddEngine(density.domain, density.support, density.weight, algebra=PyXaddAlgebra()).compute_volume(add_bounds=False))
+    #times.append(time.time())
+    #print("Time XSDD(BR): {:.4f}s".format(times[-1] - times[-2]))
 
     # print("Result REJ:", RejectionEngine(density.domain, density.support, density.weight, 1000000).compute_volume())
     # times.append(time.time())
@@ -79,9 +84,9 @@ def main():
 
     # result = NativeXsddEngine(density.domain, density.support, density.weight, LatteIntegrator(), factorized=False, find_conflicts=True, ordered=False).compute_volume(add_bounds=False)
 
-    print("Result PyXADD:", PyXaddEngine(density.domain, density.support, density.weight).compute_volume(add_bounds=False))
-    times.append(time.time())
-    print("Time PyXADD: {:.4f}s".format(times[-1] - times[-2]))
+    #print("Result PyXADD:", PyXaddEngine(density.domain, density.support, density.weight).compute_volume(add_bounds=False))
+    #times.append(time.time())
+    #print("Time PyXADD: {:.4f}s".format(times[-1] - times[-2]))
 
     # print(pretty_print(simplify(density.support)))
     
