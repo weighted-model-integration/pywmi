@@ -24,7 +24,7 @@ def main():
     # density = FileDensity.from_file("data/click/click_10")
     # density = Density.from_file("data/queries_volume/sequential_2_4_4_2.txt.json")
     # density = Density.from_file("data/dual_paths/dual_paths_4_0.json")
-    density = FileDensity.from_file("example1/xor_5")
+    density = FileDensity.from_file("test_examples/example1/xor_5")
     print("Support")
     #print(pretty_print(density.support))
     print()

@@ -538,7 +538,7 @@ class XsddEngine(Engine):
         return solver_string
         
         
-class XsddOptimizationEngine(Engine):
+class XsddOptimizationEngine(XsddEngine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
