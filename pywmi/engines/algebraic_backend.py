@@ -45,7 +45,7 @@ class AlgebraBackend:
         
     #opt
     def min(self, a: E, b: E) -> E:
-        return a if self.less_than_equal(a, b) else b
+        return -(self.max(-a, -b))
     
     #opt 
     def max(self, a: E, b: E) -> E:

@@ -14,7 +14,3 @@ class ConvexIntegrationBackend(object):
 
     def integrate(self, domain: Domain, convex_bounds: List[LinearInequality], polynomial: Polynomial):
         raise NotImplementedError()
-    
-    #opt
-    def optimize(self, domain: Domain, convex_bounds: List[LinearInequality], polynomial: Polynomial):
-        raise NotImplementedError()

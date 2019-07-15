@@ -1,0 +1,7 @@
+(set-logic QF_NRA)
+(declare-fun x0 () Real)
+(declare-fun x1 () Real)
+(declare-fun x2 () Real)
+(declare-fun x3 () Real)
+(assert (let ((.def_0 (* x3 (- 1.0)))) (let ((.def_1 (+ .def_0 1.0))) (let ((.def_2 (+ x3 1.0))) (let ((.def_3 (< x3 0.0))) (let ((.def_4 (ite .def_3 .def_2 .def_1))) (let ((.def_5 (< x3 1.0))) (let ((.def_6 (< (- 1.0) x3))) (let ((.def_7 (and .def_6 .def_5))) (let ((.def_8 (ite .def_7 .def_4 0.0))) (let ((.def_9 (* x2 (- 1.0)))) (let ((.def_10 (+ .def_9 1.0))) (let ((.def_11 (+ x2 1.0))) (let ((.def_12 (< x2 0.0))) (let ((.def_13 (ite .def_12 .def_11 .def_10))) (let ((.def_14 (< x2 1.0))) (let ((.def_15 (< (- 1.0) x2))) (let ((.def_16 (and .def_15 .def_14))) (let ((.def_17 (ite .def_16 .def_13 0.0))) (let ((.def_18 (* x1 (- 1.0)))) (let ((.def_19 (+ .def_18 1.0))) (let ((.def_20 (+ x1 1.0))) (let ((.def_21 (< x1 0.0))) (let ((.def_22 (ite .def_21 .def_20 .def_19))) (let ((.def_23 (< x1 1.0))) (let ((.def_24 (< (- 1.0) x1))) (let ((.def_25 (and .def_24 .def_23))) (let ((.def_26 (ite .def_25 .def_22 0.0))) (let ((.def_27 (* x0 (- 1.0)))) (let ((.def_28 (+ .def_27 1.0))) (let ((.def_29 (+ x0 1.0))) (let ((.def_30 (< x0 0.0))) (let ((.def_31 (ite .def_30 .def_29 .def_28))) (let ((.def_32 (< x0 1.0))) (let ((.def_33 (< (- 1.0) x0))) (let ((.def_34 (and .def_33 .def_32))) (let ((.def_35 (ite .def_34 .def_31 0.0))) (let ((.def_36 (* .def_35 .def_26 .def_17 .def_8))) .def_36))))))))))))))))))))))))))))))))))))))
+(check-sat)
