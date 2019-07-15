@@ -583,11 +583,9 @@ class XsddOptimizationEngine(XsddEngine):
                 if not self.backend:
                     raise NotImplementedError()
                 else:
-                    print("entered")
                     convex_supports = amc(ConvexWMISemiring(abstractions, var_to_lit), support)
                     logger.debug("#convex regions %s", len(convex_supports))
                     for convex_support, variables in convex_supports:
                         opt = self.optimize_convex(convex_support, w_weight.to_smt())
                         optimum = factorized_algebra.max(optimum, factorized_algebra.real(opt))
-                        print(optimum)
         return factorized_algebra.to_float(optimum)

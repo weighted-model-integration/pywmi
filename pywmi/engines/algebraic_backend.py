@@ -47,9 +47,13 @@ class AlgebraBackend:
     def min(self, a: E, b: E) -> E:
         return -(self.max(-a, -b))
     
-    #opt 
     def max(self, a: E, b: E) -> E:
-        return a if self.greater_than_equal(a, b) else b
+        print(self.to_float(a), self.to_float(b))
+        if (self.to_float(a) >= self.to_float(b)):
+            print("greater")
+            return a
+        return b
+        #return b if self.less_than_equal(a, b) else a
 
     def symbol(self, name: str) -> E:
         raise NotImplementedError()
