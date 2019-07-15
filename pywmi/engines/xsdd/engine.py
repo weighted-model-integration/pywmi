@@ -587,5 +587,5 @@ class XsddOptimizationEngine(XsddEngine):
                     logger.debug("#convex regions %s", len(convex_supports))
                     for convex_support, variables in convex_supports:
                         opt = self.optimize_convex(convex_support, w_weight.to_smt())
-                        optimum = factorized_algebra.max(optimum, factorized_algebra.real(opt))
+                        optimum = factorized_algebra.min(optimum, factorized_algebra.real(opt))
         return factorized_algebra.to_float(optimum)

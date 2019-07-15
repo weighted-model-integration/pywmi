@@ -62,7 +62,18 @@ class Domain(Exportable):
             if ub is not None:
                 bounds.append(symbol <= ub)
         return fm.And(*bounds)
-
+    
+    #opt
+    def get_ul_bounds(self, formula_manager=None):
+        fm = smt if formula_manager is None else formula_manager
+        lower_bounds, upper_bounds = [], []
+        for (lb, ub) in self.var_domains.values():
+            if lb is not None:
+                lower_bounds.append(lb)
+            if ub is not None:
+                upper_bounds.append(ub)
+        return lower_bounds, upper_bounds
+        
     def domain_size(self, variable):
         return self.var_domains[variable][1] - self.var_domains[variable][0]
 
