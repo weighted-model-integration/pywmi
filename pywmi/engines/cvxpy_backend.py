@@ -10,8 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class cvxpyOptimizer(ConvexOptimizationBackend):
-    #pattern = re.compile(r".*Answer:\s+(-?\d+)/(\d+).*")
-
     def __init__(self):
         super().__init__(True)
 
