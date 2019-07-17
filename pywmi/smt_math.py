@@ -1,4 +1,5 @@
 import math
+import sympy
 from fractions import Fraction
 from typing import Dict, Tuple, Union, List
 
@@ -6,7 +7,7 @@ from pysmt.exceptions import InternalSolverError
 from pysmt.shortcuts import Plus, Symbol, Real, Times, Solver
 from pysmt.typing import REAL, BOOL
 
-from pywmi.engines.algebraic_backend import AlgebraBackend
+from pywmi.engines.algebraic_backend import AlgebraBackend, SympyAlgebra
 from pywmi import SmtWalker
 from functools import reduce, partial
 
@@ -44,6 +45,14 @@ class Polynomial(object):
                     term = algebra.times(term, algebra.symbol(var))
             result = algebra.plus(result, algebra.times(term, algebra.real(factor)))
         return result
+    
+    def compute_value_from_variables(self, domain_variables):
+        def compute_value(*values):
+            objective = self.to_expression(PolynomialAlgebra())
+            polynomial_variables = self.variables
+            arguments = dict(list(zip(domain_variables, values)))
+            arguments.pop(var for var in (set(domain_variables) - set(polynomial_variables)))
+        return compute_value
 
     def get_terms(self) -> List['Polynomial']:
         return [Polynomial({k: v}) for k, v in self.poly_dict.items()]
@@ -131,7 +140,7 @@ class PolynomialAlgebra(AlgebraBackend):
 
     def to_float(self, real_value):
         raise NotImplementedError()
-
+       
 
 class LinearInequality(object):
     def __init__(self, inequality_dict):

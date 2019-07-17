@@ -148,7 +148,7 @@ class SympyAlgebra(AlgebraBackend):
         return float(real_value)
 
 
-class PSIAlgebra(AlgebraBackend, IntegrationBackend, OptimizationBackend):
+class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     def __init__(self, integrate_poly=True):
         super().__init__()
         self.integrate_poly = integrate_poly
@@ -197,9 +197,6 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend, OptimizationBackend):
             result = psipy.integrate(variables, expression)
         return result
         # return psipy.integrate(variables, expression)
-        
-    def optimize(self, domain: Domain, expression, variables=None):
-        return "OK"
 
     def to_float(self, real_value):
         string_value = str(psipy.simplify(real_value))
@@ -212,7 +209,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend, OptimizationBackend):
         result = psipy.filter_iverson(expression_with_conditions)
         return psipy.simplify(result)
 
-#added opt stuff
+
 class StringAlgebra(AlgebraBackend, IntegrationBackend, OptimizationBackend):
     def __init__(self):
         AlgebraBackend.__init__(self)
@@ -310,11 +307,6 @@ class XaddAlgebra(AlgebraBackend, IntegrationBackend):
     def integrate(self, domain: Domain, expression, variables=None):
         variables = variables or domain.real_vars
         return "(int {} (list {}))".format(expression, " ".join(variables))
-
-    #opt
-    def optimize(self, domain: Domain, expression, variables=None):
-        variables = variables or domain.real_vars
-        return "(opt {} (list {}))".format(expression, " ".join(variables))
 
     def to_float(self, real_value):
         raise NotImplementedError()
