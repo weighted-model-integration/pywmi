@@ -42,8 +42,7 @@ class AlgebraBackend:
             return a
         else:
             return a + b
-        
-    #opt
+
     def min(self, a: E, b: E) -> E:
         return a if (self.to_float(a) <= self.to_float(b)) else b
     

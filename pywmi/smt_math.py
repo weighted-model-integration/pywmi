@@ -53,14 +53,14 @@ class Polynomial(object):
         objective = sympy.lambdify([sympy.Symbol(var) for var in polynomial_variables],
                                    expression, "numpy")
                 
-        def compute_value(values):
+        def compute_value(values, sign=1.0):
             parameters = dict(list(zip(domain_variables, values)))
             for var in domain_variables:
                 if var not in polynomial_variables:
                     del parameters[var]
             polynomial_arguments = list(parameters.values())
-            if len(polynomial_arguments) == 4:
-                return objective(np.array(polynomial_arguments))
+            if len(polynomial_arguments) == len(polynomial_variables):
+                return sign*objective(*polynomial_arguments)
             return 0
 
         return compute_value

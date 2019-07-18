@@ -64,14 +64,14 @@ class Domain(Exportable):
         return fm.And(*bounds)
     
     #opt
-    def get_ul_bounds(self, formula_manager=None):
-        fm = smt if formula_manager is None else formula_manager
+    def get_ul_bounds(self, variables):
         lower_bounds, upper_bounds = [], []
-        for (lb, ub) in self.var_domains.values():
-            if lb is not None:
-                lower_bounds.append(lb)
-            if ub is not None:
-                upper_bounds.append(ub)
+        for v, (lb, ub) in self.var_domains.items():
+            if v in variables:
+                if lb is not None:
+                    lower_bounds.append(lb)
+                if ub is not None:
+                    upper_bounds.append(ub)
         return lower_bounds, upper_bounds
         
     def domain_size(self, variable):
