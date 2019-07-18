@@ -34,10 +34,13 @@ class cvxpyOptimizer(ConvexOptimizationBackend):
         lower_bounds, upper_bounds = domain.get_ul_bounds()
         bounds = Bounds(lower_bounds, upper_bounds)
         A, b = self.get_opt_bounds(domain, convex_bounds)
-        constraints = LinearConstraint(A, np.full((len(b), ), -np.inf), b)
-        return minimize(self.get_opt_function(domain, polynomial), initial_value, 
+        constraints = LinearConstraint(A, np.full((len(b),), -np.inf), b)
+        print("Min:", minimize(self.get_opt_function(domain, polynomial), initial_value, 
                         method='trust-constr',
-                        bounds=bounds, constraints=constraints)
+                        bounds=bounds, constraints=constraints).fun)
+        return 1 #minimize(self.get_opt_function(domain, polynomial), initial_value, 
+                        #method='trust-constr',
+                        #bounds=bounds, constraints=constraints).fun
                         
     def __str__(self):
         return "cvxpy_opt"

@@ -1,5 +1,6 @@
 import math
 import sympy
+import numpy as np
 from fractions import Fraction
 from typing import Dict, Tuple, Union, List
 
@@ -47,11 +48,22 @@ class Polynomial(object):
         return result
     
     def compute_value_from_variables(self, domain_variables):
-        def compute_value(*values):
-            objective = self.to_expression(PolynomialAlgebra())
-            polynomial_variables = self.variables
-            arguments = dict(list(zip(domain_variables, values)))
-            arguments.pop(var for var in (set(domain_variables) - set(polynomial_variables)))
+        expression = self.to_expression(SympyAlgebra())
+        polynomial_variables = self.variables
+        objective = sympy.lambdify([sympy.Symbol(var) for var in polynomial_variables],
+                                   expression, "numpy")
+                
+        def compute_value(*arguments):
+            parameters = dict(list(zip(domain_variables, arguments)))
+            for var in domain_variables:
+                if var not in polynomial_variables:
+                    del parameters[var]
+            polynomial_arguments = list(parameters.values())
+            #print("Polynomial:", objective(*polynomial_arguments))
+            if len(polynomial_arguments) == 4:
+                return objective(*polynomial_arguments)
+            return 0
+        #print("Polynomial:", compute_value([1, 2, 3, 4]))
         return compute_value
 
     def get_terms(self) -> List['Polynomial']:
