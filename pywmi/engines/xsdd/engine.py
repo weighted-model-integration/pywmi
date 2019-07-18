@@ -107,9 +107,6 @@ class NonConvexWMISemiring(Semiring):
         raise NotImplementedError()
 
 
-
-
-
 class BooleanFinder(Semiring):
     def __init__(self, abstractions: Dict, var_to_lit: Dict):
         self.reverse_abstractions = {v: k for k, v in abstractions.items()}
@@ -546,7 +543,7 @@ class XsddOptimizationEngine(XsddEngine):
         try:
             domain = Domain(self.domain.real_vars, {v: REAL for v in self.domain.real_vars}, self.domain.var_domains)
             return self.backend.optimize(domain, BoundsWalker.get_inequalities(convex_support),
-                                          Polynomial.from_smt(polynomial_weight))
+                                         Polynomial.from_smt(polynomial_weight))
         except ZeroDivisionError:
             return 0
         

@@ -14,5 +14,5 @@ class ConvexOptimizationBackend(object):
     def get_opt_bounds(self, domain: Domain, convex_bounds: List[LinearInequality]) -> (List, List):
         raise NotImplementedError()
     
-    def get_opt_function(self, polynomial: Polynomial) -> Callable:
+    def get_opt_function(self, domain: Domain, polynomial: Polynomial) -> Callable:
         raise NotImplementedError()

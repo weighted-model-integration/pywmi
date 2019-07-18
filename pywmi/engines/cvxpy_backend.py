@@ -23,24 +23,22 @@ class cvxpyOptimizer(ConvexOptimizationBackend):
     
     def get_opt_bounds(self, domain: Domain, convex_bounds: List[LinearInequality]) -> (List, List):
         A = [[bound.a(var) for var in domain.real_vars] for bound in convex_bounds]
-        b =  [bound.b() for bound in convex_bounds]
+        b = [bound.b() for bound in convex_bounds]
         return A, b
 
     def get_opt_function(self, domain: Domain, polynomial: Polynomial) -> Callable:
         return polynomial.compute_value_from_variables(domain.real_vars)
         
     def optimize(self, domain, convex_bounds: List[LinearInequality], polynomial: Polynomial):
-        initial_value = np.zeros(len(domain.real_vars),)
+        initial_value = np.zeros(len(polynomial.variables))
         lower_bounds, upper_bounds = domain.get_ul_bounds()
         bounds = Bounds(lower_bounds, upper_bounds)
         A, b = self.get_opt_bounds(domain, convex_bounds)
-        constraints = LinearConstraint(A, np.full((len(b),), -np.inf), b)
-        print("Min:", minimize(self.get_opt_function(domain, polynomial), initial_value, 
-                        method='trust-constr',
-                        bounds=bounds, constraints=constraints).fun)
-        return 1 #minimize(self.get_opt_function(domain, polynomial), initial_value, 
-                        #method='trust-constr',
-                        #bounds=bounds, constraints=constraints).fun
-                        
+        lin_constraints = LinearConstraint(A, np.full(len(b), -np.inf), b)
+        return 1
+        # return minimize(self.get_opt_function(domain, polynomial), initial_value,
+        #                method='trust-constr', bounds=bounds,
+        #                constraints=lin_constraints).fun
+
     def __str__(self):
         return "cvxpy_opt"

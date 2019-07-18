@@ -39,8 +39,8 @@ class Polynomial(object):
 
     def to_expression(self, algebra: AlgebraBackend):
         result = algebra.zero()
+        term = algebra.one()
         for variables, factor in self.poly_dict.items():
-            term = algebra.one()
             for var in variables:
                 if var != CONST_KEY:
                     term = algebra.times(term, algebra.symbol(var))
@@ -53,17 +53,16 @@ class Polynomial(object):
         objective = sympy.lambdify([sympy.Symbol(var) for var in polynomial_variables],
                                    expression, "numpy")
                 
-        def compute_value(*arguments):
-            parameters = dict(list(zip(domain_variables, arguments)))
+        def compute_value(values):
+            parameters = dict(list(zip(domain_variables, values)))
             for var in domain_variables:
                 if var not in polynomial_variables:
                     del parameters[var]
             polynomial_arguments = list(parameters.values())
-            #print("Polynomial:", objective(*polynomial_arguments))
             if len(polynomial_arguments) == 4:
-                return objective(*polynomial_arguments)
+                return objective(np.array(polynomial_arguments))
             return 0
-        #print("Polynomial:", compute_value([1, 2, 3, 4]))
+
         return compute_value
 
     def get_terms(self) -> List['Polynomial']:
