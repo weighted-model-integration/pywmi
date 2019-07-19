@@ -7,7 +7,6 @@ from typing import List, Callable
 from pywmi import Domain
 from pywmi.smt_math import LinearInequality, Polynomial
 from .convex_optimizer import ConvexOptimizationBackend
-# from .algebraic_backend import SympyAlgebra
 # import pysmt.shortcuts as smt
 
 logger = logging.getLogger(__name__)
@@ -30,26 +29,31 @@ class cvxpyOptimizer(ConvexOptimizationBackend):
         return polynomial.compute_value_from_variables(domain.real_vars)
         
     def optimize(self, domain, convex_bounds: List[LinearInequality],
-                 polynomial: Polynomial, min=True) -> float:
-        sign = 1.0 if min else -1.0
-        # print([bound.to_expression(SympyAlgebra()) for bound in convex_bounds])
-        print(polynomial)
+                 polynomial: Polynomial, minimization=True) -> float or None:
         lower_bounds, upper_bounds = domain.get_ul_bounds(polynomial.variables)
         bounds_arr = list(zip(lower_bounds, upper_bounds))
         a, b = self.get_opt_bounds(domain, convex_bounds)
 
-        point_in_region = linprog(np.zeros(len(domain.real_vars)), np.array(a), np.array(b),
-                                  bounds=np.array(bounds_arr), method="simplex")
-        if point_in_region.success:
-            initial_value = point_in_region.x
+        point_inside_region = linprog(np.zeros(len(domain.real_vars)), np.array(a), np.array(b),
+                                      bounds=np.array(bounds_arr), method="simplex")
+        if point_inside_region.success:
+            initial_value = point_inside_region.x
         else:
-            return 50000     # should be last min or something like that
+            return None
 
         bounds = Bounds(lower_bounds, upper_bounds)
         lin_constraints = LinearConstraint(a, np.full(len(b), -np.inf), b)
+        sign = 1.0 if minimization else -1.0
+
         return minimize(self.get_opt_function(domain, polynomial), initial_value,
                         args=(sign,), method='trust-constr', bounds=bounds,
                         constraints=lin_constraints).fun
 
     def __str__(self):
         return "scipy_opt"
+
+
+def objective(x):
+    x0, x1, x2, x3 = x[0], x[1], x[2], x[3]
+    return x0*x1*x2*x3*1.0 + x0*x1*x2*(-1.0) + x0*x1*x3*(-1.0) + x0*x1*1.0 + x0*x2*x3*(-1.0) + x0*x2*1.0 + x0*x3*1.0 + x0*(-1.0) + x1*x2*x3*(-1.0) + x1*x2*1.0 + x1*x3*1.0 + x1*(-1.0) + x2*x3*1.0 + x2*(-1.0) + x3*(-1.0) + 1.0
+

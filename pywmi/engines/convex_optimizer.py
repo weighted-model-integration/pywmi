@@ -8,7 +8,8 @@ class ConvexOptimizationBackend(object):
     def __init__(self, exact=True):
         self.exact = exact
 
-    def optimize(self, domain: Domain, convex_bounds: List[LinearInequality], polynomial: Polynomial, min=True):
+    def optimize(self, domain: Domain, convex_bounds: List[LinearInequality],
+                 polynomial: Polynomial, minimization=True) -> float or None:
         raise NotImplementedError()
 
     def get_opt_bounds(self, domain: Domain, convex_bounds: List[LinearInequality]) -> (List, List):

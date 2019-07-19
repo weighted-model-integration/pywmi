@@ -1,6 +1,5 @@
 import math
 import sympy
-import numpy as np
 from fractions import Fraction
 from typing import Dict, Tuple, Union, List
 
@@ -8,7 +7,7 @@ from pysmt.exceptions import InternalSolverError
 from pysmt.shortcuts import Plus, Symbol, Real, Times, Solver
 from pysmt.typing import REAL, BOOL
 
-from pywmi.engines.algebraic_backend import AlgebraBackend, SympyAlgebra
+from pywmi.engines.algebraic_backend import AlgebraBackend
 from pywmi import SmtWalker
 from functools import reduce, partial
 
@@ -48,20 +47,18 @@ class Polynomial(object):
         return result
     
     def compute_value_from_variables(self, domain_variables):
-        expression = self.to_expression(SympyAlgebra())
-        polynomial_variables = self.variables
-        objective = sympy.lambdify([sympy.Symbol(var) for var in polynomial_variables],
-                                   expression, "numpy")
+        objective = sympy.lambdify([sympy.Symbol(var) for var in self.variables], self, "numpy")
                 
         def compute_value(values, sign=1.0):
             parameters = dict(list(zip(domain_variables, values)))
             for var in domain_variables:
-                if var not in polynomial_variables:
+                if var not in self.variables:
                     del parameters[var]
             polynomial_arguments = list(parameters.values())
-            if len(polynomial_arguments) == len(polynomial_variables):
-                return sign*objective(*polynomial_arguments)
-            return 0
+
+            if len(polynomial_arguments) != len(self.variables):
+                raise NotImplementedError()
+            return sign*objective(*polynomial_arguments)
 
         return compute_value
 

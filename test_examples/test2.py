@@ -25,7 +25,7 @@ def main():
     # density = FileDensity.from_file("data/click/click_10")
     # density = Density.from_file("data/queries_volume/sequential_2_4_4_2.txt.json")
     # density = Density.from_file("data/dual_paths/dual_paths_4_0.json")
-    density = FileDensity.from_file("example1/uni_6")
+    density = FileDensity.from_file("example1/uni_4")
     print("-----------------------------------------------------------")
     print("Support:")
     print(pretty_print(density.support))
@@ -53,7 +53,9 @@ def main():
     #print("Time XSDD(PSI): {:.4f}s".format(times[-1] - times[-2]))
     
     # XSDD_OPT:PSI
-    print("Result XSDD_OPT(PSI):", XsddOptimizationEngine(density.domain, density.support, density.weight, cvxpyOptimizer()).compute_optimum(add_bounds=False))
+    print("Result XSDD_OPT(PSI):", XsddOptimizationEngine(density.domain, density.support,
+                                                          density.weight, cvxpyOptimizer()).
+          compute_optimum(add_bounds=False, minimization=True))
     times.append(time.time())
     print("Time XSDD_OPT(PSI): {:.4f}s".format(times[-1] - times[-2]))
 

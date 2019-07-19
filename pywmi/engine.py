@@ -36,14 +36,6 @@ class Engine:
         volume = self.compute_volume(add_bounds=add_bounds)
         return [self.with_constraint(query).compute_volume(add_bounds=add_bounds) / volume if volume > 0 else None
                 for query in queries]
-        
-    #opt (or could add a flag in parameter list of compute_probabilities)
-    #maybe doesn't make too much sense for opt anyway
-    def compute_probabilities_opt(self, queries, add_bounds=True):
-        # type: (List[FNode], bool) -> List[float]
-        optimum = self.compute_optimum(add_bounds=add_bounds)
-        return [self.with_constraint(query).compute_optimum(add_bounds=add_bounds) / optimum if optimum > 0 else None
-                for query in queries]
 
     def compute_probability(self, query, add_bounds=True):
         # type: (FNode, bool) -> float

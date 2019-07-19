@@ -539,17 +539,17 @@ class XsddOptimizationEngine(XsddEngine):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-    def optimize_convex(self, convex_support, polynomial_weight):
+    def optimize_convex(self, convex_support, polynomial_weight, minimization=True):
         try:
             domain = Domain(self.domain.real_vars, {v: REAL for v in self.domain.real_vars}, self.domain.var_domains)
             return self.backend.optimize(domain, BoundsWalker.get_inequalities(convex_support),
-                                         Polynomial.from_smt(polynomial_weight))
+                                         Polynomial.from_smt(polynomial_weight), minimization)
         except ZeroDivisionError:
             return 0
         
-    def compute_optimum(self, add_bounds=True):
+    def compute_optimum(self, add_bounds=True, minimization=True):
         if add_bounds:
-            return self.with_constraint(self.domain.get_bounds()).compute_optimum(False)
+            return self.with_constraint(self.domain.get_bounds()).compute_optimum(False, minimization)
         abstractions, var_to_lit = dict(), dict()
 
         algebra = PolynomialAlgebra()
@@ -571,7 +571,7 @@ class XsddOptimizationEngine(XsddEngine):
         factorized_algebra = self.algebra
         if factorized_algebra is not None and isinstance(factorized_algebra, PyXaddAlgebra):
             raise NotImplementedError()
-        optimum = factorized_algebra.zero()
+        optimum = None
         if self.factorized:
             raise NotImplementedError()
         else:
@@ -583,6 +583,14 @@ class XsddOptimizationEngine(XsddEngine):
                     convex_supports = amc(ConvexWMISemiring(abstractions, var_to_lit), support)
                     logger.debug("#convex regions %s", len(convex_supports))
                     for convex_support, variables in convex_supports:
-                        opt = self.optimize_convex(convex_support, w_weight.to_smt())
-                        optimum = factorized_algebra.min(optimum, factorized_algebra.real(opt))
-        return factorized_algebra.to_float(optimum)
+                        opt = self.optimize_convex(convex_support, w_weight.to_smt(), minimization)
+                        if optimum is None:
+                            optimum = None if opt is None else factorized_algebra.real(opt)
+                        elif opt is not None:
+                            if minimization:
+                                optimum = factorized_algebra.min(optimum, factorized_algebra.real(opt))
+                            else:
+                                optimum = factorized_algebra.max(optimum, factorized_algebra.real(opt))
+
+        return factorized_algebra.to_float(optimum) if optimum is not None else None
+
