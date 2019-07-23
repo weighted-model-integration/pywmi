@@ -1,0 +1,7 @@
+(set-logic QF_RDL)
+(declare-fun x () Real)
+(declare-fun x0 () Real)
+(declare-fun x1 () Real)
+(declare-fun x2 () Real)
+(assert (let ((.def_0 (<= x2 (/ 7746191359077253 9007199254740992)))) (let ((.def_1 (<= (/ 5764607523034235 36028797018963968) x2))) (let ((.def_2 (<= x1 (/ 7836263351624663 9007199254740992)))) (let ((.def_3 (<= (/ 5404319552844595 36028797018963968) x1))) (let ((.def_4 (<= x0 (/ 7926335344172073 9007199254740992)))) (let ((.def_5 (<= (/ 1261007895663739 9007199254740992) x0))) (let ((.def_6 (<= x (/ 8016407336719483 9007199254740992)))) (let ((.def_7 (<= (/ 1170935903116329 9007199254740992) x))) (let ((.def_8 (and true .def_7))) (let ((.def_9 (and .def_8 .def_6))) (let ((.def_10 (and .def_9 .def_5))) (let ((.def_11 (and .def_10 .def_4))) (let ((.def_12 (and .def_11 .def_3))) (let ((.def_13 (and .def_12 .def_2))) (let ((.def_14 (and .def_13 .def_1))) (let ((.def_15 (and .def_14 .def_0))) (let ((.def_16 (<= x x2))) (let ((.def_17 (<= x x1))) (let ((.def_18 (<= x x0))) (let ((.def_19 (or .def_18 .def_17 .def_16))) (let ((.def_20 (not .def_16))) (let ((.def_21 (not .def_18))) (let ((.def_22 (or .def_21 .def_20))) (let ((.def_23 (not .def_17))) (let ((.def_24 (or .def_21 .def_23))) (let ((.def_25 (or .def_23 .def_20))) (let ((.def_26 (and .def_25 .def_24 .def_22))) (let ((.def_27 (and .def_26 .def_19))) (let ((.def_28 (and .def_27 .def_15))) .def_28))))))))))))))))))))))))))))))
+(check-sat)

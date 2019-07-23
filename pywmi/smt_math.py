@@ -47,7 +47,8 @@ class Polynomial(object):
         return result
     
     def compute_value_from_variables(self, domain_variables):
-        objective = sympy.lambdify([sympy.Symbol(var) for var in self.variables], self, "numpy")
+        objective = sympy.lambdify([sympy.Symbol(var) for var in sorted(self.variables)],
+                                   self, modules=["scipy", "numpy"])
                 
         def compute_value(values, sign=1.0):
             parameters = dict(list(zip(domain_variables, values)))
@@ -55,9 +56,6 @@ class Polynomial(object):
                 if var not in self.variables:
                     del parameters[var]
             polynomial_arguments = list(parameters.values())
-
-            if len(polynomial_arguments) != len(self.variables):
-                raise NotImplementedError()
             return sign*objective(*polynomial_arguments)
 
         return compute_value
@@ -179,7 +177,7 @@ class LinearInequality(object):
         return Plus(Times(Symbol(n, REAL) for n in name) * Real(factor)
                     if factor != 1 else Times(Symbol(n, REAL) for n in name)
                     for name, factor in self.inequality_dict.items() if name != CONST_KEY) \
-               < Real(-self.inequality_dict.get(CONST_KEY, 0))
+                < Real(-self.inequality_dict.get(CONST_KEY, 0))
 
     def to_expression(self, algebra: AlgebraBackend):
         try:

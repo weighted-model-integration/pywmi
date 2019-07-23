@@ -5,7 +5,6 @@ from typing import Iterable
 from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend, OptimizationBackend
 from pywmi.engines.algebraic_backend import PSIAlgebra
 from pywmi.engines.convex_integrator import ConvexIntegrationBackend
-#opt
 from pywmi.engines.convex_optimizer import ConvexOptimizationBackend
 from pywmi.engines.xsdd.draw import sdd_to_png_file
 from pywmi.engines.xsdd.vtree import get_new_manager
@@ -549,7 +548,8 @@ class XsddOptimizationEngine(XsddEngine):
         
     def compute_optimum(self, add_bounds=True, minimization=True):
         if add_bounds:
-            return self.with_constraint(self.domain.get_bounds()).compute_optimum(False, minimization)
+            return self.with_constraint(self.domain.get_bounds()).\
+                compute_optimum(add_bounds=False, minimization=minimization)
         abstractions, var_to_lit = dict(), dict()
 
         algebra = PolynomialAlgebra()
@@ -571,7 +571,8 @@ class XsddOptimizationEngine(XsddEngine):
         factorized_algebra = self.algebra
         if factorized_algebra is not None and isinstance(factorized_algebra, PyXaddAlgebra):
             raise NotImplementedError()
-        optimum = None
+
+        optimum = {'value': None, 'point': None}
         if self.factorized:
             raise NotImplementedError()
         else:
@@ -584,13 +585,18 @@ class XsddOptimizationEngine(XsddEngine):
                     logger.debug("#convex regions %s", len(convex_supports))
                     for convex_support, variables in convex_supports:
                         opt = self.optimize_convex(convex_support, w_weight.to_smt(), minimization)
-                        if optimum is None:
-                            optimum = None if opt is None else factorized_algebra.real(opt)
+                        if optimum['value'] is None:
+                            optimum = opt if opt is not None else optimum
                         elif opt is not None:
                             if minimization:
-                                optimum = factorized_algebra.min(optimum, factorized_algebra.real(opt))
+                                optimum = opt if factorized_algebra.less_than(
+                                                     factorized_algebra.real(opt['value']),
+                                                     factorized_algebra.real(optimum['value']))\
+                                          else optimum
                             else:
-                                optimum = factorized_algebra.max(optimum, factorized_algebra.real(opt))
+                                optimum = opt if factorized_algebra.greater_than(
+                                                     factorized_algebra.real(opt['value']),
+                                                     factorized_algebra.real(optimum['value'])) \
+                                          else optimum
 
-        return factorized_algebra.to_float(optimum) if optimum is not None else None
-
+        return optimum

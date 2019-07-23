@@ -63,15 +63,20 @@ class Domain(Exportable):
                 bounds.append(symbol <= ub)
         return fm.And(*bounds)
     
-    #opt
-    def get_ul_bounds(self, variables):
+    def get_ul_bounds(self):
         lower_bounds, upper_bounds = [], []
-        for v, (lb, ub) in self.var_domains.items():
-            if v in variables:
-                if lb is not None:
-                    lower_bounds.append(lb)
-                if ub is not None:
-                    upper_bounds.append(ub)
+        for v in sorted(self.var_domains):
+            (lb, ub) = self.var_domains[v]
+            if lb is not None:
+                lower_bounds.append(lb)
+            else:
+                lower_bounds.append(-np.inf)
+
+            if ub is not None:
+                upper_bounds.append(ub)
+            else:
+                upper_bounds.append(np.inf)
+
         return lower_bounds, upper_bounds
         
     def domain_size(self, variable):

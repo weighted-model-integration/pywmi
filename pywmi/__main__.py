@@ -122,7 +122,7 @@ def get_engine(description, domain, support, weight):
                 backend = LatteIntegrator()
             #opt
             elif parts[0] == "opt":
-                from .engines.cvxpy_backend import cvxpyOptimizer
+                from .engines.scipy_backend import cvxpyOptimizer
                 backend = LatteIntegrator()
             else:
                 raise ValueError("Please specify a valid backend instead of {}".format(parts[0]))
