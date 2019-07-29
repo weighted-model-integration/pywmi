@@ -9,11 +9,5 @@ class ConvexOptimizationBackend(object):
         self.exact = exact
 
     def optimize(self, domain: Domain, convex_bounds: List[LinearInequality],
-                 polynomial: Polynomial, minimization=True) -> float or None:
-        raise NotImplementedError()
-
-    def get_opt_bounds(self, domain: Domain, convex_bounds: List[LinearInequality]) -> (List, List):
-        raise NotImplementedError()
-    
-    def get_opt_function(self, domain: Domain, polynomial: Polynomial) -> Callable:
+                 polynomial: Polynomial, minimization: bool = True) -> dict or None:
         raise NotImplementedError()

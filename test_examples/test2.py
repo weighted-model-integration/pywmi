@@ -43,17 +43,18 @@ def main():
     # print("Time PA: {:.4f}s".format(times[-1] - times[-2]))
 
     # XSDD:Latte
-    # print("Result XSDD:", XsddEngine(density.domain, density.support, density.weight, LatteIntegrator()).compute_volume(add_bounds=False))
+    # print("Result XSDD:", XsddEngine(density.domain, density.support, density.weight, LatteIntegrator(
+    # )).compute_volume(add_bounds=False))
     # times.append(time.time())
     # print("Time XSDD: {:.4f}s".format(times[-1] - times[-2]))
 
     # XSDD:PSI
     print("Result XSDD(PSI):", XsddEngine(density.domain, density.support, density.weight).
-          compute_volume(add_bounds=False))
+           compute_volume(add_bounds=False))
     times.append(time.time())
     print("Time XSDD(PSI): {:.4f}s".format(times[-1] - times[-2]))
     
-    # XSDD_OPT:PSI
+    # XSDD:OPT
     result_opt = XsddOptimizationEngine(density.domain, density.support,
                                         density.weight, ScipyOptimizer()).\
         compute_optimum(add_bounds=False, minimization=False)

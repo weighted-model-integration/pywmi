@@ -555,7 +555,7 @@ class XsddOptimizationEngine(XsddEngine):
         algebra = PolynomialAlgebra()
         support = (smt.And(*self.collect_conflicts()) & self.support) if self.find_conflicts else self.support
         if self.factorized:
-            print("Not factorized")
+            print("Should not be factorized")
             raise NotImplementedError()
         else:
             labels, weight = None, self.weight
