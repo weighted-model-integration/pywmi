@@ -596,7 +596,7 @@ class XsddOptimizationEngine(XsddEngine):
                             else:
                                 optimum = opt if factorized_algebra.greater_than(
                                                      factorized_algebra.real(opt['value']),
-                                                     factorized_algebra.real(optimum['value'])) \
+                                                     factorized_algebra.real(optimum['value']))\
                                           else optimum
 
         return optimum

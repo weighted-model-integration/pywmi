@@ -18,15 +18,13 @@ class ScipyOptimizer(ConvexOptimizationBackend):
         self.algorithm = 'trust-constr'
 
     @staticmethod
-    def key_to_exponents(domain, key: tuple):
-        return [key.count(v) for v in domain.real_vars]
-    
-    def get_opt_bounds(self, domain: Domain, convex_bounds: List[LinearInequality]) -> (List, List):
+    def get_opt_bounds(domain: Domain, convex_bounds: List[LinearInequality]) -> (List, List):
         a = [[bound.a(var) for var in sorted(domain.real_vars)] for bound in convex_bounds]
         b = [bound.b() for bound in convex_bounds]
         return a, b
 
-    def get_opt_function(self, domain: Domain, polynomial: Polynomial) -> Callable:
+    @staticmethod
+    def get_opt_function(domain: Domain, polynomial: Polynomial) -> Callable:
         return polynomial.compute_value_from_variables(sorted(domain.real_vars))
         
     def optimize(self, domain, convex_bounds: List[LinearInequality],

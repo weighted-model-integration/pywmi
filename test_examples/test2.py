@@ -6,6 +6,7 @@ from pywmi import XsddEngine, Density, PredicateAbstractionEngine, XaddEngine, P
 from pywmi.domain import FileDensity
 from pywmi.engines.latte_backend import LatteIntegrator
 from pywmi.engines.scipy_backend import ScipyOptimizer
+from pywmi.engines.ipopt_backend import IpoptOptimizer
 from pywmi.smt_print import pretty_print
 
 import logging
@@ -25,7 +26,7 @@ def main():
     # density = FileDensity.from_file("data/click/click_10")
     # density = Density.from_file("data/queries_volume/sequential_2_4_4_2.txt.json")
     # density = Density.from_file("example1/dual_paths_2.json")
-    density = FileDensity.from_file("example1/uni_6")
+    density = FileDensity.from_file("example1/uni_3")
     print("-----------------------------------------------------------")
     print("Support:")
     print(pretty_print(density.support))
@@ -44,20 +45,20 @@ def main():
 
     # XSDD:Latte
     # print("Result XSDD:", XsddEngine(density.domain, density.support, density.weight, LatteIntegrator(
-    # )).compute_volume(add_bounds=False))
+    #    )).compute_volume(add_bounds=False))
     # times.append(time.time())
     # print("Time XSDD: {:.4f}s".format(times[-1] - times[-2]))
 
     # XSDD:PSI
-    print("Result XSDD(PSI):", XsddEngine(density.domain, density.support, density.weight).
-           compute_volume(add_bounds=False))
-    times.append(time.time())
-    print("Time XSDD(PSI): {:.4f}s".format(times[-1] - times[-2]))
+    # print("Result XSDD(PSI):", XsddEngine(density.domain, density.support, density.weight).
+    #       compute_volume(add_bounds=False))
+    # times.append(time.time())
+    # print("Time XSDD(PSI): {:.4f}s".format(times[-1] - times[-2]))
     
     # XSDD:OPT
     result_opt = XsddOptimizationEngine(density.domain, density.support,
-                                        density.weight, ScipyOptimizer()).\
-        compute_optimum(add_bounds=False, minimization=False)
+                                        density.weight, IpoptOptimizer()).\
+        compute_optimum(add_bounds=False, minimization=True)
     print("Result XSDD_OPT(PSI):", result_opt['value'], "at", result_opt['point'])
     times.append(time.time())
     print("Time XSDD_OPT(PSI): {:.4f}s".format(times[-1] - times[-2]))
