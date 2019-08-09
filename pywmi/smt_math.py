@@ -47,11 +47,11 @@ class Polynomial(object):
             result = algebra.plus(result, algebra.times(term, algebra.real(factor)))
         return result
     
-    def compute_value_from_variables(self, domain_variables):
+    def compute_value_from_variables(self, domain_variables, sign=1.0):
         objective = sympy.lambdify([sympy.Symbol(var, real=True) for var in sorted(self.variables)],
                                    sympy.sympify(self.__str__()), modules=["scipy", "numpy"])
 
-        def compute_value(values, sign=1.0):
+        def compute_value(values):
             parameters = dict(list(zip(domain_variables, values)))
             for var in domain_variables:
                 if var not in self.variables:
@@ -61,7 +61,7 @@ class Polynomial(object):
 
         return compute_value
 
-    def compute_gradient_from_variables(self, domain_variables):
+    def compute_gradient_from_variables(self, domain_variables, sign=1.0):
         gradient_sympy = [sympy.sympify(self.__str__()).diff(var) for var in sorted(self.variables)]
         gradient = [sympy.lambdify([sympy.Symbol(var, real=True) for var in sorted(self.variables)],
                                    grad, modules=["scipy", "numpy"]) for grad in gradient_sympy]
@@ -72,27 +72,29 @@ class Polynomial(object):
                 if var not in self.variables:
                     del parameters[var]
             polynomial_arguments = list(parameters.values())
-            return np.array([grad(*polynomial_arguments) for grad in gradient])
+            return sign*np.array([grad(*polynomial_arguments) for grad in gradient])
 
         return compute_gradient
 
-    def compute_hessian_from_variables(self, domain_variables):
+    def compute_hessian_from_variables(self, domain_variables, hs=None, sign=1.0):
         hessian_sympy = [[sympy.sympify(self.__str__()).diff(var1).diff(var2) for var1 in sorted(self.variables)]
                          for var2 in sorted(self.variables)]
-        print(hessian_sympy)
-        exit()
-        hessian = [[sympy.lambdify([sympy.Symbol(var, real=True) for var in sorted(self.variables)],
-                                   hess, modules=["scipy", "numpy"]) for hess in row] for row in hessian_sympy]
+        hessian = np.array([np.array([sympy.lambdify([sympy.Symbol(var, real=True)
+                                                     for var in sorted(self.variables)],
+                                                     hess, modules=["scipy", "numpy"])
+                                     for hess in row]) for row in hessian_sympy])
 
-        def compute_gradient(values):
+        def compute_hessian(values, lagrange=None, obj_factor=1.0):
             parameters = dict(list(zip(domain_variables, values)))
             for var in domain_variables:
                 if var not in self.variables:
                     del parameters[var]
             polynomial_arguments = list(parameters.values())
-            return np.array([hess(*polynomial_arguments) for hess in row] for row in hessian)
+            H = sign*obj_factor*np.tril(np.array([np.array([hess(*polynomial_arguments) for hess in row])
+                                              for row in hessian]))
+            return H if hs is None else H[hs.row, hs.col]
 
-        return compute_gradient
+        return compute_hessian
 
     def get_terms(self) -> List['Polynomial']:
         return [Polynomial({k: v}) for k, v in self.poly_dict.items()]

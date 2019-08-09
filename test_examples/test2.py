@@ -26,7 +26,7 @@ def main():
     # density = FileDensity.from_file("data/click/click_10")
     # density = Density.from_file("data/queries_volume/sequential_2_4_4_2.txt.json")
     # density = Density.from_file("example1/dual_paths_2.json")
-    density = FileDensity.from_file("example1/uni_3")
+    density = FileDensity.from_file("example1/uni_6")
     print("-----------------------------------------------------------")
     print("Support:")
     print(pretty_print(density.support))
@@ -55,13 +55,23 @@ def main():
     # times.append(time.time())
     # print("Time XSDD(PSI): {:.4f}s".format(times[-1] - times[-2]))
     
-    # XSDD:OPT
+    # XSDD:OPT-ipopt
     result_opt = XsddOptimizationEngine(density.domain, density.support,
                                         density.weight, IpoptOptimizer()).\
-        compute_optimum(add_bounds=False, minimization=True)
-    print("Result XSDD_OPT(PSI):", result_opt['value'], "at", result_opt['point'])
+        compute_optimum(add_bounds=False, minimization=False)
+    print("Result XSDD_OPT(ipopt):", result_opt['value'], "at", result_opt['point'])
     times.append(time.time())
-    print("Time XSDD_OPT(PSI): {:.4f}s".format(times[-1] - times[-2]))
+    print("Time XSDD_OPT(ipopt): {:.4f}s".format(times[-1] - times[-2]))
+    print()
+
+    # XSDD:OPT-scipy
+    result_opt = XsddOptimizationEngine(density.domain, density.support,
+                                        density.weight, ScipyOptimizer()). \
+        compute_optimum(add_bounds=False, minimization=False)
+    print("Result XSDD_OPT(scipy):", result_opt['value'], "at", result_opt['point'])
+    times.append(time.time())
+    print("Time XSDD_OPT(scipy): {:.4f}s".format(times[-1] - times[-2]))
+    print()
 
     # XSDD:BR
     #print("Result XSDD(BR):", XsddEngine(density.domain, density.support, density.weight, algebra=PyXaddAlgebra()).compute_volume(add_bounds=False))
