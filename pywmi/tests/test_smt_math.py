@@ -6,7 +6,7 @@ from pysmt.typing import REAL
 from pywmi.errors import InstallError
 from pywmi import Domain
 from pywmi.engines.latte_backend import LatteIntegrator
-from pywmi.engines.xadd import XaddIntegrator
+from pywmi.engines.xadd import XaddIntegrator, XaddEngine
 from pywmi.smt_math import Polynomial, LinearInequality, implies
 
 
@@ -21,6 +21,13 @@ try:
     latte_installed = True
 except InstallError:
     latte_installed = False
+
+try:
+    # noinspection PyTypeChecker
+    XaddEngine(None, None, None)
+    xadd_installed = True
+except InstallError:
+    xadd_installed = False
 
 
 def test_conversion():
@@ -72,8 +79,10 @@ def test_inequality_to_integer():
     assert inequality.scale_to_integer().to_smt() == (x * 85 + y * 312 < 204)
 
 
+@pytest.mark.skipif(not xadd_installed, reason="XADD engine is not installed (required to XADD integrator)")
 @pytest.mark.skipif(not latte_installed, reason="Latte (integrate) is not installed")
 def test_latte_backend():
+    print(xadd_installed)
     x, y = [Symbol(n, REAL) for n in "xy"]
     inequalities = [LinearInequality.from_smt(f) for f in [(x >= 0), (x <= y), (y <= 1)]]
     polynomial = Polynomial.from_smt((x*2/3 + 13/15) * (y*1/8 + x))
