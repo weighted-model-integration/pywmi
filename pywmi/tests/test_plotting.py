@@ -1,9 +1,10 @@
 import matplotlib as mpl
+import pytest
 from PIL import Image
-from pysmt.shortcuts import Real
+from pysmt.shortcuts import Real, Ite
 
-from pywmi import Domain, nested_to_smt
-from pywmi.plot import plot_data, plot_formula
+from pywmi import Domain, nested_to_smt, Density
+from pywmi.plot import plot_data, plot_formula, plot_density
 from pywmi.sample import uniform
 from pywmi.smt_check import evaluate
 from pywmi.temp import TemporaryFile
@@ -41,3 +42,12 @@ def test_plot_boolean_or():
         plot_formula(filename, domain, formula)
         image = Image.open(filename)
         assert image.getpixel((900, 900)) == image.getpixel((300, 900))
+
+
+@pytest.mark.skip(reason="Will not close")
+def test_plot_density():
+    domain = Domain.make([], ["x", "y"], [(-2.5, 2.7), (0, 1)])
+    x, y = domain.get_symbols()
+    support = (y <= x * 0.7 + 0.5) & (y >= x * 1.3 - 1)
+    weight = Ite(x <= y, Ite(x < 0, -x, x), 3 - y)
+    plot_density(Density(domain, support, weight))
