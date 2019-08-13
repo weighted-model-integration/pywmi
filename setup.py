@@ -11,17 +11,17 @@ URL = 'http://github.com/samuelkolb/pywmi'
 EMAIL = 'samuel.kolb@me.com'
 AUTHOR = 'Samuel Kolb'
 REQUIRES_PYTHON = '>=3.5.0'
-VERSION = "0.7.2"
+VERSION = "0.7.3"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
     'pysmt', 'numpy', 'future', 'typing', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'graphviz', 'sympy',
-    'scipy>=1.2', 'autodora>=0.3.3', 'deprecated', 'networkx', 'antlr4-python3-runtime'
+    'scipy>=1.2', 'autodora>=0.3.3', 'deprecated', 'networkx', 'antlr4-python3-runtime', 'pysdd'
 ]
 
 # What packages are optional?
 EXTRAS = {
-        'sdd': ["pysdd"]
+        # 'sdd': ["pysdd"]
 }
 
 # Distribute: python setup.py upload
