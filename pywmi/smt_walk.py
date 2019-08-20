@@ -1,3 +1,5 @@
+from abc import ABC
+
 import pysmt.shortcuts as smt
 from pysmt.operators import POW, IMPLIES
 
@@ -85,6 +87,21 @@ class SmtWalker(object):
             return self.walk_and([smt.Implies(formula.arg(0), formula.arg(1)),
                                   smt.Implies(formula.arg(1), formula.arg(0))])
         raise RuntimeError("Cannot walk {} (of type {})".format(formula, formula.node_type()))
+
+
+class CachedSmtWalker(SmtWalker, ABC):
+    def __init__(self,cache_key=None):
+        self._cache = dict()
+        self.cache_key = cache_key or (lambda f: f)
+
+    def walk_smt(self, formula):
+        key = self.cache_key(formula)
+        if key in self._cache:
+            return self._cache[key]
+
+        result = super().walk_smt(formula)
+        self._cache[key] = result
+        return result
 
 
 class SmtIdentityWalker(SmtWalker):

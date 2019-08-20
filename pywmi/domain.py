@@ -1,8 +1,12 @@
 from __future__ import print_function
 
 import logging
+import os
+from glob import glob
+
 import numpy as np
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, IO
+
 from pywmi.export import Exportable
 
 import pysmt.shortcuts as smt
@@ -180,6 +184,10 @@ class Density(Exportable):
         self.weight = weight
         self.queries = queries if queries is not None else [smt.TRUE()]
 
+    def __repr__(self):
+        return "Density({}, {}, {}, [{}])".format(self.domain, smt_to_nested(self.support), smt_to_nested(self.weight),
+                                                  ", ".join(map(smt_to_nested, self.queries)))
+
     def get_state(self):
         return {
             "domain": self.domain.get_state(),
@@ -196,3 +204,77 @@ class Density(Exportable):
             nested_to_smt(state["weights"]),
             [nested_to_smt(query) for query in state["queries"]],
         )
+
+
+class FileDensity(Density):
+    @classmethod
+    def get_domain_file(cls):
+        return "domain.json"
+
+    @classmethod
+    def get_support_file(cls):
+        return "support.smt2"
+
+    @classmethod
+    def get_weight_file(cls):
+        return "weight.smt2"
+
+    @classmethod
+    def get_query_file(cls, i):
+        return "query_{}.smt2".format(i)
+
+    def to_file(self, filename: str):
+        def wrap(f):
+            return os.path.join(filename, f)
+
+        if not os.path.exists(filename):
+            os.makedirs(filename)
+
+        self.domain.to_file(wrap(self.get_domain_file()))
+        smt.write_smtlib(self.support, wrap(self.get_support_file()))
+        if self.weight:
+            smt.write_smtlib(self.weight, wrap(self.get_weight_file()))
+        for i, query in enumerate(self.queries or []):
+            smt.write_smtlib(query, wrap(self.get_query_file(i)))
+
+    @classmethod
+    def from_file(cls: 'FileDensity', filename: str) -> 'FileDensity':
+        def wrap(f):
+            return os.path.join(filename, f)
+
+        if not os.path.exists(filename):
+            os.makedirs(filename)
+
+        domain = Domain.from_file(wrap(cls.get_domain_file()))
+        support = smt.read_smtlib(wrap(cls.get_support_file()))
+        weight_file = wrap(cls.get_weight_file())
+        weight = None
+        if os.path.exists(weight_file):
+            weight = smt.read_smtlib(weight_file)
+
+        queries = []
+        query_files = sorted(glob(os.path.join(filename, "query_*.smt2")), key=lambda f: int(f.split("_")[-1][:-5]))
+        for query_file in query_files:
+            queries.append(smt.read_smtlib(query_file))
+        return FileDensity(domain, support, weight, queries)
+
+    def dump(self, ref: IO):
+        raise NotImplementedError()
+
+    def dumps(self) -> str:
+        raise NotImplementedError()
+
+    @classmethod
+    def load(cls: 'FileDensity', ref: IO):
+        raise NotImplementedError()
+
+    @classmethod
+    def loads(cls: 'FileDensity', string: str):
+        raise NotImplementedError()
+
+    def get_state(self):
+        raise NotImplementedError()
+
+    @classmethod
+    def from_state(cls, state: dict):
+        raise NotImplementedError()

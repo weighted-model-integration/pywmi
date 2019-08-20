@@ -102,6 +102,7 @@ class Visitor(minizincVisitor):
         
         domA = self.boolean_variables
         domX = self.real_variables
+        print(domX)
         weight = self.weight
         
         support, weight, domA, domX, queries, variables = MinizincParser.parse(absolute_path, domA=domA, domX=domX, weight=weight)
@@ -164,7 +165,8 @@ class Visitor(minizincVisitor):
             if decl['obj'] == "range_type":
                 min_ = decl['min']
                 max_ = decl['max']
-                self.real_variables[variable] = [simplify(min_), simplify(max_)]
+                self.real_variables[variable] = [simplify(min_).constant_value(),
+                                                 simplify(max_).constant_value()]
                 
             # add value of variable to support
             if expr:

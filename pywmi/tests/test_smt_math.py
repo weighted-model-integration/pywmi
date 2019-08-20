@@ -7,7 +7,7 @@ from pywmi.errors import InstallError
 from pywmi import Domain
 from pywmi.engines.latte_backend import LatteIntegrator
 from pywmi.engines.xadd import XaddIntegrator, XaddEngine
-from pywmi.smt_math import get_inequality_dict, get_inequality_smt, Polynomial, LinearInequality, implies
+from pywmi.smt_math import Polynomial, LinearInequality, implies
 
 
 try:
@@ -21,7 +21,7 @@ try:
     latte_installed = True
 except InstallError:
     latte_installed = False
-    
+
 try:
     # noinspection PyTypeChecker
     XaddEngine(None, None, None)
@@ -36,32 +36,37 @@ def test_conversion():
     # 2x + 3y - z + 9 < 10z + 5
     # 2/4x + 3/4y - 11/4z + 1 <= 0
     should_be = {("x",): 2/4, ("y",): 3/4, ("z",): -11/4, (): 1}
-    assert get_inequality_dict(formula) == should_be
-    get_inequality_smt(formula)
+    inequality = LinearInequality.from_smt(formula)
+    assert inequality.inequality_dict == should_be
+    inequality.to_smt()
 
     formula = 2*x <= 0
-    should_be = {("x",): 1, (): 0}
-    assert get_inequality_dict(formula) == should_be
-    get_inequality_smt(formula)
+    should_be = {("x",): 1}
+    inequality = LinearInequality.from_smt(formula)
+    assert inequality.inequality_dict == should_be
+    inequality.to_smt()
 
     formula = 2*x <= 0.0001
     should_be = {("x",): 2 * 1 / 0.0001, (): -1}
-    assert get_inequality_dict(formula) == should_be
-    get_inequality_smt(formula)
+    inequality = LinearInequality.from_smt(formula)
+    assert inequality.inequality_dict == should_be
+    inequality.to_smt()
 
 
 def test_conversion_negative_factor():
     x, y, z = [Symbol(n, REAL) for n in "xyz"]
     formula = (-x <= 0)
-    should_be = {("x",): -1, (): 0}
-    assert get_inequality_dict(formula) == should_be
+    should_be = {("x",): -1}
+    inequality = LinearInequality.from_smt(formula)
+    assert inequality.inequality_dict == should_be
+    inequality.to_smt()
 
 
 def test_conversion_non_linear_error():
     x, y, z = [Symbol(n, REAL) for n in "xyz"]
     formula = ((-x + 2) * y <= 0)
     try:
-        get_inequality_dict(formula)
+        LinearInequality.from_smt(formula)
         assert False
     except ValueError:
         assert True
@@ -71,7 +76,7 @@ def test_inequality_to_integer():
     x, y = [Symbol(n, REAL) for n in "xy"]
     formula = x * 5/24 + y * 13/17 <= 28/56
     inequality = LinearInequality.from_smt(formula)
-    assert inequality.scale_to_integer().to_smt() == (x * 85 + y * 312 <= 204)
+    assert inequality.scale_to_integer().to_smt() == (x * 85 + y * 312 < 204)
 
 
 @pytest.mark.skipif(not xadd_installed, reason="XADD engine is not installed (required to XADD integrator)")
@@ -132,3 +137,17 @@ def test_implies():
     assert not implies(term2, term3)
     assert not implies(term3, term1)
     assert not implies(term3, term2)
+
+
+def test_linear_inequality_variables():
+    x, y, z = [Symbol(n, REAL) for n in "xyz"]
+    inequality = LinearInequality.from_smt(x - z <= y - z)
+    print(inequality)
+    assert inequality.variables == {"x", "y"}
+
+
+def test_linear_inequality_from_smt():
+    x, y = [Symbol(n, REAL) for n in "xy"]
+    inequality = LinearInequality.from_smt(x >= 0)
+    assert inequality.a("x") == -1
+    assert inequality.scale_to_integer().a("x") == -1

@@ -12,13 +12,13 @@ from pywmi import Density
 from pywmi.errors import InstallError
 from pywmi.smt_math import LinearInequality, Polynomial
 from pywmi.temp import TemporaryFile
-from .integration_backend import IntegrationBackend
+from .convex_integrator import ConvexIntegrationBackend
 from pywmi.engine import Engine
 import pysmt.shortcuts as smt
 
 logger = logging.getLogger(__name__)
 
-
+# TODO Latte for integration
 class XaddEngine(Engine):
     pattern = re.compile(r"\n(-?\d+\.\d+E?-?\d*) (-?\d+\.\d+E?-?\d*)\n")
 
@@ -49,6 +49,7 @@ class XaddEngine(Engine):
                 # print(output.replace("Academic license - for non-commercial use only\n", ""))
                 results = [(float(match[0]) if queries is not None else float(match[1]))
                            for match in XaddEngine.pattern.findall(output)]
+                # print(output)
                 return results
             except subprocess.CalledProcessError as e:
                 logger.warning(e.output.decode(sys.stdout.encoding)
@@ -121,7 +122,7 @@ class XaddEngine(Engine):
         return result
 
 
-class XaddIntegrator(IntegrationBackend):
+class XaddIntegrator(ConvexIntegrationBackend):
     def __init__(self, mode=None):
         super().__init__(True)
         self.mode = mode

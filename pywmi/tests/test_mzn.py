@@ -71,8 +71,8 @@ constraint x < y ;
 
     assert w == weights
         
-    assert domX[x] == [Real(-1.5), Real(1.0)]
-    assert domX[y] == [Real(0.0), Real(2.0)]
+    assert domX[x] == [-1.5, 1.0]
+    assert domX[y] == [0.0, 2.0]
 
 
 @pytest.mark.skipif(not solver_available, reason="No Solver is available")
@@ -107,7 +107,7 @@ query (true);
 
     assert w == weights
 
-    assert domX[y] == [Real(0.0), Real(2.0)]
+    assert domX[y] == [0.0, 2.0]
         
     phi1 = GT(x, Real(1.5))
     phi2 = LE(x, Real(1.5))
@@ -148,7 +148,7 @@ query (x<=8);
 
     assert w == weights
 
-    assert domX[x] == [Real(0.0), Real(10.0)]
+    assert domX[x] == [0.0, 10.0]
         
     phi1 = GT(x, Real(2))
     phi2 = LE(x, Real(8))
@@ -178,8 +178,8 @@ var -5.0..5:y;      % here the second element is int
     
     assert w == weights
     
-    assert domX[x] == [Real(-5.0), Real(5.0)]
-    assert domX[y] == [Real(-5.0), Real(5.0)]
+    assert domX[x] == [-5.0, 5.0]
+    assert domX[y] == [-5.0, 5.0]
     
     assert queries == []
     
@@ -207,7 +207,7 @@ var min..max:x;
     
     assert w == weights
     
-    assert domX[x] == [Real(0.0), Real(10.0)]
+    assert domX[x] == [0.0, 10.0]
     
     assert queries == []
     

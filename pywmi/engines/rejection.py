@@ -9,7 +9,7 @@ from pywmi import evaluate, Domain
 from pywmi.engine import Engine
 from pywmi.sample import uniform
 from pywmi.smt_math import LinearInequality, Polynomial
-from .integration_backend import IntegrationBackend
+from .convex_integrator import ConvexIntegrationBackend
 
 
 def sample(n_boolean_vars, bounds, n):
@@ -103,7 +103,7 @@ class RejectionEngine(Engine):
         return "rej" + (":n{}".format(self.sample_count))
 
 
-class RejectionIntegrator(IntegrationBackend):
+class RejectionIntegrator(ConvexIntegrationBackend):
     def __init__(self, sample_count, bounding_box=False):
         super().__init__(False)
         self.sample_count = sample_count

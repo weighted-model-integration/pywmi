@@ -1,10 +1,8 @@
+import pysmt.shortcuts as smt
 import pytest
 
-from examples import inspect_manual, inspect_density, inspect_infinite_without_domain_bounds, get_examples
-from pywmi import RejectionEngine, Domain, XaddEngine, smt_to_nested
-
-import pysmt.shortcuts as smt
-
+from .examples import inspect_manual, inspect_density, inspect_infinite_without_domain_bounds, get_examples
+from pywmi import RejectionEngine, Domain, XaddEngine
 from pywmi.transform import normalize_formula
 
 SAMPLE_COUNT = 1000000
@@ -23,9 +21,9 @@ def test_infinite():
     inspect_infinite_without_domain_bounds(rejection_factory, False)
 
 
-def test_examples():
-    for density in get_examples():
-        inspect_density(rejection_factory, density)
+@pytest.mark.parametrize("e", get_examples())
+def test_examples(e):
+    inspect_density(rejection_factory, e)
 
 
 @pytest.mark.skip("Not ready")
