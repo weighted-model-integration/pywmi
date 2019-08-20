@@ -74,7 +74,6 @@ def positive(required_sample_count, domain, support, weight=None, sample_pool_si
         new_labels = evaluate(domain, support, new_samples)
         new_pos_samples = new_samples[new_labels]
         if pos_samples.shape[0] > 0:
-            print(pos_samples, new_pos_samples)
             pos_samples = numpy.concatenate((pos_samples, new_pos_samples), axis=0)
         else:
             pos_samples = new_pos_samples

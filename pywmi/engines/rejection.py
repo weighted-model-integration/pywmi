@@ -139,8 +139,7 @@ class RejectionIntegrator(ConvexIntegrationBackend):
                 samples = uniform(domain, self.sample_count)
                 labels = evaluate(domain, formula, samples)
                 samples = samples[labels == 1]
-                print()
-                print(min(samples[:, -1]))
+
                 try:
                     samples.sort(axis=0)
                     std = abs(samples[0:-1, :] - samples[1:, :]).std(axis=0)
