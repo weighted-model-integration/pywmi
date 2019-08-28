@@ -1,5 +1,6 @@
 import pysmt.shortcuts as smt
 import pytest
+from pysmt.exceptions import NoSolverAvailableError
 
 from pywmi import Domain
 from pywmi.engines.xsdd.smt_to_sdd import SddConversionWalker, convert_function, recover_formula
@@ -10,6 +11,12 @@ try:
     from pysdd.sdd import SddManager
 except ImportError:
     SddManager = None
+
+try:
+    with smt.Solver() as solver:
+        smt_solver_available = True
+except NoSolverAvailableError:
+    smt_solver_available = False
 
 pytestmark = pytest.mark.skipif(SddManager is None, reason="pysdd is not installed")
 
@@ -24,7 +31,7 @@ def test_convert_weight():
     print(converter.abstractions)
     print(converter.var_to_lit)
 
-
+@pytest.mark.skipif(not smt_solver_available, reason="No SMT solver available")
 def test_convert_support():
     converter = SddConversionWalker(SddManager(), PolynomialAlgebra(), True)
     x, y = smt.Symbol("x", smt.REAL), smt.Symbol("y", smt.REAL)
