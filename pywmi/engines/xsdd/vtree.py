@@ -1,4 +1,10 @@
-from pysdd.sdd import Vtree, SddManager
+from pywmi.errors import InstallError
+
+try:
+    from pysdd.sdd import Vtree, SddManager
+except ImportError:
+    SddManager, Vtree, SddNode = None, None, None
+
 from typing import Dict
 
 from pysmt.fnode import FNode
@@ -8,6 +14,9 @@ from pywmi.smt_print import pretty_print
 
 
 def get_new_manager(domain: Domain, abstractions: Dict[FNode, int], var_to_lit: Dict[str, int], strategy: str):
+    if SddManager is None:
+        raise InstallError("The PySDD library is not installed")
+
     def key(_t):
         if len(_t[0].get_free_variables()) == 0:
             return len(domain.real_vars), -1
