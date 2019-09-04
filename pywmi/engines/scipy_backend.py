@@ -17,11 +17,11 @@ class ScipyOptimizer(ConvexOptimizationBackend):
     def __init__(self):
         super().__init__(True)
         self.method = 'trust-constr'
-        # supported methods: trust-constr, SLSQP, COBYLA
+        # supported methods: trust-constr, SLSQP
 
     @staticmethod
     def get_opt_bounds(domain: Domain, convex_bounds: List[LinearInequality]) -> (List, List):
-        a = [[bound.a(var) for var in sorted(domain.real_vars)] for bound in convex_bounds]
+        a = [np.array([bound.a(var) for var in sorted(domain.real_vars)]) for bound in convex_bounds]
         b = [bound.b() for bound in convex_bounds]
         return np.array(a), np.array(b)
 
@@ -44,8 +44,7 @@ class ScipyOptimizer(ConvexOptimizationBackend):
                        bounds=np.array(bounds_arr), method="simplex")
 
     def optimize(self, domain, convex_bounds: List[LinearInequality],
-                 polynomial: Polynomial, minimization: bool = True, iterations: int = 100)\
-            -> dict or None:
+                 polynomial: Polynomial, minimization: bool = True) -> dict or None:
         lower_bounds, upper_bounds = domain.get_ul_bounds()
         a, b = self.get_opt_bounds(domain, convex_bounds)
 
@@ -58,7 +57,7 @@ class ScipyOptimizer(ConvexOptimizationBackend):
 
         if self.method == 'trust-constr':
             constraints = LinearConstraint(a, np.full(len(b), -np.inf), b)
-        elif self.method in {'SLSQP', 'COBYLA'}:
+        elif self.method == 'SLSQP':
             constraints = {'type': 'ineq',
                            'fun': lambda x: np.array([b[i] - (np.dot(x, a[i]))
                                                       for i in range(len(convex_bounds))]),
@@ -72,10 +71,9 @@ class ScipyOptimizer(ConvexOptimizationBackend):
                           initial_value,
                           method=self.method,
                           constraints=constraints,
-                          jac=self.compute_gradient(domain, polynomial, sign)
-                          if self.method != 'COBYLA' else None,
+                          jac=self.compute_gradient(domain, polynomial, sign),
                           options={'disp': True},
-                          bounds=bounds if self.method != 'COBYLA' else None)
+                          bounds=bounds)
 
         return {'value': sign * result.fun,
                 'point': dict(list(zip(sorted(domain.real_vars), result.x)))}

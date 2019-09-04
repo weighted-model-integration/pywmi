@@ -56,13 +56,13 @@ def main():
     # print("Time XSDD(PSI): {:.4f}s".format(times[-1] - times[-2]))
     
     # XSDD:OPT-ipopt
-    result_opt = XsddOptimizationEngine(density.domain, density.support,
-                                        density.weight, IpoptOptimizer()).\
-        compute_optimum(add_bounds=False, minimization=False)
-    print("Result XSDD_OPT(ipopt):", result_opt['value'], "at", result_opt['point'])
-    times.append(time.time())
-    print("Time XSDD_OPT(ipopt): {:.4f}s".format(times[-1] - times[-2]))
-    print()
+    # result_opt = XsddOptimizationEngine(density.domain, density.support,
+    #                                     density.weight, IpoptOptimizer()).\
+    #     compute_optimum(add_bounds=False, minimization=False)
+    # print("Result XSDD_OPT(ipopt):", result_opt['value'], "at", result_opt['point'])
+    # times.append(time.time())
+    # print("Time XSDD_OPT(ipopt): {:.4f}s".format(times[-1] - times[-2]))
+    # print()
 
     # XSDD:OPT-scipy
     result_opt = XsddOptimizationEngine(density.domain, density.support,

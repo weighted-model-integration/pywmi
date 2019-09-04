@@ -22,10 +22,9 @@ class IpoptOptimizer(ConvexOptimizationBackend):
 
     @staticmethod
     def get_opt_bounds(domain: Domain, convex_bounds: List[LinearInequality]) -> (List, List):
-        a = np.array([np.array([bound.a(var) for var in sorted(domain.real_vars)])
-                     for bound in convex_bounds])
+        a = [np.array([bound.a(var) for var in sorted(domain.real_vars)]) for bound in convex_bounds]
         b = [bound.b() for bound in convex_bounds]
-        return a, b
+        return np.array(a), np.array(b)
 
     class OptProblem(object):
         def __init__(self, domain, polynomial, convex_bounds, sign):
