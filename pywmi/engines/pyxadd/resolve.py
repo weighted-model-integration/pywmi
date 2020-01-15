@@ -110,7 +110,7 @@ class ResolveIntegrator(object):
         logger.debug("%s resolve %s var=%s lb=%s ub=%s", prefix, node_id, var, lb, ub)
 
         if self.cache_result:
-            key = (node_id, ub, lb)
+            key = (var.symbol_name(), node_id, ub, lb)
             self.cache_calls += 1
             # print key, self.cache_calls, self.cache_hits
             if key in self.resolve_cache:
