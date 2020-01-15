@@ -25,6 +25,7 @@ EXTRAS = {
 }
 
 # Distribute: python setup.py upload
+# Requires: pip install twine wheel
 
 here = os.path.abspath(os.path.dirname(__file__))
 
