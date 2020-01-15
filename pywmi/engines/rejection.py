@@ -48,6 +48,12 @@ class RejectionEngine(Engine):
         else:
             return approx_volume
 
+    def copy(self, domain, support, weight):
+        return RejectionEngine(domain, support, weight, self.sample_count, self.seed)
+
+    def __str__(self):
+        return "rej" + (":n{}".format(self.sample_count))
+
     def compute_probabilities(self, queries, sample_count=None, add_bounds=False):
         sample_count = sample_count if sample_count is not None else self.sample_count
         samples = uniform(self.domain, sample_count)
@@ -74,12 +80,6 @@ class RejectionEngine(Engine):
                     results.append(None)
 
         return results
-
-    def copy(self, domain, support, weight):
-        return RejectionEngine(domain, support, weight, self.sample_count, self.seed)
-
-    def __str__(self):
-        return "rej" + (":n{}".format(self.sample_count))
 
 
 class RejectionIntegrator(ConvexIntegrationBackend):
