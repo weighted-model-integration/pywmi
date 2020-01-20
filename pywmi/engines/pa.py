@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from autodora.parallel import run_command
 from pysmt.exceptions import NoSolverAvailableError
-from pysmt.shortcuts import Solver
+from pysmt.shortcuts import Solver, Bool
 
 from pywmi import Density
 from pywmi.engine import Engine
@@ -22,17 +22,17 @@ except NoSolverAvailableError:
     pysmt_installed = False
 
 try:
-    from wmipa import Weights, WMI
+    from wmipa import WMI
 except ImportError:
     lib_filename = os.path.join(os.path.dirname(__file__), "lib", "pa", "wmi-pa-master")
     if os.path.exists(lib_filename):
         sys.path.append(lib_filename)
         try:
-            from wmipa import Weights, WMI
+            from wmipa import WMI
         except ImportError:
             raise RuntimeError("Corrupted PA install")
     else:
-        Weights, WMI = None, None
+        WMI = None
 
 
 logger = logging.getLogger(__name__)
@@ -73,13 +73,12 @@ class PredicateAbstractionEngine(Engine):
         return "pa" + ("" if self.timeout is None else ":t{}".format(self.timeout))
 
     @staticmethod
-    def compute_volume_pa(domain, support, weight):
+    def compute_volume_pa(domain, support, weight, convex_backend=None):
         # noinspection PyCallingNonCallable
-        solver, weights = WMI(), Weights(weight)
-        return solver.compute(
-            support & weights.labelling,
-            weights,
-            WMI.MODE_PA,
+        solver = WMI(support, weight, convex_backend=convex_backend)
+        return solver.computeWMI(
+            Bool(True),
+            mode=WMI.MODE_PA,
             domA=set(domain.get_bool_symbols()),
             domX=set(domain.get_real_symbols())
         )[0]
