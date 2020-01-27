@@ -184,11 +184,13 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         # return psipy.integrate(variables, expression)
 
     def to_float(self, real_value):
+        real_value = self.times(real_value,self.symbol("1.0"))
         string_value = str(psipy.simplify(real_value))
-        if "/" in string_value:
-            parts = string_value.split("/", 1)
-            return float(parts[0]) / float(parts[1])
+        # if "/" in string_value:
+        #     parts = string_value.split("/", 1)
+        #     return float(parts[0]) / float(parts[1])
         return float(string_value)
+
 
     def get_flat_expression(self, expression_with_conditions):
         result = psipy.filter_iverson(expression_with_conditions)
