@@ -157,9 +157,9 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         assert isinstance(float_constant, (float, int))
         if int(float_constant) == float_constant:
             return psipy.S("{}".format(int(float_constant)))
-        # return psipy.S("{:.32f}".format(float_constant))
-        fraction = Fraction(float_constant).limit_denominator()
-        return psipy.S("{}/{}".format(fraction.numerator, fraction.denominator))
+        return psipy.S("{:.64f}".format(float_constant))
+        # fraction = Fraction(float_constant).limit_denominator()
+        # return psipy.S("{}/{}".format(fraction.numerator, fraction.denominator))
 
     def less_than(self, a, b):
         return psipy.less(a, b)
