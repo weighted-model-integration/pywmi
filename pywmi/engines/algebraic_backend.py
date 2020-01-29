@@ -184,7 +184,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         # return psipy.integrate(variables, expression)
 
     def to_float(self, real_value):
-        real_value = self.times(real_value,self.symbol("1.0"))
+        # real_value = self.times(real_value,self.symbol("1.0"))
         string_value = str(psipy.simplify(real_value))
         # if "/" in string_value:
         #     parts = string_value.split("/", 1)
