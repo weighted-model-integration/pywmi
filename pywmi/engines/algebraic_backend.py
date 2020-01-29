@@ -162,10 +162,10 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         # return psipy.S("{}/{}".format(fraction.numerator, fraction.denominator))
 
     def less_than(self, a, b):
-        return psipy.less(a, b)
+        return psipy.simplify(psipy.less(a, b))
 
     def less_than_equal(self, a, b):
-        return psipy.less_equal(a, b)
+        return psipy.simplify(psipy.less_equal(a, b))
 
     # def power(self, a, power):
     #     if not isinstance(power, int) and int(power) != power:
@@ -176,6 +176,9 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     #     return result
 
     def integrate(self, domain: Domain, expression, variables=None):
+        # epxression = psipy.simplify(expression)
+        # print(expression)
+        # print("")
         if self.integrate_poly:
             result = psipy.integrate_poly(variables, expression)
         else:
