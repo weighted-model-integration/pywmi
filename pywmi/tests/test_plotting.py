@@ -6,7 +6,7 @@ from pywmi import Domain, nested_to_smt
 from pywmi.plot import plot_data, plot_formula
 from pywmi.sample import uniform
 from pywmi.smt_check import evaluate
-from pywmi.temp import TemporaryFile
+from pywmi.util import TemporaryFile
 
 
 def _test_plot_data():

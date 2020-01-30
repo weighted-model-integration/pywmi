@@ -156,7 +156,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     def real(self, float_constant):
         assert isinstance(float_constant, (float, int))
         if int(float_constant) == float_constant:
-            return psipy.S("{}".format(int(float_constant)))
+            return psipy.S(str(int(float_constant)))
         # return psipy.S("{:.32f}".format(float_constant))
         fraction = Fraction(float_constant).limit_denominator()
         return psipy.S("{}/{}".format(fraction.numerator, fraction.denominator))
@@ -184,6 +184,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         # return psipy.integrate(variables, expression)
 
     def to_float(self, real_value):
+        real_value = psipy.mul(real_value,psipy.S("1.0"))
         string_value = str(psipy.simplify(real_value))
         if "/" in string_value:
             parts = string_value.split("/", 1)

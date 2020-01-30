@@ -4,7 +4,7 @@ import shutil
 import urllib.request
 import zipfile
 
-from pywmi.temp import TemporaryFile
+from pywmi.util import TemporaryFile
 
 
 def install_xadd(upgrade=False, remove=False):

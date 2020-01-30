@@ -8,29 +8,13 @@ from subprocess import check_output, DEVNULL, CalledProcessError
 from typing import List
 
 from pysmt.exceptions import InternalSolverError
+import pysmt.shortcuts as smt
 
 from pywmi.smt_math import LinearInequality, Polynomial
 from .convex_integrator import ConvexIntegrationBackend
-import pysmt.shortcuts as smt
+from pywmi.util import TemporaryFile
 
 logger = logging.getLogger(__name__)
-
-
-class TemporaryFile(object):
-    def __init__(self, directory=None, suffix=None):
-        self.directory = directory
-        self.tmp_filename = None
-        self.suffix = suffix
-
-    def __enter__(self):
-        tmp_file = tempfile.mkstemp(suffix=self.suffix, dir=self.directory)
-        self.tmp_filename = tmp_file[1]
-        logger.info("Created tmp file: {}".format(self.tmp_filename))
-        return self.tmp_filename
-
-    def __exit__(self, t, value, traceback):
-        if os.path.exists(self.tmp_filename):
-            os.remove(self.tmp_filename)
 
 
 class LatteIntegrator(ConvexIntegrationBackend):

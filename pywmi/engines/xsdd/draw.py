@@ -3,13 +3,12 @@ import subprocess
 from pywmi.engines.xsdd.semiring import SddWalker, walk
 import pysmt.shortcuts as smt
 
-from pywmi.temp import TemporaryFile
+from pywmi.util import TemporaryFile
 
 
 class SddToDot(SddWalker):
-    def __init__(self, abstractions, var_to_lit, node_annotations=None, edge_annotations=None):
-        self.reverse_abstractions = {v: k for k, v in abstractions.items()}
-        self.lit_to_var = {v: k for k, v in var_to_lit.items()}
+    def __init__(self, literals, node_annotations=None, edge_annotations=None):
+        self.literals = literals
         self.vertex_counter = 0
         self.node_annotations = node_annotations or dict()
         self.edge_annotations = edge_annotations or dict()
@@ -76,18 +75,18 @@ class SddToDot(SddWalker):
 
     def walk_literal(self, l, node):
         vertex_id = self.get_id(node.id)
-        if abs(l) in self.lit_to_var:
-            label = "[{}] {}".format(node.id, ("~" if l < 0 else "") + str(self.lit_to_var[abs(l)]))
+        abstraction = self.literals[self.literals.inv_numbered[abs(l)]]
+        if isinstance(abstraction, str):
+            label = "[{}] {}".format(node.id, ("~" if l < 0 else ("" + abstraction)))
             if node.id in self.node_annotations:
                 label += ": {}".format(self.node_annotations[node.id])
             return vertex_id, {
                 "{} [label=\"{}\",color=black,shape=rectangle];".format(vertex_id, label)
             }, set(), node.id
         else:
-            inequality = self.reverse_abstractions[abs(l)]
             if l < 0:
-                inequality = smt.simplify(~inequality)
-            label = "[{}] {}".format(node.id, str(inequality))
+                abstraction = smt.simplify(~abstraction)
+            label = "[{}] {}".format(node.id, str(abstraction))
             if node.id in self.node_annotations:
                 label += ": {}".format(self.node_annotations[node.id])
             return vertex_id, {
@@ -95,24 +94,24 @@ class SddToDot(SddWalker):
             }, set(), node.id
 
 
-def sdd_to_dot(diagram, abstractions, var_to_lit, node_annotations=None, edge_annotations=None):
-    walker = SddToDot(abstractions, var_to_lit, node_annotations, edge_annotations)
+def sdd_to_dot(diagram, literals, node_annotations=None, edge_annotations=None):
+    walker = SddToDot(literals, node_annotations, edge_annotations)
     _, nodes, edges, _node_id = walk(walker, diagram)
     return "digraph G {{\n{}\n{}\n}}".format("\n".join(nodes), "\n".join(edges))
 
 
-def sdd_to_png_file(diagram, abstractions, var_to_lit, filename, node_annotations=None, edge_annotations=None):
+def sdd_to_png_file(diagram, literals, filename, node_annotations=None, edge_annotations=None):
     if not filename.endswith(".png"):
         filename = filename + ".png"
 
     with TemporaryFile() as f:
         with open(f, "w") as ref:
-            print(sdd_to_dot(diagram, abstractions, var_to_lit, node_annotations, edge_annotations), file=ref)
+            print(sdd_to_dot(diagram, literals, node_annotations, edge_annotations), file=ref)
         subprocess.call(["dot", "-Tpng", f, "-o", filename])
 
 
-def sdd_to_dot_file(diagram, abstractions, var_to_lit, filename, node_annotations=None, edge_annotations=None):
+def sdd_to_dot_file(diagram, literals, filename, node_annotations=None, edge_annotations=None):
     if not filename.endswith(".dot"):
         filename = filename + ".dot"
     with open(filename, "w") as ref:
-        print(sdd_to_dot(diagram, abstractions, var_to_lit, node_annotations, edge_annotations), file=ref)
+        print(sdd_to_dot(diagram, literals, node_annotations, edge_annotations), file=ref)

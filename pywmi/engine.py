@@ -6,7 +6,7 @@ from pysmt.shortcuts import simplify
 from pysmt.typing import BOOL
 
 from pywmi import Domain, Density
-from pywmi.temp import TemporaryFile
+from pywmi.util import TemporaryFile
 
 logger = logging.getLogger(__name__)
 

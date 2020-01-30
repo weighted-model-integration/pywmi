@@ -11,7 +11,7 @@ from pysmt.shortcuts import Real, TRUE
 from pywmi import Density
 from pywmi.errors import InstallError
 from pywmi.smt_math import LinearInequality, Polynomial
-from pywmi.temp import TemporaryFile
+from pywmi.util import TemporaryFile
 from .convex_integrator import ConvexIntegrationBackend
 from pywmi.engine import Engine
 import pysmt.shortcuts as smt
