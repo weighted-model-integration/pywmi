@@ -157,9 +157,9 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         assert isinstance(float_constant, (float, int))
         if int(float_constant) == float_constant:
             return psipy.S("{}".format(int(float_constant)))
-        return psipy.S("{:.64f}".format(float_constant))
-        # fraction = Fraction(float_constant).limit_denominator()
-        # return psipy.S("{}/{}".format(fraction.numerator, fraction.denominator))
+        # return psipy.S("{:.64f}".format(float_constant))
+        fraction = Fraction(float_constant).limit_denominator()
+        return psipy.S("{}/{}".format(fraction.numerator, fraction.denominator))
 
     def less_than(self, a, b):
         return psipy.simplify(psipy.less(a, b))
@@ -176,9 +176,6 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     #     return result
 
     def integrate(self, domain: Domain, expression, variables=None):
-        # epxression = psipy.simplify(expression)
-        # print(expression)
-        # print("")
         if self.integrate_poly:
             result = psipy.integrate_poly(variables, expression)
         else:
@@ -187,7 +184,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         # return psipy.integrate(variables, expression)
 
     def to_float(self, real_value):
-        # real_value = self.times(real_value,self.symbol("1.0"))
+        real_value = self.times(real_value,self.symbol("1.0"))
         string_value = str(psipy.simplify(real_value))
         # if "/" in string_value:
         #     parts = string_value.split("/", 1)
