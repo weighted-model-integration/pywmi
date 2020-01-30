@@ -4,3 +4,7 @@ class InstallError(RuntimeError):
 
 class InfiniteVolumeError(RuntimeError):
     pass
+    
+    
+class ParsingFileError(RuntimeError):
+    pass

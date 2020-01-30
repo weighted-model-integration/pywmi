@@ -2,18 +2,30 @@ import pytest
 from pysmt.shortcuts import Ite, Real
 
 from pywmi.engines.latte_backend import LatteIntegrator
+from pywmi.errors import InstallError
 from .examples import inspect_manual, get_examples, inspect_density
 from pywmi import Domain, RejectionEngine, XaddEngine
 from pywmi import XsddEngine
 from pywmi.engines.xadd import XaddIntegrator
 
+missing_installs = []
+
 try:
     import pysdd
-    pysdd_installed = True
 except ImportError:
-    pysdd_installed = False
+    missing_installs.append("pysdd")
 
-pytestmark = pytest.mark.skipif(not pysdd_installed, reason="pysdd is not installed")
+try:
+    import psipy
+except ImportError:
+    missing_installs.append("PSI")
+
+try:
+    LatteIntegrator()
+except InstallError:
+    missing_installs.append("Latte")
+
+pytestmark = pytest.mark.skipif(len(missing_installs) > 0, reason=", ".join(missing_installs) + " not installed")
 
 ERROR = 0.1
 REL_ERROR = 0.000001

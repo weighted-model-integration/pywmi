@@ -17,7 +17,6 @@ try:
     from pysdd.sdd import SddManager, SddNode, Vtree
 except ImportError:
     SddManager, Vtree, SddNode = None, None, None
-    raise
 
 
 class SddIterator:

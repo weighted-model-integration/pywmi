@@ -7,10 +7,11 @@ import numpy as np
 import polytope
 import pysmt.shortcuts as smt
 
+
 from pysmt.fnode import FNode
 from pysmt.typing import REAL
 
-from pywmi import Domain, SmtWalker
+from pywmi import Domain, SmtWalker, Density, evaluate
 from .smt_math import LinearInequality
 
 if platform.system() == "Darwin":
@@ -225,6 +226,62 @@ def plot_combined(feat_x: Union[str, int],
 
     if name is not None:
         plt.savefig(name if name.endswith(".png") else "{}.png".format(name))
+    else:
+        plt.show()
+    plt.close(fig)
+
+
+def plot_density(density: Density, feat_x: Optional[str] = None, feat_y: Optional[str] = None,
+                 filename: Optional[str] = None, d3=False, cmap=None):
+    cmap = cmap or "plasma"
+    from matplotlib import cm
+    from mpl_toolkits.mplot3d import axes3d, Axes3D
+
+    domain = density.domain
+    row_vars = domain.bool_vars[:int(len(domain.bool_vars) / 2)]
+    col_vars = domain.bool_vars[int(len(domain.bool_vars) / 2):]
+    sf_size = 2
+
+    fig = plt.figure(num=None, figsize=(2 ** len(col_vars) * sf_size, 2 ** len(row_vars) * sf_size), dpi=300)
+    feat_x = feat_x if feat_x else domain.real_vars[0]
+    feat_y = feat_y if feat_y else domain.real_vars[1]
+
+    if d3:
+        ax = fig.add_subplot(1, 1, 1, projection='3d')
+    else:
+        ax = fig.add_subplot(1, 1, 1)
+
+    assert len(domain.bool_vars) == 0  # Otherwise the max and min have to be calculated globally
+
+    support = smt.simplify(density.support)
+    weight = smt.simplify(density.weight)
+
+    if d3:
+        n = 1000
+    else:
+        n = 100
+    x_arr = np.linspace(domain.var_domains[feat_x][0], domain.var_domains[feat_x][1], n)
+    y_arr = np.linspace(domain.var_domains[feat_y][0], domain.var_domains[feat_y][1], n)
+
+    x, y = np.meshgrid(x_arr, y_arr)
+    z = np.zeros(x.shape)
+    for i in range(x.shape[1]):
+        data = np.concatenate((x[:, i][:, np.newaxis], y[:, i][:, np.newaxis]), axis=1)
+        labels = evaluate(domain, support, data)
+        z[:, i] = evaluate(domain, weight, data) * labels
+
+    if d3:
+        ax.plot_surface(x, y, z, cmap=cmap)
+        ax.view_init(30, 70)
+    else:
+        ax.scatter(x, y, c=z, cmap=cmap, s=1)
+
+    plt.tick_params(axis='both', which='major', labelsize=6)
+    ax.set_xlim(domain.var_domains[feat_x])
+    ax.set_ylim(domain.var_domains[feat_y])
+
+    if filename is not None:
+        plt.savefig(filename if filename.endswith(".png") else "{}.png".format(filename))
     else:
         plt.show()
     plt.close(fig)
