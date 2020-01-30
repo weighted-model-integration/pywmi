@@ -173,108 +173,6 @@ class VariableTagAnalysis(SddWalker):
         return True, groups
 
 
-class FactorizedIntegrator:
-    def __init__(self,
-                 domain: Domain,
-                 abstractions: Dict,
-                 var_to_lit: Dict,
-                 groups: Dict[int, Tuple[Set[str], Polynomial]],
-                 node_to_groups: Dict,
-                 labels: Dict,
-                 algebra: Union[AlgebraBackend, IntegrationBackend]) -> None:
-        self.domain = domain
-        self.reverse_abstractions = {v: k for k, v in abstractions.items()}
-        self.lit_to_var = {v: k for k, v in var_to_lit.items()}
-        self.groups = groups
-        self.node_to_groups = node_to_groups
-        self.labels = labels
-        self.algebra = algebra
-        self.hits = 0
-        self.misses = 0
-
-    def recursive(self, node, tags=None, cache=None, order=None):
-        if cache is None:
-            cache = dict()
-
-        if tags is None:
-            tags = self.node_to_groups[node.id]
-
-        key = (node, frozenset(tags))
-        if key in cache:
-            self.hits += 1
-            return cache[key]
-        else:
-            self.misses += 1
-
-        if node.is_false():
-            result = self.walk_false()
-            cache[key] = result
-            return result
-        if node.is_true():
-            result = self.walk_true()
-            cache[key] = result
-            return result
-
-        if node.is_decision():
-            result = self.algebra.zero()
-            for prime, sub in node.elements():
-                result = self.algebra.plus(result, self.walk_and(prime, sub, tags, cache, order))
-        else:
-            expression = self.walk_literal(node)
-            logger.debug("node LIT(%s)", node.id)
-            result = self.integrate(expression, tags)
-
-        cache[key] = result
-        return result
-
-    def walk_true(self):
-        return self.algebra.one()
-
-    def walk_false(self):
-        return self.algebra.zero()
-
-    def walk_and(self, prime, sub, tags, cache, order):
-        if prime.is_false() or sub.is_false():
-            return self.algebra.zero()
-        tags_prime = self.node_to_groups[prime.id] & tags
-        tags_sub = self.node_to_groups[sub.id] & tags
-        tags_shared = tags_prime & tags_sub
-        if order and len(tags_shared) > 0:
-            first_index = min(order.index(tag) for tag in tags_shared)
-            tags_shared |= (tags & set(order[first_index:]))
-        prime_result = self.recursive(prime, tags_prime - tags_shared, cache, order)
-        sub_result = self.recursive(sub, tags_sub - tags_shared, cache, order)
-        logger.debug("node AND(%s, %s)", prime.id, sub.id)
-        return self.integrate(self.algebra.times(prime_result, sub_result),
-                              [e for e in order if e in tags_shared] if order else tags_shared)
-
-    def walk_literal(self, node):
-        literal = node.literal
-        if abs(literal) in self.lit_to_var:
-            var = self.lit_to_var[abs(literal)]
-            if var in self.labels:
-                expr = Polynomial.from_smt(self.labels[var][0 if (literal > 0) else 1]).to_expression(self.algebra)
-            else:
-                expr = self.algebra.one()
-        else:
-            f = self.reverse_abstractions[abs(literal)]
-            if literal < 0:
-                f = ~f
-            # expr = LinearInequality.from_smt(f).scale_to_integer().to_expression(self.algebra)
-            expr = self.algebra.parse_condition(f)
-
-        return expr
-
-    def integrate(self, expr, tags):
-        # type: (Any, Iterable[int]) -> Any
-        result = expr
-        for group_id in tags:
-            variables, poly = self.groups[group_id]
-            group_expr = self.algebra.times(result, poly.to_expression(self.algebra))
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug("%s: %s", variables, str(group_expr))
-            result = self.algebra.integrate(self.domain, group_expr, variables)
-        return result
 
 
 class XsddEngine(Engine):
@@ -284,7 +182,6 @@ class XsddEngine(Engine):
             support,
             weight,
             convex_backend: Optional[ConvexIntegrationBackend] = None,
-            factorized=False,
             manager=None,
             algebra: Optional[IntegratorAndAlgebra] = None,
             find_conflicts=False,
@@ -296,7 +193,6 @@ class XsddEngine(Engine):
         if SddManager is None:
             from pywmi.errors import InstallError
             raise InstallError("NativeXsddEngine requires the pysdd package")
-        self.factorized = factorized
         self.manager = manager or SddManager()
         self.algebra = algebra
         self.backend = convex_backend
@@ -368,140 +264,42 @@ class XsddEngine(Engine):
 
         abstractions, var_to_lit = dict(), dict()
 
-        algebra = PolynomialAlgebra()
+        poly_algebra = PolynomialAlgebra()
         support = (smt.And(*self.collect_conflicts()) & self.support) if self.find_conflicts else self.support
-        if self.factorized:
-            labels, weight = extract_labels_and_weight(self.weight)
-            logger.debug("Weight %s", self.weight)
-            logger.debug("Labels %s", labels)
-            logger.debug("New weight %s", weight)
-        else:
-            labels, weight = None, self.weight
 
-        support_sdd = convert_formula(support, self.manager, algebra, abstractions, var_to_lit)
-        piecewise_function = convert_function(weight, self.manager, algebra, abstractions, var_to_lit)
+        labels, weight = None, self.weight
+
+        support_sdd = convert_formula(support, self.manager, poly_algebra, abstractions, var_to_lit)
+        piecewise_function = convert_function(weight, self.manager, poly_algebra, abstractions, var_to_lit)
 
         if self.balance:
             self.manager = get_new_manager(self.domain, abstractions, var_to_lit, self.balance)
-            support_sdd = convert_formula(support, self.manager, algebra, abstractions, var_to_lit)
-            piecewise_function = convert_function(weight, self.manager, algebra, abstractions, var_to_lit)
+            support_sdd = convert_formula(support, self.manager, poly_algebra, abstractions, var_to_lit)
+            piecewise_function = convert_function(weight, self.manager, poly_algebra, abstractions, var_to_lit)
 
-        factorized_algebra = self.algebra
-        if factorized_algebra is not None and isinstance(factorized_algebra, PyXaddAlgebra):
-            # TODO Booleans in order?
-            for test, lit in sorted(abstractions.items(), key=lambda t: t[1]):
-                factorized_algebra.pool.bool_test(Decision(test))
+        integration_algebra = self.algebra
 
-        volume = factorized_algebra.zero()
-        if self.factorized:
-            terms_dict = dict()
-            for w_weight, world_support in piecewise_function.sdd_dict.items():
-                logger.debug("ww %s", w_weight)
-                support = world_support
-                for term in w_weight.get_terms():
-                    if term in terms_dict:
-                        terms_dict[term] = self.manager.disjoin(terms_dict[term], support)
-                    else:
-                        terms_dict[term] = support
+        volume = integration_algebra.zero()
 
-            for key in terms_dict:
-                terms_dict[key] = support_sdd & terms_dict[key]
+        for w_weight, world_support in piecewise_function.sdd_dict.items():
+            support = support_sdd & world_support
+            if not self.backend:
+                semiring = NonConvexWMISemiring(integration_algebra, abstractions, var_to_lit)
+                expression, variables = amc(semiring, support)
+                expression = integration_algebra.times(expression, w_weight.to_expression(integration_algebra))
+                volume = integration_algebra.integrate(self.domain, expression, self.domain.real_vars)
 
-            for support in terms_dict.values():
-                support.ref()
-
-            if self.minimize:
-                self.manager.minimize()
-
-            index = 0
-            for term, support in terms_dict.items():
-                logger.debug("term %s", term)
-                # TODO BOOLEAN WORLDS
-
-                variable_groups = self.get_variable_groups_poly(term, self.domain.real_vars)
-
-                if self.ordered:
-                    sort_key = lambda t: max(self.domain.real_vars.index(v)
-                                             for v in t[1][0]) if len(t[1][0]) > 0 else -1
-                    group_order = [t[0] for t in sorted(enumerate(variable_groups), key=sort_key, reverse=False)]
-                    logger.debug("variable groups %s", variable_groups)
-                    logger.debug("group order %s", group_order)
-                    logger.debug("real variables %s", self.domain.real_vars)
-                else:
-                    group_order = None
-
-                def get_group(_v):
-                    for i, (_vars, _node) in enumerate(variable_groups):
-                        if _v in _vars:
-                            return i
-                    raise ValueError("Variable {} not found in any group ({})".format(_v, variable_groups))
-
-                literal_to_groups = dict()
-                for inequality, literal in abstractions.items():
-                    inequality_variables = LinearInequality.from_smt(inequality).variables
-                    inequality_groups = [get_group(v) for v in inequality_variables]
-                    literal_to_groups[literal] = inequality_groups
-                    literal_to_groups[-literal] = inequality_groups
-
-                for var, (true_label, false_label) in labels.items():
-                    true_inequality_groups = [get_group(v) for v in map(str, true_label.get_free_variables())]
-                    false_inequality_groups = [get_group(v) for v in map(str, false_label.get_free_variables())]
-                    literal_to_groups[var_to_lit[var]] = true_inequality_groups
-                    literal_to_groups[-var_to_lit[var]] = false_inequality_groups
-
-                tag_analysis = VariableTagAnalysis(literal_to_groups)
-                walk(tag_analysis, support)
-                node_to_groups = tag_analysis.node_to_groups
-                if logger.isEnabledFor(logging.DEBUG):
-                    sdd_to_png_file(support, abstractions, var_to_lit, "exported_{}".format(index), node_to_groups)
-                index += 1
-
-                group_to_vars_poly = {i: g for i, g in enumerate(variable_groups)}
-                # all_groups = frozenset(i for i, e in group_to_vars_poly.items() if len(e[0]) > 0)
-
-                constant_group_indices = [i for i, e in group_to_vars_poly.items() if len(e[0]) == 0]
-                integrator = FactorizedIntegrator(self.domain, abstractions, var_to_lit, group_to_vars_poly,
-                                                  node_to_groups, labels, factorized_algebra)
-                logger.debug("group order %s", group_order)
-                expression = integrator.recursive(support, order=group_order)
-                # expression = integrator.integrate(expression, node_to_groups[support.id])
-                logger.debug("hits %s misses %s", integrator.hits, integrator.misses)
-                bool_vars = amc(BooleanFinder(abstractions, var_to_lit), support)
-                missing_variable_count = len(self.domain.bool_vars) - len(bool_vars)
-                bool_worlds = factorized_algebra.power(factorized_algebra.real(2), missing_variable_count)
-                result_with_booleans = factorized_algebra.times(expression, bool_worlds)
-                if len(constant_group_indices) == 1:
-                    constant_poly = group_to_vars_poly[constant_group_indices[0]][1]
-                    constant = constant_poly.to_expression(factorized_algebra)
-                elif len(constant_group_indices) == 0:
-                    constant = factorized_algebra.one()
-                else:
-                    raise ValueError("Multiple constant groups: {}".format(constant_group_indices))
-                result = factorized_algebra.times(constant, result_with_booleans)
-                volume = factorized_algebra.plus(volume, result)
-
-            for support in terms_dict.values():
-                support.deref()
-        else:
-            for w_weight, world_support in piecewise_function.sdd_dict.items():
-                support = support_sdd & world_support
-                if not self.backend:
-                    semiring = NonConvexWMISemiring(factorized_algebra, abstractions, var_to_lit)
-                    expression, variables = amc(semiring, support)
-                    expression = factorized_algebra.times(expression, w_weight.to_expression(factorized_algebra))
-                    volume = factorized_algebra.integrate(self.domain, expression, self.domain.real_vars)
-
+                missing_variable_count = len(self.domain.bool_vars) - len(variables)
+                bool_worlds = integration_algebra.power(integration_algebra.real(2), missing_variable_count)
+                volume = integration_algebra.times(volume, bool_worlds)
+            else:
+                convex_supports = amc(ConvexWMISemiring(abstractions, var_to_lit), support)
+                logger.debug("#convex regions %s", len(convex_supports))
+                for convex_support, variables in convex_supports:
                     missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                    bool_worlds = factorized_algebra.power(factorized_algebra.real(2), missing_variable_count)
-                    volume = factorized_algebra.times(volume, bool_worlds)
-                else:
-                    convex_supports = amc(ConvexWMISemiring(abstractions, var_to_lit), support)
-                    logger.debug("#convex regions %s", len(convex_supports))
-                    for convex_support, variables in convex_supports:
-                        missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                        vol = self.integrate_convex(convex_support, w_weight.to_smt()) * 2 ** missing_variable_count
-                        volume = factorized_algebra.plus(volume, factorized_algebra.real(vol))
-        return factorized_algebra.to_float(volume)
+                    vol = self.integrate_convex(convex_support, w_weight.to_smt()) * 2 ** missing_variable_count
+                    volume = integration_algebra.plus(volume, integration_algebra.real(vol))
+        return integration_algebra.to_float(volume)
 
     def copy(self, domain, support, weight):
         return XsddEngine(
@@ -509,7 +307,6 @@ class XsddEngine(Engine):
             support,
             weight,
             self.backend,
-            self.factorized,
             self.manager,
             self.algebra,
             self.find_conflicts,
@@ -520,8 +317,6 @@ class XsddEngine(Engine):
 
     def __str__(self):
         solver_string = "xsdd:b{}".format(self.backend)
-        if self.factorized:
-            solver_string += ":factorized"
         if self.find_conflicts:
             solver_string += ":prune"
         if self.ordered:
