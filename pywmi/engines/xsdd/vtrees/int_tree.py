@@ -14,7 +14,7 @@ pseudo tree in the literature of Variable Elimination and AND/OR graphs.
 import math
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Set, Optional
-from pywmi.engines.xsdd.vtree import Vtree, VtreeSplit
+from pywmi.engines.xsdd.vtrees.vtree import Vtree, VtreeSplit
 
 from .primal import PrimalGraph
 
