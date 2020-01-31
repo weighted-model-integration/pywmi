@@ -1,40 +1,39 @@
 from collections import defaultdict
-from typing import Dict, List, Tuple, Set, Union, Any, Optional
-from typing import Iterable
-
-from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend
-from pywmi.engines.algebraic_backend import PSIAlgebra
-from pywmi.engines.convex_integrator import ConvexIntegrationBackend
-from pywmi.engines.xsdd.draw import sdd_to_png_file
-from pywmi.engines.xsdd.vtree import get_new_manager
-
-try:
-    from pysdd.sdd import SddManager, SddNode
-except ImportError:
-    SddManager, SddNode = None, None
+from typing import Dict, List, Tuple, Set, Union, Any, Optional, Iterable
+import logging
+from itertools import chain
 
 from pysmt.typing import REAL
+from pysmt.environment import get_env
+import pysmt.shortcuts as smt
 
-from pywmi.smt_math import Polynomial, BoundsWalker, LinearInequality, implies
-from pywmi.smt_math import PolynomialAlgebra
-from .smt_to_sdd import convert_formula, convert_function, extract_labels_and_weight
 from pywmi import Domain
+from pywmi.smt_math import Polynomial, LinearInequality, BoundsWalker, PolynomialAlgebra, implies
 from pywmi.engine import Engine
-from .semiring import amc, Semiring, SddWalker, walk
 from pywmi.engines.pyxadd.algebra import PyXaddAlgebra
 from pywmi.engines.pyxadd.decision import Decision
 
-import pysmt.shortcuts as smt
-import logging
+from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend, PSIAlgebra
+from pywmi.engines.convex_integrator import ConvexIntegrationBackend
+from pywmi.engines.xsdd.vtree import balanced
+
+from .semiring import amc, Semiring, SddWalker, walk
+from .literals import extract_and_replace_literals, LiteralInfo
+from .piecewise import split_up_function
+from .smt_to_sdd import compile_to_sdd
+from .draw import sdd_to_dot_file
+from .vtree import Vtree
+
+
+
 
 IntegratorAndAlgebra = Union[AlgebraBackend, IntegrationBackend]
 logger = logging.getLogger(__name__)
 
 
 class ConvexWMISemiring(Semiring):
-    def __init__(self, abstractions: Dict, var_to_lit: Dict):
-        self.reverse_abstractions = {v: k for k, v in abstractions.items()}
-        self.lit_to_var = {v: k for k, v in var_to_lit.items()}
+    def __init__(self, literals: LiteralInfo):
+        self.literals = literals
 
     def times_neutral(self):
         return [(smt.TRUE(), set())]
@@ -56,23 +55,23 @@ class ConvexWMISemiring(Semiring):
         raise NotImplementedError()
 
     def weight(self, a):
-        if abs(a) in self.lit_to_var:
-            return [(smt.TRUE(), {self.lit_to_var[abs(a)]})]
+        var = self.literals.inv_numbered[abs(a)]
+        abstraction = self.literals[var]
+        if isinstance(abstraction, str):
+            return [(smt.TRUE(), {abstraction})]
         else:
-            f = self.reverse_abstractions[abs(a)]
             if a < 0:
-                f = ~f
-            return [(f, set())]
+                abstraction = ~abstraction
+            return [(abstraction, set())]
 
     def positive_weight(self, a):
         raise NotImplementedError()
 
 
 class NonConvexWMISemiring(Semiring):
-    def __init__(self, algebra, abstractions: Dict, var_to_lit: Dict):
+    def __init__(self, algebra, literals: LiteralInfo):
         self.algebra = algebra
-        self.reverse_abstractions = {v: k for k, v in abstractions.items()}
-        self.lit_to_var = {v: k for k, v in var_to_lit.items()}
+        self.literals = literals
 
     def times_neutral(self):
         return self.algebra.one(), set()
@@ -90,151 +89,49 @@ class NonConvexWMISemiring(Semiring):
         raise NotImplementedError()
 
     def weight(self, a):
-        if abs(a) in self.lit_to_var:
-            return self.algebra.one(), {self.lit_to_var[abs(a)]}
+        var = self.literals.inv_numbered[abs(a)]
+        abstraction = self.literals[var]
+        if isinstance(abstraction, str):
+            return self.algebra.one(), {abstraction}
         else:
-            f = self.reverse_abstractions[abs(a)]
             if a < 0:
-                f = ~f
-            return LinearInequality.from_smt(f).to_expression(self.algebra), set()
+                abstraction = ~abstraction
+            return LinearInequality.from_smt(abstraction).to_expression(self.algebra), set()
 
     def positive_weight(self, a):
         raise NotImplementedError()
 
 
-
-
-
-class BooleanFinder(Semiring):
-    def __init__(self, abstractions: Dict, var_to_lit: Dict):
-        self.reverse_abstractions = {v: k for k, v in abstractions.items()}
-        self.lit_to_var = {v: k for k, v in var_to_lit.items()}
-
-    def times_neutral(self):
-        return set()
-
-    def plus_neutral(self):
-        return set()
-
-    def times(self, a, b, index=None):
-        return a | b
-
-    def plus(self, a, b, index=None):
-        return a | b
-
-    def negate(self, a):
-        raise NotImplementedError()
-
-    def weight(self, a):
-        if abs(a) in self.lit_to_var:
-            return {self.lit_to_var[abs(a)]}
-        else:
-            return set()
-
-    def positive_weight(self, a):
-        raise NotImplementedError()
-
-
-class VariableTagAnalysis(SddWalker):
-    def __init__(self, literal_to_groups):
-        self.literal_to_groups = literal_to_groups
-        self.node_to_groups = dict()
-
-    def walk_true(self, node):
-        groups = set()
-        self.node_to_groups[node.id] = groups
-        return True, groups
-
-    def walk_false(self, node):
-        groups = set()
-        self.node_to_groups[node.id] = groups
-        return False, groups
-
-    def walk_and(self, prime_result, sub_result, prime_node, sub_node):
-        prime_feasible, prime_groups = prime_result
-        sub_feasible, sub_groups = sub_result
-        feasible = prime_feasible and sub_feasible
-        groups = (prime_groups | sub_groups) if feasible else set()
-        self.node_to_groups[(prime_node.id, sub_node.id)] = groups
-        return feasible, groups
-
-    def walk_or(self, child_results, node):
-        feasible = any(t[0] for t in child_results)
-        groups = set()
-        if feasible:
-            for _, child_groups in child_results:
-                groups |= child_groups
-        self.node_to_groups[node.id] = groups
-        return feasible, groups
-
-    def walk_literal(self, l, node):
-        groups = set(self.literal_to_groups.get(l, []))
-        self.node_to_groups[node.id] = groups
-        return True, groups
-
-
-
-
-class XsddEngine(Engine):
+class BaseXsddEngine(Engine):
     def __init__(
-            self,
-            domain,
-            support,
-            weight,
-            convex_backend: Optional[ConvexIntegrationBackend] = None,
-            manager=None,
-            algebra: Optional[IntegratorAndAlgebra] = None,
-            find_conflicts=False,
-            ordered=False,
-            balance: Optional[str] = None,
-            minimize=False):
-        algebra = algebra or PSIAlgebra()
-        super().__init__(domain, support, weight, convex_backend.exact if convex_backend else algebra.exact)
-        if SddManager is None:
+        self,
+        domain,
+        support,
+        weight,
+        exact,
+        *,
+        algebra: Optional[IntegratorAndAlgebra] = None,
+        find_conflicts=False,
+        ordered=False,
+        vtree_strategy=balanced,
+        minimize=False):
+
+        super().__init__(domain, support, weight, exact)
+        try:
+            from pysdd.sdd import SddManager, SddNode
+        except ImportError as e:
             from pywmi.errors import InstallError
-            raise InstallError("NativeXsddEngine requires the pysdd package")
-        self.manager = manager or SddManager()
-        self.algebra = algebra
-        self.backend = convex_backend
+            raise InstallError(f"{type(self).__name__} requires the pysdd package") from e
+
+
+        self.algebra = algebra or PSIAlgebra()  # Algebra used to solve SMT theory
         self.find_conflicts = find_conflicts
         self.ordered = ordered
-        self.balance = balance
-        self.minimize = minimize
+        self.vtree_strategy = vtree_strategy
+        self.minimize = minimize  # Use SDD minimization as implemented in PySDD
 
     def get_samples(self, n):
         raise NotImplementedError()
-
-    def integrate_convex(self, convex_support, polynomial_weight):
-        try:
-            domain = Domain(self.domain.real_vars, {v: REAL for v in self.domain.real_vars}, self.domain.var_domains)
-            return self.backend.integrate(domain, BoundsWalker.get_inequalities(convex_support),
-                                          Polynomial.from_smt(polynomial_weight))
-        except ZeroDivisionError:
-            return 0
-
-    def get_variable_groups_poly(self, weight: Polynomial, real_vars: List[str]) -> List[Tuple[Set[str], Polynomial]]:
-        if len(real_vars) > 0:
-            result = []
-            found_vars = weight.variables
-            for v in real_vars:
-                if v not in found_vars:
-                    result.append(({v}, Polynomial.from_constant(1)))
-            return result + self.get_variable_groups_poly(weight, [])
-
-        if len(weight.poly_dict) > 1:
-            return [(weight.variables, weight)]
-        elif len(weight.poly_dict) == 0:
-            return [(set(), Polynomial.from_constant(0))]
-        else:
-            result = defaultdict(lambda: Polynomial.from_constant(1))
-            for name, value in weight.poly_dict.items():
-                if len(name) == 0:
-                    result[frozenset()] *= Polynomial.from_constant(value)
-                else:
-                    for v in name:
-                        result[frozenset((v,))] *= Polynomial.from_smt(smt.Symbol(v, smt.REAL))
-                    result[frozenset()] *= Polynomial.from_constant(value)
-            return list(result.items())
 
     def collect_conflicts(self):
         conflicts = []
@@ -262,67 +159,125 @@ class XsddEngine(Engine):
         if add_bounds:
             return self.with_constraint(self.domain.get_bounds()).compute_volume(False)
 
-        abstractions, var_to_lit = dict(), dict()
+        # The algebra used for describing the given SMT theory (which hopefully complies)
+        # Not to be confused with self.algebra, which is used to actually
+        # integrate and solve the SMT theory
+        descr_algebra = PolynomialAlgebra()
 
-        poly_algebra = PolynomialAlgebra()
-        support = (smt.And(*self.collect_conflicts()) & self.support) if self.find_conflicts else self.support
+        # Calculate base support
+        base_support = self.support
+        if self.find_conflicts:
+            base_support = smt.And(*self.collect_conflicts()) & base_support
 
-        labels, weight = None, self.weight
+        # piecewise_function contains a dict of weight -> support pairs
+        piecewise_function = split_up_function(self.weight, descr_algebra, get_env())
 
-        support_sdd = convert_formula(support, self.manager, poly_algebra, abstractions, var_to_lit)
-        piecewise_function = convert_function(weight, self.manager, poly_algebra, abstractions, var_to_lit)
+        if isinstance(self.algebra, PyXaddAlgebra):
+            _, _, all_support_literals = extract_and_replace_literals(base_support)
+            vtree = self.get_vtree(base_support, all_support_literals)
+            all_literals = [n.var for n in vtree.all_leaves()]
 
-        if self.balance:
-            self.manager = get_new_manager(self.domain, abstractions, var_to_lit, self.balance)
-            support_sdd = convert_formula(support, self.manager, poly_algebra, abstractions, var_to_lit)
-            piecewise_function = convert_function(weight, self.manager, poly_algebra, abstractions, var_to_lit)
+            for lit in all_literals:
+                test = all_support_literals[lit]
+                self.algebra.pool.bool_test(Decision(test))
 
-        integration_algebra = self.algebra
+        volume = self.compute_volume_from_pieces(base_support, piecewise_function)
+        return self.algebra.to_float(volume)
 
-        volume = integration_algebra.zero()
+    def get_vtree(self, support, literals: LiteralInfo):
+        return self.vtree_strategy(literals)
 
-        for w_weight, world_support in piecewise_function.sdd_dict.items():
-            support = support_sdd & world_support
-            if not self.backend:
-                semiring = NonConvexWMISemiring(integration_algebra, abstractions, var_to_lit)
-                expression, variables = amc(semiring, support)
-                expression = integration_algebra.times(expression, w_weight.to_expression(integration_algebra))
-                volume = integration_algebra.integrate(self.domain, expression, self.domain.real_vars)
+    def get_sdd(self, logic_support, literals: LiteralInfo, vtree: Vtree):
+        return compile_to_sdd(logic_support, literals, vtree)
 
-                missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                bool_worlds = integration_algebra.power(integration_algebra.real(2), missing_variable_count)
-                volume = integration_algebra.times(volume, bool_worlds)
-            else:
-                convex_supports = amc(ConvexWMISemiring(abstractions, var_to_lit), support)
-                logger.debug("#convex regions %s", len(convex_supports))
-                for convex_support, variables in convex_supports:
-                    missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                    vol = self.integrate_convex(convex_support, w_weight.to_smt()) * 2 ** missing_variable_count
-                    volume = integration_algebra.plus(volume, integration_algebra.real(vol))
-        return integration_algebra.to_float(volume)
+    def compute_volume_from_pieces(self, base_support, piecewise_function):
+        raise NotImplementedError()
 
-    def copy(self, domain, support, weight):
-        return XsddEngine(
+    def copy(self, domain, support, weight, exact, **kwargs):
+        return type(self)(
             domain,
             support,
             weight,
-            self.backend,
-            self.manager,
-            self.algebra,
-            self.find_conflicts,
-            self.ordered,
-            self.balance,
-            self.minimize
+            algebra=self.algebra,
+            find_conflicts=self.find_conflicts,
+            ordered=self.ordered,
+            vtree_strategy=self.vtree_strategy,
+            minimize=self.minimize,
+            **kwargs
         )
 
     def __str__(self):
-        solver_string = "xsdd:b{}".format(self.backend)
+        solver_string = ""
         if self.find_conflicts:
             solver_string += ":prune"
         if self.ordered:
             solver_string += ":order"
-        if self.balance:
-            solver_string += ":v{}".format(self.balance)
+        if self.vtree_strategy:
+            solver_string += ":VS={}".format(self.vtree_strategy.__name__)
         if self.minimize:
             solver_string += ":minimize"
         return solver_string
+
+    def __repr__(self):
+        return str(self)
+
+
+
+class XsddEngine(BaseXsddEngine):
+    "Implementation without factorizing"
+
+    def __init__(
+        self,
+        domain,
+        support,
+        weight,
+        *,
+        algebra: Optional[IntegratorAndAlgebra] = None,
+        convex_backend: ConvexIntegrationBackend = None,
+        **kwargs):
+
+        algebra = algebra or PSIAlgebra()
+        super().__init__(domain, support, weight, convex_backend.exact if convex_backend else algebra.exact, algebra=algebra, **kwargs)
+        self.backend = convex_backend
+
+    def copy(self, domain, support, weight, **kwargs):
+        return super().copy(domain, support, weight, self.backend.exact, convex_backend=self.backend, **kwargs)
+
+
+    def compute_volume_from_pieces(self, base_support, piecewise_function):
+        volume = self.algebra.zero()
+        for i, (w_weight, w_support) in enumerate(piecewise_function.pieces.items()):
+            support = w_support & base_support
+            if not self.backend:
+                _, logic_support, literals = extract_and_replace_literals(support)
+                vtree = self.get_vtree(support, literals)
+                support_sdd = self.get_sdd(logic_support, literals, vtree)
+                if logger.getEffectiveLevel() == logging.DEBUG:
+                    filename = f"sdd_{i}.dot"
+                    sdd_to_dot_file(support_sdd, literals, filename)
+                    logger.debug(f"saved SDD to {filename}")
+
+                semiring_algebra = self.algebra
+                semiring = NonConvexWMISemiring(semiring_algebra, literals)
+                expression, variables = amc(semiring, support_sdd)
+                expression = semiring_algebra.times(expression, w_weight.to_expression(semiring_algebra))
+                volume = semiring_algebra.integrate(self.domain, expression, self.domain.real_vars)
+
+                missing_variable_count = len(self.domain.bool_vars) - len(variables)
+                bool_worlds = semiring_algebra.power(semiring_algebra.real(2), missing_variable_count)
+                volume = semiring_algebra.times(volume, bool_worlds)
+            else:
+                raise NotImplementedError
+
+        return volume
+
+    def integrate_convex(self, convex_support, polynomial_weight):
+        try:
+            domain = Domain(self.domain.real_vars, {v: REAL for v in self.domain.real_vars}, self.domain.var_domains)
+            return self.algebra.integrate(domain, BoundsWalker.get_inequalities(convex_support),
+                                          Polynomial.from_smt(polynomial_weight))
+        except ZeroDivisionError:
+            return 0
+
+    def __str__(self):
+        return f"XSDD:BE={self.backend}" + super().__str__()

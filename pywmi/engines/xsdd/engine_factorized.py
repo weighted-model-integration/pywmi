@@ -8,7 +8,7 @@ import pysmt.shortcuts as smt
 from pywmi import Domain
 from pywmi.smt_math import Polynomial, LinearInequality
 from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend, PSIAlgebra
-from pywmi.util import multimap
+from pywmi import multimap
 
 from .semiring import amc, Semiring, SddWalker, walk
 from .engine import BaseXsddEngine, IntegratorAndAlgebra
@@ -429,3 +429,32 @@ class FactorizedXsddEngine(BaseXsddEngine):
 
     def __str__(self):
         return "FXSDD" + super().__str__()
+
+
+
+
+
+
+    # def get_variable_groups_poly(self, weight: Polynomial, real_vars: List[str]) -> List[Tuple[Set[str], Polynomial]]:
+    #     if len(real_vars) > 0:
+    #         result = []
+    #         found_vars = weight.variables
+    #         for v in real_vars:
+    #             if v not in found_vars:
+    #                 result.append(({v}, Polynomial.from_constant(1)))
+    #         return result + self.get_variable_groups_poly(weight, [])
+    #
+    #     if len(weight.poly_dict) > 1:
+    #         return [(weight.variables, weight)]
+    #     elif len(weight.poly_dict) == 0:
+    #         return [(set(), Polynomial.from_constant(0))]
+    #     else:
+    #         result = defaultdict(lambda: Polynomial.from_constant(1))
+    #         for name, value in weight.poly_dict.items():
+    #             if len(name) == 0:
+    #                 result[frozenset()] *= Polynomial.from_constant(value)
+    #             else:
+    #                 for v in name:
+    #                     result[frozenset((v,))] *= Polynomial.from_smt(smt.Symbol(v, smt.REAL))
+    #                 result[frozenset()] *= Polynomial.from_constant(value)
+    #         return list(result.items())
