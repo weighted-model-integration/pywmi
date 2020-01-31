@@ -14,7 +14,6 @@ pseudo tree in the literature of Variable Elimination and AND/OR graphs.
 import math
 from abc import ABC, abstractmethod
 from typing import List, Tuple, Set, Optional
-from pywmi.engines.xsdd.vtrees.vtree import Vtree, VtreeSplit
 
 from .primal import PrimalGraph
 
@@ -40,7 +39,7 @@ class IntTree(ABC):
         pass
 
     @abstractmethod
-    def create_vtree(self, literals: set, logic2cont) -> Vtree:
+    def create_vtree(self, literals: set, logic2cont):
         """ Create a vtree that respects the integration order of this tree. """
         pass
 
@@ -68,6 +67,8 @@ class IntTreeVar(IntTree):
         return 1
 
     def create_vtree(self, literals: set, logic2cont):
+        from pywmi.engines.xsdd.vtrees.vtree import Vtree, VtreeSplit
+
         literals_map = [(lit, logic2cont[lit]) for lit in literals]
         exists_nonvar = any((self.var not in c_set for (lit, c_set) in literals_map))
 
