@@ -16,7 +16,7 @@ from pywmi.smt_walk import CachedSmtWalker
 from pywmi.errors import InstallError
 
 from .semiring import Semiring, amc
-from .vtree import Vtree
+from pywmi.engines.xsdd.vtrees.vtree import Vtree
 from .literals import LiteralInfo
 
 

@@ -15,14 +15,14 @@ from pywmi.engines.pyxadd.decision import Decision
 
 from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend, PSIAlgebra
 from pywmi.engines.convex_integrator import ConvexIntegrationBackend
-from pywmi.engines.xsdd.vtree import balanced
+from pywmi.engines.xsdd.vtrees.vtree import balanced
 
 from .semiring import amc, Semiring, SddWalker, walk
 from .literals import extract_and_replace_literals, LiteralInfo
 from .piecewise import split_up_function
 from .smt_to_sdd import compile_to_sdd
 from .draw import sdd_to_dot_file
-from .vtree import Vtree
+from pywmi.engines.xsdd.vtrees.vtree import Vtree
 
 
 
