@@ -82,6 +82,7 @@ class AlgebraBackend:
 
     def parse_condition(self, condition: FNode) -> E:
         from pywmi.smt_math import LinearInequality
+
         return LinearInequality.from_smt(condition).to_expression(self)
 
 
@@ -144,7 +145,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         return psipy.mul(a, b)
 
     def plus(self, a, b):
-        return psipy.add(a,b)
+        return psipy.add(a, b)
 
     def negate(self, a):
         return psipy.mul(psipy.S("-1"), a)
@@ -181,20 +182,19 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         else:
             result = psipy.integrate(variables, expression)
         return result
-        # return psipy.integrate(variables, expression)
 
     def to_float(self, real_value):
-        real_value = self.times(real_value,self.symbol("1.0"))
+        real_value = self.times(real_value, self.symbol("1.0"))
         string_value = str(psipy.simplify(real_value))
         # if "/" in string_value:
         #     parts = string_value.split("/", 1)
         #     return float(parts[0]) / float(parts[1])
         return float(string_value)
 
-
     def get_flat_expression(self, expression_with_conditions):
         result = psipy.filter_iverson(expression_with_conditions)
-        return psipy.simplify(result)
+        # result = psipy.simplify(result)
+        return result
 
 
 class StringAlgebra(AlgebraBackend, IntegrationBackend):
