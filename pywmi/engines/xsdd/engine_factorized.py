@@ -15,6 +15,7 @@ from .engine import BaseXsddEngine, IntegratorAndAlgebra
 from .literals import LiteralInfo, extract_and_replace_literals
 from .smt_to_sdd import compile_to_sdd
 from .draw import sdd_to_dot_file
+from. factorized_polynomial import FactorizedPolynomialAlgebra
 
 logger = logging.getLogger(__name__)
 
@@ -187,13 +188,6 @@ class FactorizedIntegrator:
 
 
 
-
-
-
-
-
-
-
 class FactorizedXsddEngine(BaseXsddEngine):
     def __init__(self, domain, support, weight, algebra: Optional[IntegratorAndAlgebra] = None, **kwargs):
         algebra = algebra or PSIAlgebra()
@@ -201,6 +195,9 @@ class FactorizedXsddEngine(BaseXsddEngine):
 
     def copy(self, domain, support, weight, **kwargs):
         return super().copy(domain, support, weight, self.algebra.exact, **kwargs)
+
+    def get_weight_algebra(self):
+        return FactorizedPolynomialAlgebra()
 
     def compute_volume_from_pieces(self, base_support, piecewise_function):
         # Prepare the support for each piece (not compiled yet)
@@ -321,32 +318,3 @@ class FactorizedXsddEngine(BaseXsddEngine):
 
     def __str__(self):
         return "FXSDD" + super().__str__()
-
-
-
-
-
-
-    # def get_variable_groups_poly(self, weight: Polynomial, real_vars: List[str]) -> List[Tuple[Set[str], Polynomial]]:
-    #     if len(real_vars) > 0:
-    #         result = []
-    #         found_vars = weight.variables
-    #         for v in real_vars:
-    #             if v not in found_vars:
-    #                 result.append(({v}, Polynomial.from_constant(1)))
-    #         return result + self.get_variable_groups_poly(weight, [])
-    #
-    #     if len(weight.poly_dict) > 1:
-    #         return [(weight.variables, weight)]
-    #     elif len(weight.poly_dict) == 0:
-    #         return [(set(), Polynomial.from_constant(0))]
-    #     else:
-    #         result = defaultdict(lambda: Polynomial.from_constant(1))
-    #         for name, value in weight.poly_dict.items():
-    #             if len(name) == 0:
-    #                 result[frozenset()] *= Polynomial.from_constant(value)
-    #             else:
-    #                 for v in name:
-    #                     result[frozenset((v,))] *= Polynomial.from_smt(smt.Symbol(v, smt.REAL))
-    #                 result[frozenset()] *= Polynomial.from_constant(value)
-    #         return list(result.items())

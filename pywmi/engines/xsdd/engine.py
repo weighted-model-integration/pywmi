@@ -162,7 +162,7 @@ class BaseXsddEngine(Engine):
         # The algebra used for describing the given SMT theory (which hopefully complies)
         # Not to be confused with self.algebra, which is used to actually
         # integrate and solve the SMT theory
-        descr_algebra = PolynomialAlgebra()
+        descr_algebra = self.get_weight_algebra()
 
         # Calculate base support
         base_support = self.support
@@ -183,6 +183,9 @@ class BaseXsddEngine(Engine):
 
         volume = self.compute_volume_from_pieces(base_support, piecewise_function)
         return self.algebra.to_float(volume)
+
+    def get_weight_algebra(self):
+        raise NotImplementedError
 
     def get_vtree(self, support, literals: LiteralInfo):
         return self.vtree_strategy(literals)
@@ -243,6 +246,9 @@ class XsddEngine(BaseXsddEngine):
     def copy(self, domain, support, weight, **kwargs):
         return super().copy(domain, support, weight, self.backend.exact, convex_backend=self.backend, **kwargs)
 
+
+    def get_weight_algebra(self):
+        return PolynomialAlgebra()
 
     def compute_volume_from_pieces(self, base_support, piecewise_function):
         volume = self.algebra.zero()
