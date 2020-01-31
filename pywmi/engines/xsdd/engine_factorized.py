@@ -5,7 +5,7 @@ from collections import defaultdict
 import pysmt.shortcuts as smt
 
 from pywmi import Domain
-from pywmi.smt_math import Polynomial, LinearInequality
+from pywmi.smt_math import PolynomialAlgebra, Polynomial, LinearInequality
 from pywmi.engines.algebraic_backend import (
     AlgebraBackend,
     IntegrationBackend,
@@ -18,7 +18,7 @@ from .engine import BaseXsddEngine, IntegratorAndAlgebra
 from .literals import LiteralInfo, extract_and_replace_literals
 from .smt_to_sdd import compile_to_sdd
 from .draw import sdd_to_dot_file
-from .factorized_polynomial import FactorizedPolynomialAlgebra
+from .factorized_polynomial import FactorizedPolynomialAlgebra, FactorizedPolynomial
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +219,10 @@ class FactorizedXsddEngine(BaseXsddEngine):
         return super().copy(domain, support, weight, self.algebra.exact, **kwargs)
 
     def get_weight_algebra(self):
-        return FactorizedPolynomialAlgebra()
+        if True:
+            return PolynomialAlgebra()
+        else:
+            return FactorizedPolynomialAlgebra()
 
     def compute_volume_from_pieces(self, base_support, piecewise_function):
         # Prepare the support for each piece (not compiled yet)
@@ -335,30 +338,44 @@ class FactorizedXsddEngine(BaseXsddEngine):
     def get_variable_groups_poly(
         cls, weight: Polynomial, real_vars: List[str]
     ) -> List[Tuple[Set[str], Polynomial]]:
-        if len(real_vars) > 0:
-            result = []
-            found_vars = weight.variables
-            for v in real_vars:
-                if v not in found_vars:
-                    result.append(({v}, Polynomial.from_constant(1)))
-            return result + cls.get_variable_groups_poly(weight, [])
+        if isinstance(weight, FactorizedPolynomial):
+            if len(real_vars) > 0:
+                result = []
+                found_vars = weight.variables
+                for v in real_vars:
+                    if v not in found_vars:
+                        result.append(({v}, weight.from_constant(1)))
+                return result + cls.get_variable_groups_poly(weight, [])
 
-        if len(weight.poly_dict) > 1:
-            return [(weight.variables, weight)]
-        elif len(weight.poly_dict) == 0:
-            return [(set(), Polynomial.from_constant(0))]
+            factors = weight.get_factors()
+            return [(f.variables, f) for f in factors]
+        elif isinstance(weight, Polynomial):
+            if len(real_vars) > 0:
+                result = []
+                found_vars = weight.variables
+                for v in real_vars:
+                    if v not in found_vars:
+                        result.append(({v}, Polynomial.from_constant(1)))
+                return result + cls.get_variable_groups_poly(weight, [])
+
+            if len(weight.poly_dict) > 1:
+                return [(weight.variables, weight)]
+            elif len(weight.poly_dict) == 0:
+                return [(set(), Polynomial.from_constant(0))]
+            else:
+                result = defaultdict(lambda: Polynomial.from_constant(1))
+                for name, value in weight.poly_dict.items():
+                    if len(name) == 0:
+                        result[frozenset()] *= Polynomial.from_constant(value)
+                    else:
+                        for v in name:
+                            result[frozenset((v,))] *= Polynomial.from_smt(
+                                smt.Symbol(v, smt.REAL)
+                            )
+                        result[frozenset()] *= Polynomial.from_constant(value)
+                return list(result.items())
         else:
-            result = defaultdict(lambda: Polynomial.from_constant(1))
-            for name, value in weight.poly_dict.items():
-                if len(name) == 0:
-                    result[frozenset()] *= Polynomial.from_constant(value)
-                else:
-                    for v in name:
-                        result[frozenset((v,))] *= Polynomial.from_smt(
-                            smt.Symbol(v, smt.REAL)
-                        )
-                    result[frozenset()] *= Polynomial.from_constant(value)
-            return list(result.items())
+            raise NotImplementedError
 
     def __str__(self):
         return "FXSDD" + super().__str__()

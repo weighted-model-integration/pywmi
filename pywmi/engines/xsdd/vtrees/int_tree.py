@@ -120,6 +120,8 @@ class IntTreeSplit(IntTree):
         return 1 + max(self.left.depth(), self.right.depth())
 
     def create_vtree(self, literals: set, logic2cont):
+        from pywmi.engines.xsdd.vtrees.vtree import VtreeSplit
+
         literals_map = [(lit, logic2cont[lit]) for lit in literals]
 
         # Divide all literals, without self.vars in cont-set, with left-cont in left and right-cont in right
@@ -303,6 +305,8 @@ class IntTreeLine(IntTree):
         return 1 + self.line.depth()
 
     def create_vtree(self, literals: set, logic2cont):
+        from pywmi.engines.xsdd.vtrees.vtree import Vtree, VtreeSplit
+
         literals_map = [(lit, logic2cont[lit]) for lit in literals]
 
         lower_cont = self.line.get_con_vars()
