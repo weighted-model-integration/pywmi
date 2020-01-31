@@ -27,7 +27,6 @@ def product(*elements):
     return result
 
 
-
 class SddConversionWalker(CachedSmtWalker):
     def __init__(self, manager: SddManager, varnums: Dict[int, Any]):
         super().__init__()
@@ -49,8 +48,10 @@ class SddConversionWalker(CachedSmtWalker):
         if_arg = self.walk_smt(if_arg)
         then_arg = self.walk_smt(then_arg)
         else_arg = self.walk_smt(else_arg)
-        return self.manager.disjoin(self.manager.conjoin(if_arg, then_arg),
-                                    self.manager.conjoin(self.manager.negate(if_arg), else_arg))
+        return self.manager.disjoin(
+            self.manager.conjoin(if_arg, then_arg),
+            self.manager.conjoin(self.manager.negate(if_arg), else_arg),
+        )
 
     def walk_symbol(self, name, v_type):
         assert v_type == BOOL
@@ -86,13 +87,18 @@ class PySmtConversion(Semiring):
         return ~a
 
     def positive_weight(self, a):
-        return self.reverse_abstractions[a] if a in self.reverse_abstractions else Symbol(self.lit_to_var[a], BOOL)
-
+        return (
+            self.reverse_abstractions[a]
+            if a in self.reverse_abstractions
+            else Symbol(self.lit_to_var[a], BOOL)
+        )
 
 
 def compile_to_sdd(formula: FNode, literals: LiteralInfo, vtree: Vtree) -> SddNode:
     if SddManager is None:
-        raise InstallError("The pysdd package is required for this function but is not currently installed.")
+        raise InstallError(
+            "The pysdd package is required for this function but is not currently installed."
+        )
     varnums = literals.numbered
     pysdd_vtree = vtree.to_pysdd(varnums)
     manager = SddManager.from_vtree(pysdd_vtree)
@@ -100,13 +106,19 @@ def compile_to_sdd(formula: FNode, literals: LiteralInfo, vtree: Vtree) -> SddNo
     return converter.walk_smt(formula)
 
 
-def recover_formula(sdd_node: SddNode, literals: LiteralInfo, env: Environment = None, simplify_result=True) -> FNode:
+def recover_formula(
+    sdd_node: SddNode,
+    literals: LiteralInfo,
+    env: Environment = None,
+    simplify_result=True,
+) -> FNode:
     # TODO: provide a similar recover procedure in literals.py to re-insert abstractions etc
     result = amc(PySmtConversion(literals, env), sdd_node)
     return env.formula_manager.simplify(result) if simplify_result else result
 
 
 # TODO: labels are not used currently. See TODO in engine.py
+
 
 def get_bool_label(formula: FNode) -> Optional[Tuple[str, FNode, FNode]]:
     if formula.is_ite():

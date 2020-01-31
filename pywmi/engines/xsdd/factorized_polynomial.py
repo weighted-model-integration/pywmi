@@ -14,7 +14,6 @@ class FactorizedPolynomialAlgebra(PolynomialAlgebra):
         raise NotImplementedError()
 
 
-
 class FactorizedPolynomial:
     def __init__(self, polynomial):
         self.expression = sympy.sympify(polynomial)
@@ -23,10 +22,11 @@ class FactorizedPolynomial:
     def from_constant(constant):
         return FactorizedPolynomial(constant)
 
-    def __mul__(a,b):
-        return FactorizedPolynomial(a.expression*b.expression)
-    def __add__(a,b):
-        return FactorizedPolynomial(a.expression+b.expression)
+    def __mul__(a, b):
+        return FactorizedPolynomial(a.expression * b.expression)
+
+    def __add__(a, b):
+        return FactorizedPolynomial(a.expression + b.expression)
 
     def get_terms(self):
         if self.expression.is_Add:
@@ -50,8 +50,8 @@ class FactorizedPolynomial:
 
     def get_factors(self):
         constant, factors = sympy.factor_list(self.expression)
-        factors = [b**e for (b,e) in factors]
-        factors = [Polynomial.from_smt( sympy2pysmt(f)) for f in factors]
-        if not constant==1:
-            factors = [Polynomial.from_constant(constant)]+factors
+        factors = [b ** e for (b, e) in factors]
+        factors = [Polynomial.from_smt(sympy2pysmt(f)) for f in factors]
+        if not constant == 1:
+            factors = [Polynomial.from_constant(constant)] + factors
         return factors

@@ -73,8 +73,12 @@ class IntTreeVar(IntTree):
 
         if exists_nonvar:
             # Throw all non 'var' literals in one partition and all 'var' literals in the other.
-            vtree_left = Vtree.create_balanced([lit for (lit, c_set) in literals_map if self.var not in c_set], True)
-            vtree_right = Vtree.create_balanced([lit for (lit, c_set) in literals_map if self.var in c_set], True)
+            vtree_left = Vtree.create_balanced(
+                [lit for (lit, c_set) in literals_map if self.var not in c_set], True
+            )
+            vtree_right = Vtree.create_balanced(
+                [lit for (lit, c_set) in literals_map if self.var in c_set], True
+            )
             return VtreeSplit(vtree_left, vtree_right)
         else:
             # If no non 'vars', balance out all literals
@@ -101,7 +105,9 @@ class IntTreeSplit(IntTree):
         self.right = right
 
     def con_count(self):
-        return int(self.var is not None) + self.left.con_count() + self.right.con_count()
+        return (
+            int(self.var is not None) + self.left.con_count() + self.right.con_count()
+        )
 
     def get_con_vars(self):
         if self.var is None:
@@ -121,7 +127,7 @@ class IntTreeSplit(IntTree):
         right_cons = self.right.get_con_vars()
         left_literals = []
         right_literals = []
-        #var_literals = {}  # TODO: Ensure splitting var_literals
+        # var_literals = {}  # TODO: Ensure splitting var_literals
         remaining_literals = []
         for (lit, c_set) in literals_map:
             # if self.var in c_set:
@@ -130,7 +136,9 @@ class IntTreeSplit(IntTree):
             #     continue
             in_left = len(c_set & left_cons) > 0
             in_right = len(c_set & right_cons) > 0
-            assert not in_left or not in_right, f"Left: {c_set & left_cons} and Right: {c_set & right_cons}"
+            assert (
+                not in_left or not in_right
+            ), f"Left: {c_set & left_cons} and Right: {c_set & right_cons}"
 
             if in_left:
                 left_literals.append(lit)
@@ -145,19 +153,22 @@ class IntTreeSplit(IntTree):
                 too_little, too_many = left_literals, right_literals
             else:
                 too_little, too_many = right_literals, left_literals
-            needed_to_balance = min(len(too_many) - len(too_little), len(remaining_literals))
+            needed_to_balance = min(
+                len(too_many) - len(too_little), len(remaining_literals)
+            )
             too_little.extend(remaining_literals[:needed_to_balance])
             del remaining_literals[:needed_to_balance]
 
             if len(remaining_literals) > 0:
                 # Divide the remaining variables equally
-                add_to_left = math.floor(len(remaining_literals)/2)
+                add_to_left = math.floor(len(remaining_literals) / 2)
                 left_literals.extend(remaining_literals[:add_to_left])
                 right_literals.extend(remaining_literals[add_to_left:])
 
         return VtreeSplit(
             self.left.create_vtree(set(left_literals), logic2cont),
-            self.right.create_vtree(set(right_literals), logic2cont))
+            self.right.create_vtree(set(right_literals), logic2cont),
+        )
 
 
 class IntTreeParallel(IntTree):
@@ -200,7 +211,9 @@ class IntTreeParallel(IntTree):
         if len(self.trees) == 1:
             return self.trees[0].create_vtree(literals, logic2cont)
         elif len(self.trees) == 2:
-            return IntTreeSplit(self.var, self.trees[0], self.trees[1]).create_vtree(literals, logic2cont)
+            return IntTreeSplit(self.var, self.trees[0], self.trees[1]).create_vtree(
+                literals, logic2cont
+            )
         else:
             # Create balanced partitioning of trees based on the amount of literals in each tree.
             cont_literal_vars = [logic2cont.get(literal) for literal in literals]
@@ -209,8 +222,13 @@ class IntTreeParallel(IntTree):
             # Collect weights
             weights = self.weights
             if weights is None:
+
                 def get_lit_count(conts_tree):
-                    return sum(len(cont_vars & conts_tree) != 0 for cont_vars in cont_literal_vars)
+                    return sum(
+                        len(cont_vars & conts_tree) != 0
+                        for cont_vars in cont_literal_vars
+                    )
+
                 weights = [get_lit_count(conts_tree) for conts_tree in cont_tree_vars]
 
             # Partition
@@ -229,7 +247,9 @@ class IntTreeParallel(IntTree):
             split = IntTreeSplit(self.var, left_parallel_tree, right_parallel_tree)
             return split.create_vtree(literals, logic2cont)
 
-    def _partition_trees(self, values: List[Tuple[int, IntTree]]) -> Tuple[List[Tuple[int, IntTree]], List[Tuple[int, IntTree]]]:
+    def _partition_trees(
+        self, values: List[Tuple[int, IntTree]]
+    ) -> Tuple[List[Tuple[int, IntTree]], List[Tuple[int, IntTree]]]:
         """
         Partitions the given trees (values) in two roughly balanced sets.
         Greedy algorithm from https://en.wikipedia.org/wiki/Partition_problem.
@@ -307,7 +327,9 @@ class IntTreeFactory:
     def __init__(self, graph: PrimalGraph):
         assert graph is not None
         """ The primal graph at the beginning of the process, displaying all the interactions between the variables. """
-        self.connected_to = {node: targets.copy() for node, targets in graph.connected_to.items()}
+        self.connected_to = {
+            node: targets.copy() for node, targets in graph.connected_to.items()
+        }
         # Store integration tree roots with the variables that occur within each root and the height of each root.
         self.roots = []  # type: List[Tuple[IntTree, Set[any], int]]
 
@@ -316,8 +338,11 @@ class IntTreeFactory:
         assert node is not None
         # Root x (index) is relevant if any of the neighbors of node are present in x.
         neighbors = self.connected_to[node]
-        connected_root_indices = [index for index, (tree, conts, height) in enumerate(self.roots)
-                                  if any(neighbor in conts for neighbor in neighbors)] # TODO: if neighbors & conts != empty?
+        connected_root_indices = [
+            index
+            for index, (tree, conts, height) in enumerate(self.roots)
+            if any(neighbor in conts for neighbor in neighbors)
+        ]  # TODO: if neighbors & conts != empty?
 
         # Connect node to roots
         if len(connected_root_indices) == 0:  #  leaf
@@ -342,11 +367,15 @@ class IntTreeFactory:
             self.roots.pop(i2)
 
         else:  # parallel
-            new_cont = set().union(*(self.roots[index][1] for index in connected_root_indices))
+            new_cont = set().union(
+                *(self.roots[index][1] for index in connected_root_indices)
+            )
             new_cont.add(node)
             trees = [self.roots[index][0] for index in connected_root_indices]
             new_tree = IntTreeParallel(node, trees)
-            new_height = max(self.roots[index][2] for index in connected_root_indices) + 1
+            new_height = (
+                max(self.roots[index][2] for index in connected_root_indices) + 1
+            )
             connected_root_indices.sort()  # Required because indices change if deleted in improper order
             self.roots[connected_root_indices[0]] = new_tree, new_cont, new_height
             # Clear other roots
@@ -394,8 +423,11 @@ class IntTreeFactory:
         assert node is not None
         # Root x (index) is relevant if any of the neighbors of node are present in x.
         neighbors = self.connected_to[node]
-        connected_root_indices = [index for index, (tree, conts, height) in enumerate(self.roots)
-                                  if any(neighbor in conts for neighbor in neighbors)]
+        connected_root_indices = [
+            index
+            for index, (tree, conts, height) in enumerate(self.roots)
+            if any(neighbor in conts for neighbor in neighbors)
+        ]
 
         # new root
         if len(connected_root_indices) == 0:
@@ -413,5 +445,3 @@ class IntTreeFactory:
         # Create multiple parallel
         else:
             return max(self.roots[index][2] for index in connected_root_indices) + 1
-
-

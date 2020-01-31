@@ -1,4 +1,3 @@
-
 from typing import Dict, Tuple, Set, Union, List, Optional
 import logging
 from collections import defaultdict
@@ -7,7 +6,11 @@ import pysmt.shortcuts as smt
 
 from pywmi import Domain
 from pywmi.smt_math import Polynomial, LinearInequality
-from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend, PSIAlgebra
+from pywmi.engines.algebraic_backend import (
+    AlgebraBackend,
+    IntegrationBackend,
+    PSIAlgebra,
+)
 from pywmi.multimap import multimap
 
 from .semiring import amc, Semiring, SddWalker, walk
@@ -15,7 +18,7 @@ from .engine import BaseXsddEngine, IntegratorAndAlgebra
 from .literals import LiteralInfo, extract_and_replace_literals
 from .smt_to_sdd import compile_to_sdd
 from .draw import sdd_to_dot_file
-from. factorized_polynomial import FactorizedPolynomialAlgebra
+from .factorized_polynomial import FactorizedPolynomialAlgebra
 
 logger = logging.getLogger(__name__)
 
@@ -60,35 +63,46 @@ class VariableTagAnalysis(SddWalker):
 
 class BooleanFinder(Semiring):
     def __init__(self, literals: LiteralInfo):
-        self.inv_boolean_varnums = {num: lit for num, lit in literals.inv_numbered.items()
-                                    if isinstance(literals[lit], str)}
+        self.inv_boolean_varnums = {
+            num: lit
+            for num, lit in literals.inv_numbered.items()
+            if isinstance(literals[lit], str)
+        }
 
     def times_neutral(self):
         return set()
+
     def plus_neutral(self):
         return set()
+
     def times(self, a, b, index=None):
         return a | b
+
     def plus(self, a, b, index=None):
         return a | b
+
     def negate(self, a):
         raise NotImplementedError()
+
     def weight(self, a):
         if abs(a) in self.inv_boolean_varnums:
             return {self.inv_boolean_varnums[abs(a)]}
         else:
             return set()
+
     def positive_weight(self, a):
         raise NotImplementedError()
 
 
 class FactorizedIntegrator:
-    def __init__(self,
-                 domain: Domain,
-                 literals: LiteralInfo,
-                 groups: Dict[int, Tuple[Set[str], Polynomial]],
-                 node_to_groups: Dict,
-                 algebra: Union[AlgebraBackend, IntegrationBackend]):
+    def __init__(
+        self,
+        domain: Domain,
+        literals: LiteralInfo,
+        groups: Dict[int, Tuple[Set[str], Polynomial]],
+        node_to_groups: Dict,
+        algebra: Union[AlgebraBackend, IntegrationBackend],
+    ):
         self.domain = domain
         self.literals = literals
         self.groups = groups
@@ -124,7 +138,9 @@ class FactorizedIntegrator:
         if node.is_decision():
             result = self.algebra.zero()
             for prime, sub in node.elements():
-                result = self.algebra.plus(result, self.walk_and(prime, sub, tags, cache, order))
+                result = self.algebra.plus(
+                    result, self.walk_and(prime, sub, tags, cache, order)
+                )
         else:
             expression = self.walk_literal(node)
             logger.debug("node LIT(%s)", node.id)
@@ -147,23 +163,24 @@ class FactorizedIntegrator:
         tags_shared = tags_prime & tags_sub
         if order and len(tags_shared) > 0:
             first_index = min(order.index(tag) for tag in tags_shared)
-            tags_shared |= (tags & set(order[first_index:]))
+            tags_shared |= tags & set(order[first_index:])
         prime_result = self.recursive(prime, tags_prime - tags_shared, cache, order)
         sub_result = self.recursive(sub, tags_sub - tags_shared, cache, order)
         logger.debug("node AND(%s, %s)", prime.id, sub.id)
-        return self.integrate(self.algebra.times(prime_result, sub_result),
-                              [e for e in order if e in tags_shared] if order else tags_shared)
-
+        return self.integrate(
+            self.algebra.times(prime_result, sub_result),
+            [e for e in order if e in tags_shared] if order else tags_shared,
+        )
 
     def walk_literal(self, node):
         literal = node.literal
         var = self.literals.inv_numbered[abs(literal)]  # var as abstracted in SDD
         abstraction = self.literals[var]
         if isinstance(abstraction, str):
-            #if var in self.labels:  # TODO labels
+            # if var in self.labels:  # TODO labels
             #    expr = Polynomial.from_smt(self.labels[var][0 if (literal > 0) else 1]).to_expression(self.algebra)
-            #else:
-                expr = self.algebra.one()
+            # else:
+            expr = self.algebra.one()
         else:
             if literal < 0:
                 abstraction = ~abstraction
@@ -184,14 +201,19 @@ class FactorizedIntegrator:
         return result
 
 
-
-
-
-
 class FactorizedXsddEngine(BaseXsddEngine):
-    def __init__(self, domain, support, weight, algebra: Optional[IntegratorAndAlgebra] = None, **kwargs):
+    def __init__(
+        self,
+        domain,
+        support,
+        weight,
+        algebra: Optional[IntegratorAndAlgebra] = None,
+        **kwargs
+    ):
         algebra = algebra or PSIAlgebra()
-        super().__init__(domain, support, weight, algebra.exact, algebra=algebra,**kwargs)
+        super().__init__(
+            domain, support, weight, algebra.exact, algebra=algebra, **kwargs
+        )
 
     def copy(self, domain, support, weight, **kwargs):
         return super().copy(domain, support, weight, self.algebra.exact, **kwargs)
@@ -203,12 +225,16 @@ class FactorizedXsddEngine(BaseXsddEngine):
         # Prepare the support for each piece (not compiled yet)
         term_supports = multimap()
         for piece_weight, piece_support in piecewise_function.pieces.items():
-            logger.debug("piece with weight %s and support %s", piece_weight, piece_support)
+            logger.debug(
+                "piece with weight %s and support %s", piece_weight, piece_support
+            )
             for term in piece_weight.get_terms():
                 term_supports[term].add(piece_support)
 
-        terms_dict = {term: smt.Or(*supports) & base_support
-                        for term, supports in term_supports.items()}
+        terms_dict = {
+            term: smt.Or(*supports) & base_support
+            for term, supports in term_supports.items()
+        }
 
         volume = self.algebra.zero()
 
@@ -235,9 +261,15 @@ class FactorizedXsddEngine(BaseXsddEngine):
         variable_groups = self.get_variable_groups_poly(term, self.domain.real_vars)
 
         if self.ordered:
-            sort_key = lambda t: max(self.domain.real_vars.index(v)
-                                    for v in t[1][0]) if len(t[1][0]) > 0 else -1
-            group_order = [t[0] for t in sorted(enumerate(variable_groups), key=sort_key, reverse=False)]
+            sort_key = (
+                lambda t: max(self.domain.real_vars.index(v) for v in t[1][0])
+                if len(t[1][0]) > 0
+                else -1
+            )
+            group_order = [
+                t[0]
+                for t in sorted(enumerate(variable_groups), key=sort_key, reverse=False)
+            ]
             logger.debug("variable groups %s", variable_groups)
             logger.debug("group order %s", group_order)
             logger.debug("real variables %s", self.domain.real_vars)
@@ -248,7 +280,9 @@ class FactorizedXsddEngine(BaseXsddEngine):
             for i, (_vars, _node) in enumerate(variable_groups):
                 if _v in _vars:
                     return i
-            raise ValueError("Variable {} not found in any group ({})".format(_v, variable_groups))
+            raise ValueError(
+                "Variable {} not found in any group ({})".format(_v, variable_groups)
+            )
 
         literal_to_groups = dict()
         # From here, we will use numbered literals instead of the normal named ones
@@ -259,7 +293,7 @@ class FactorizedXsddEngine(BaseXsddEngine):
             literal_to_groups[lit_num] = inequality_groups
             literal_to_groups[-lit_num] = inequality_groups
 
-        #for var, (true_label, false_label) in labels.items():
+        # for var, (true_label, false_label) in labels.items():
         #    true_inequality_groups = [get_group(v) for v in map(str, true_label.get_free_variables())]
         #    false_inequality_groups = [get_group(v) for v in map(str, false_label.get_free_variables())]
         #    literal_to_groups[var_to_lit[var]] = true_inequality_groups
@@ -272,8 +306,12 @@ class FactorizedXsddEngine(BaseXsddEngine):
         group_to_vars_poly = {i: g for i, g in enumerate(variable_groups)}
         # all_groups = frozenset(i for i, e in group_to_vars_poly.items() if len(e[0]) > 0)
 
-        constant_group_indices = [i for i, e in group_to_vars_poly.items() if len(e[0]) == 0]
-        integrator = FactorizedIntegrator(self.domain, literals, group_to_vars_poly, node_to_groups, self.algebra)
+        constant_group_indices = [
+            i for i, e in group_to_vars_poly.items() if len(e[0]) == 0
+        ]
+        integrator = FactorizedIntegrator(
+            self.domain, literals, group_to_vars_poly, node_to_groups, self.algebra
+        )
         logger.debug("group order %s", group_order)
         expression = integrator.recursive(support_sdd, order=group_order)
         # expression = integrator.integrate(expression, node_to_groups[support.id])
@@ -288,11 +326,15 @@ class FactorizedXsddEngine(BaseXsddEngine):
         elif len(constant_group_indices) == 0:
             constant = self.algebra.one()
         else:
-            raise ValueError("Multiple constant groups: {}".format(constant_group_indices))
+            raise ValueError(
+                "Multiple constant groups: {}".format(constant_group_indices)
+            )
         return self.algebra.times(constant, result_with_booleans)
 
     @classmethod
-    def get_variable_groups_poly(cls, weight: Polynomial, real_vars: List[str]) -> List[Tuple[Set[str], Polynomial]]:
+    def get_variable_groups_poly(
+        cls, weight: Polynomial, real_vars: List[str]
+    ) -> List[Tuple[Set[str], Polynomial]]:
         if len(real_vars) > 0:
             result = []
             found_vars = weight.variables
@@ -312,7 +354,9 @@ class FactorizedXsddEngine(BaseXsddEngine):
                     result[frozenset()] *= Polynomial.from_constant(value)
                 else:
                     for v in name:
-                        result[frozenset((v,))] *= Polynomial.from_smt(smt.Symbol(v, smt.REAL))
+                        result[frozenset((v,))] *= Polynomial.from_smt(
+                            smt.Symbol(v, smt.REAL)
+                        )
                     result[frozenset()] *= Polynomial.from_constant(value)
             return list(result.items())
 

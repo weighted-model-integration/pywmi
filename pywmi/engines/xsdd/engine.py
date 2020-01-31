@@ -8,12 +8,22 @@ from pysmt.environment import get_env
 import pysmt.shortcuts as smt
 
 from pywmi import Domain
-from pywmi.smt_math import Polynomial, LinearInequality, BoundsWalker, PolynomialAlgebra, implies
+from pywmi.smt_math import (
+    Polynomial,
+    LinearInequality,
+    BoundsWalker,
+    PolynomialAlgebra,
+    implies,
+)
 from pywmi.engine import Engine
 from pywmi.engines.pyxadd.algebra import PyXaddAlgebra
 from pywmi.engines.pyxadd.decision import Decision
 
-from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend, PSIAlgebra
+from pywmi.engines.algebraic_backend import (
+    AlgebraBackend,
+    IntegrationBackend,
+    PSIAlgebra,
+)
 from pywmi.engines.convex_integrator import ConvexIntegrationBackend
 from pywmi.engines.xsdd.vtrees.vtree import balanced
 
@@ -23,8 +33,6 @@ from .piecewise import split_up_function
 from .smt_to_sdd import compile_to_sdd
 from .draw import sdd_to_dot_file
 from pywmi.engines.xsdd.vtrees.vtree import Vtree
-
-
 
 
 IntegratorAndAlgebra = Union[AlgebraBackend, IntegrationBackend]
@@ -96,7 +104,10 @@ class NonConvexWMISemiring(Semiring):
         else:
             if a < 0:
                 abstraction = ~abstraction
-            return LinearInequality.from_smt(abstraction).to_expression(self.algebra), set()
+            return (
+                LinearInequality.from_smt(abstraction).to_expression(self.algebra),
+                set(),
+            )
 
     def positive_weight(self, a):
         raise NotImplementedError()
@@ -114,15 +125,18 @@ class BaseXsddEngine(Engine):
         find_conflicts=False,
         ordered=False,
         vtree_strategy=balanced,
-        minimize=False):
+        minimize=False,
+    ):
 
         super().__init__(domain, support, weight, exact)
         try:
             from pysdd.sdd import SddManager, SddNode
         except ImportError as e:
             from pywmi.errors import InstallError
-            raise InstallError(f"{type(self).__name__} requires the pysdd package") from e
 
+            raise InstallError(
+                f"{type(self).__name__} requires the pysdd package"
+            ) from e
 
         self.algebra = algebra or PSIAlgebra()  # Algebra used to solve SMT theory
         self.find_conflicts = find_conflicts
@@ -137,10 +151,16 @@ class BaseXsddEngine(Engine):
         conflicts = []
         print(self.support)
         print(self.weight)
-        inequalities = list(BoundsWalker(True).walk_smt(self.support) | BoundsWalker(True).walk_smt(self.weight))
+        inequalities = list(
+            BoundsWalker(True).walk_smt(self.support)
+            | BoundsWalker(True).walk_smt(self.weight)
+        )
         for i in range(len(inequalities) - 1):
             for j in range(i + 1, len(inequalities)):
-                if inequalities[i].get_free_variables() == inequalities[j].get_free_variables():
+                if (
+                    inequalities[i].get_free_variables()
+                    == inequalities[j].get_free_variables()
+                ):
                     if implies(inequalities[i], inequalities[j]):
                         conflicts.append(smt.Implies(inequalities[i], inequalities[j]))
                         logger.debug("%s => %s", inequalities[i], inequalities[j])
@@ -206,7 +226,7 @@ class BaseXsddEngine(Engine):
             ordered=self.ordered,
             vtree_strategy=self.vtree_strategy,
             minimize=self.minimize,
-            **kwargs
+            **kwargs,
         )
 
     def __str__(self):
@@ -225,7 +245,6 @@ class BaseXsddEngine(Engine):
         return str(self)
 
 
-
 class XsddEngine(BaseXsddEngine):
     "Implementation without factorizing"
 
@@ -237,15 +256,29 @@ class XsddEngine(BaseXsddEngine):
         *,
         algebra: Optional[IntegratorAndAlgebra] = None,
         convex_backend: ConvexIntegrationBackend = None,
-        **kwargs):
+        **kwargs,
+    ):
 
         algebra = algebra or PSIAlgebra()
-        super().__init__(domain, support, weight, convex_backend.exact if convex_backend else algebra.exact, algebra=algebra, **kwargs)
+        super().__init__(
+            domain,
+            support,
+            weight,
+            convex_backend.exact if convex_backend else algebra.exact,
+            algebra=algebra,
+            **kwargs,
+        )
         self.backend = convex_backend
 
     def copy(self, domain, support, weight, **kwargs):
-        return super().copy(domain, support, weight, self.backend.exact, convex_backend=self.backend, **kwargs)
-
+        return super().copy(
+            domain,
+            support,
+            weight,
+            self.backend.exact,
+            convex_backend=self.backend,
+            **kwargs,
+        )
 
     def get_weight_algebra(self):
         return PolynomialAlgebra()
@@ -266,12 +299,18 @@ class XsddEngine(BaseXsddEngine):
                 semiring_algebra = self.algebra
                 semiring = NonConvexWMISemiring(semiring_algebra, literals)
                 expression, variables = amc(semiring, support_sdd)
-                expression = semiring_algebra.times(expression, w_weight.to_expression(semiring_algebra))
-                vol = semiring_algebra.integrate(self.domain, expression, self.domain.real_vars)
+                expression = semiring_algebra.times(
+                    expression, w_weight.to_expression(semiring_algebra)
+                )
+                vol = semiring_algebra.integrate(
+                    self.domain, expression, self.domain.real_vars
+                )
                 missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                bool_worlds = semiring_algebra.power(semiring_algebra.real(2), missing_variable_count)
+                bool_worlds = semiring_algebra.power(
+                    semiring_algebra.real(2), missing_variable_count
+                )
                 vol = semiring_algebra.times(vol, bool_worlds)
-                volume = semiring_algebra.plus(volume,vol)
+                volume = semiring_algebra.plus(volume, vol)
 
             else:
                 raise NotImplementedError
@@ -280,9 +319,16 @@ class XsddEngine(BaseXsddEngine):
 
     def integrate_convex(self, convex_support, polynomial_weight):
         try:
-            domain = Domain(self.domain.real_vars, {v: REAL for v in self.domain.real_vars}, self.domain.var_domains)
-            return self.algebra.integrate(domain, BoundsWalker.get_inequalities(convex_support),
-                                          Polynomial.from_smt(polynomial_weight))
+            domain = Domain(
+                self.domain.real_vars,
+                {v: REAL for v in self.domain.real_vars},
+                self.domain.var_domains,
+            )
+            return self.algebra.integrate(
+                domain,
+                BoundsWalker.get_inequalities(convex_support),
+                Polynomial.from_smt(polynomial_weight),
+            )
         except ZeroDivisionError:
             return 0
 
