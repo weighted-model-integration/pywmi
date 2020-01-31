@@ -153,6 +153,7 @@ class FactorizedIntegrator:
         return self.integrate(self.algebra.times(prime_result, sub_result),
                               [e for e in order if e in tags_shared] if order else tags_shared)
 
+
     def walk_literal(self, node):
         literal = node.literal
         var = self.literals.inv_numbered[abs(literal)]  # var as abstracted in SDD
@@ -185,109 +186,6 @@ class FactorizedIntegrator:
 
 
 
-#TODO is this the same as the new one?
-# class FactorizedIntegrator:
-#     def __init__(self,
-#                  domain: Domain,
-#                  abstractions: Dict,
-#                  var_to_lit: Dict,
-#                  groups: Dict[int, Tuple[Set[str], Polynomial]],
-#                  node_to_groups: Dict,
-#                  labels: Dict,
-#                  algebra: Union[AlgebraBackend, IntegrationBackend]) -> None:
-#         self.domain = domain
-#         self.reverse_abstractions = {v: k for k, v in abstractions.items()}
-#         self.lit_to_var = {v: k for k, v in var_to_lit.items()}
-#         self.groups = groups
-#         self.node_to_groups = node_to_groups
-#         self.labels = labels
-#         self.algebra = algebra
-#         self.hits = 0
-#         self.misses = 0
-#
-#     def recursive(self, node, tags=None, cache=None, order=None):
-#         if cache is None:
-#             cache = dict()
-#
-#         if tags is None:
-#             tags = self.node_to_groups[node.id]
-#
-#         key = (node, frozenset(tags))
-#         if key in cache:
-#             self.hits += 1
-#             return cache[key]
-#         else:
-#             self.misses += 1
-#
-#         if node.is_false():
-#             result = self.walk_false()
-#             cache[key] = result
-#             return result
-#         if node.is_true():
-#             result = self.walk_true()
-#             cache[key] = result
-#             return result
-#
-#         if node.is_decision():
-#             result = self.algebra.zero()
-#             for prime, sub in node.elements():
-#                 result = self.algebra.plus(result, self.walk_and(prime, sub, tags, cache, order))
-#         else:
-#             expression = self.walk_literal(node)
-#             logger.debug("node LIT(%s)", node.id)
-#             result = self.integrate(expression, tags)
-#
-#         cache[key] = result
-#         return result
-#
-#     def walk_true(self):
-#         return self.algebra.one()
-#
-#     def walk_false(self):
-#         return self.algebra.zero()
-#
-#     def walk_and(self, prime, sub, tags, cache, order):
-#         if prime.is_false() or sub.is_false():
-#             return self.algebra.zero()
-#         tags_prime = self.node_to_groups[prime.id] & tags
-#         tags_sub = self.node_to_groups[sub.id] & tags
-#         tags_shared = tags_prime & tags_sub
-#         if order and len(tags_shared) > 0:
-#             first_index = min(order.index(tag) for tag in tags_shared)
-#             tags_shared |= (tags & set(order[first_index:]))
-#         prime_result = self.recursive(prime, tags_prime - tags_shared, cache, order)
-#         sub_result = self.recursive(sub, tags_sub - tags_shared, cache, order)
-#         logger.debug("node AND(%s, %s)", prime.id, sub.id)
-#         return self.integrate(self.algebra.times(prime_result, sub_result),
-#                               [e for e in order if e in tags_shared] if order else tags_shared)
-#
-#     def walk_literal(self, node):
-#         literal = node.literal
-#         if abs(literal) in self.lit_to_var:
-#             var = self.lit_to_var[abs(literal)]
-#             if var in self.labels:
-#                 expr = Polynomial.from_smt(self.labels[var][0 if (literal > 0) else 1]).to_expression(self.algebra)
-#             else:
-#                 expr = self.algebra.one()
-#         else:
-#             f = self.reverse_abstractions[abs(literal)]
-#             if literal < 0:
-#                 f = ~f
-#             # expr = LinearInequality.from_smt(f).scale_to_integer().to_expression(self.algebra)
-#             expr = self.algebra.parse_condition(f)
-#
-#         return expr
-#
-#     def integrate(self, expr, tags):
-#         # type: (Any, Iterable[int]) -> Any
-#         result = expr
-#         for group_id in tags:
-#             variables, poly = self.groups[group_id]
-#             group_expr = self.algebra.times(result, poly.to_expression(self.algebra))
-#             if logger.isEnabledFor(logging.DEBUG):
-#                 logger.debug("%s: %s", variables, str(group_expr))
-#             result = self.algebra.integrate(self.domain, group_expr, variables)
-#         return result
 
 
 
