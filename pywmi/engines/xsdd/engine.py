@@ -261,11 +261,12 @@ class XsddEngine(BaseXsddEngine):
                 semiring = NonConvexWMISemiring(semiring_algebra, literals)
                 expression, variables = amc(semiring, support_sdd)
                 expression = semiring_algebra.times(expression, w_weight.to_expression(semiring_algebra))
-                volume = semiring_algebra.integrate(self.domain, expression, self.domain.real_vars)
-
+                vol = semiring_algebra.integrate(self.domain, expression, self.domain.real_vars)
                 missing_variable_count = len(self.domain.bool_vars) - len(variables)
                 bool_worlds = semiring_algebra.power(semiring_algebra.real(2), missing_variable_count)
-                volume = semiring_algebra.times(volume, bool_worlds)
+                vol = semiring_algebra.times(vol, bool_worlds)
+                volume = semiring_algebra.plus(volume,vol)
+
             else:
                 raise NotImplementedError
 
