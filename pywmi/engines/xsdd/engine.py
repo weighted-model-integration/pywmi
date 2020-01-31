@@ -489,11 +489,13 @@ class XsddEngine(Engine):
                     semiring = NonConvexWMISemiring(factorized_algebra, abstractions, var_to_lit)
                     expression, variables = amc(semiring, support)
                     expression = factorized_algebra.times(expression, w_weight.to_expression(factorized_algebra))
-                    volume = factorized_algebra.integrate(self.domain, expression, self.domain.real_vars)
+                    vol = factorized_algebra.integrate(self.domain, expression, self.domain.real_vars)
+
 
                     missing_variable_count = len(self.domain.bool_vars) - len(variables)
                     bool_worlds = factorized_algebra.power(factorized_algebra.real(2), missing_variable_count)
-                    volume = factorized_algebra.times(volume, bool_worlds)
+                    vol = factorized_algebra.times(vol, bool_worlds)
+                    volume = factorized_algebra.plus(volume,vol)
                 else:
                     convex_supports = amc(ConvexWMISemiring(abstractions, var_to_lit), support)
                     logger.debug("#convex regions %s", len(convex_supports))
