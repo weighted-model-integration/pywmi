@@ -8,7 +8,7 @@ import pysmt.shortcuts as smt
 from pywmi import Domain
 from pywmi.smt_math import Polynomial, LinearInequality
 from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend, PSIAlgebra
-from pywmi import multimap
+from pywmi.multimap import multimap
 
 from .semiring import amc, Semiring, SddWalker, walk
 from .engine import BaseXsddEngine, IntegratorAndAlgebra
@@ -64,25 +64,19 @@ class BooleanFinder(Semiring):
 
     def times_neutral(self):
         return set()
-
     def plus_neutral(self):
         return set()
-
     def times(self, a, b, index=None):
         return a | b
-
     def plus(self, a, b, index=None):
         return a | b
-
     def negate(self, a):
         raise NotImplementedError()
-
     def weight(self, a):
         if abs(a) in self.inv_boolean_varnums:
             return {self.inv_boolean_varnums[abs(a)]}
         else:
             return set()
-
     def positive_weight(self, a):
         raise NotImplementedError()
 
