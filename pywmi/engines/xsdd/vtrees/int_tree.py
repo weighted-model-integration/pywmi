@@ -382,7 +382,7 @@ class IntTreeFactory:
                 min_height_nodes = [node]
         return min_height_nodes
 
-    def current_depth(self):
+    def current_depth(self) -> int:
         """ The depth of the integration tree if it was formed now (get_int_tree()). """
         if len(self.roots) == 1:
             return self.roots[0][2]
