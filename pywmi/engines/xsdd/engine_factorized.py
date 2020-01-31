@@ -347,7 +347,10 @@ class FactorizedXsddEngine(BaseXsddEngine):
                         result.append(({v}, weight.from_constant(1)))
                 return result + cls.get_variable_groups_poly(weight, [])
 
+            # print(weight)
             factors = weight.get_factors()
+            # print(factors)
+            # print("")
             return [(f.variables, f) for f in factors]
         elif isinstance(weight, Polynomial):
             if len(real_vars) > 0:

@@ -1,6 +1,6 @@
-from pywmi.smt_math import PolynomialAlgebra, Polynomial, CONST_KEY
 import sympy
-from pywmi.sympy_utils import sympy2pysmt
+
+from pywmi.smt_math import PolynomialAlgebra, CONST_KEY
 
 
 class FactorizedPolynomialAlgebra(PolynomialAlgebra):
@@ -35,14 +35,8 @@ class FactorizedPolynomial:
             return [self]
 
     def to_expression(self, algebra):
-        expression = Polynomial.from_smt(sympy2pysmt(self.expression))
-        expression = Polynomial.to_expression(expression, algebra)
-        return expression
-        # print(algebra)
-        # print(self.expression)
-
-    def to_smt(self):
-        return sympy2pysmt(self.expression)
+        print(self)
+        raise NotImplementedError
 
     @property
     def variables(self):
@@ -51,9 +45,9 @@ class FactorizedPolynomial:
     def get_factors(self):
         constant, factors = sympy.factor_list(self.expression)
         factors = [b ** e for (b, e) in factors]
-        factors = [Polynomial.from_smt(sympy2pysmt(f)) for f in factors]
+        factors = [FactorizedPolynomial(f) for f in factors]
         if not constant == 1:
-            factors = [Polynomial.from_constant(constant)] + factors
+            factors = [FactorizedPolynomial.from_constant(constant)] + factors
         return factors
 
     def __str__(self):
