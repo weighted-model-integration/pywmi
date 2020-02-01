@@ -15,7 +15,9 @@ CONST_KEY = ()
 
 class Polynomial(object):
     def __init__(self, poly_dict):
-        self.poly_dict = {k: float(v) for k, v in poly_dict.items()}  # type: Dict[Tuple[str], float]
+        self.poly_dict = {
+            k: float(v) for k, v in poly_dict.items()
+        }  # type: Dict[Tuple[str], float]
         self._hash_value = None
 
     @property
@@ -28,8 +30,10 @@ class Polynomial(object):
         return result
 
     def to_smt(self):
-        keys = {key: Times(Symbol(n, REAL) for n in key) if key != CONST_KEY else Real(1.0)
-                for key in self.poly_dict.keys()}
+        keys = {
+            key: Times(Symbol(n, REAL) for n in key) if key != CONST_KEY else Real(1.0)
+            for key in self.poly_dict.keys()
+        }
         return Plus(
             keys[key] * Real(value) if value != 1 else keys[key]
             for key, value in self.poly_dict.items()
@@ -45,7 +49,7 @@ class Polynomial(object):
             result = algebra.plus(result, algebra.times(term, algebra.real(factor)))
         return result
 
-    def get_terms(self) -> List['Polynomial']:
+    def get_terms(self) -> List["Polynomial"]:
         return [Polynomial({k: v}) for k, v in self.poly_dict.items()]
 
     def __add__(self, other: Union[object, int, float]):
@@ -53,7 +57,9 @@ class Polynomial(object):
             other = Polynomial({CONST_KEY: other})
 
         if not isinstance(other, Polynomial):
-            raise NotImplementedError("Can only add polynomials not {other}".format(other=other))
+            raise NotImplementedError(
+                "Can only add polynomials not {other}".format(other=other)
+            )
 
         return Polynomial(Polynomial.dict_plus(self.poly_dict, other.poly_dict))
 
@@ -67,7 +73,9 @@ class Polynomial(object):
             other = Polynomial({CONST_KEY: other})
 
         if not isinstance(other, Polynomial):
-            raise NotImplementedError("Can only multiply polynomials not {other}".format(other=other))
+            raise NotImplementedError(
+                "Can only multiply polynomials not {other}".format(other=other)
+            )
 
         return Polynomial(Polynomial.dict_times(self.poly_dict, other.poly_dict))
 
@@ -116,7 +124,9 @@ class Polynomial(object):
         return isinstance(other, Polynomial) and self.poly_dict == other.poly_dict
 
     def __str__(self):
-        return " + ".join("*".join(key + (str(value),)) for key, value in self.poly_dict.items())
+        return " + ".join(
+            "*".join(key + (str(value),)) for key, value in self.poly_dict.items()
+        )
 
     def __repr__(self):
         return self.__str__()
@@ -159,10 +169,14 @@ class LinearInequality(object):
             return Real(0) <= Real(0)
         elif len(self.inequality_dict) == 1 and CONST_KEY in self.inequality_dict:
             return Real(0) <= Real(-self.inequality_dict.get(CONST_KEY, 0))
-        return Plus(Times(Symbol(n, REAL) for n in name) * Real(factor)
-                    if factor != 1 else Times(Symbol(n, REAL) for n in name)
-                    for name, factor in self.inequality_dict.items() if name != CONST_KEY) \
-               < Real(-self.inequality_dict.get(CONST_KEY, 0))
+        result = Plus(
+            Times(Symbol(n, REAL) for n in name) * Real(factor)
+            if factor != 1
+            else Times(Symbol(n, REAL) for n in name)
+            for name, factor in self.inequality_dict.items()
+            if name != CONST_KEY
+        ) < Real(-self.inequality_dict.get(CONST_KEY, 0))
+        return result
 
     def to_expression(self, algebra: AlgebraBackend):
         try:
@@ -172,7 +186,9 @@ class LinearInequality(object):
                     term = algebra.one()
                     for var in variables:
                         term = algebra.times(term, algebra.symbol(var))
-                    result = algebra.plus(result, algebra.times(term, algebra.real(factor)))
+                    result = algebra.plus(
+                        result, algebra.times(term, algebra.real(factor))
+                    )
             return algebra.less_than_equal(result, algebra.real(self.b()))
         except NotImplementedError:
             return algebra.parse_condition(self.to_smt())
@@ -182,19 +198,30 @@ class LinearInequality(object):
         return int(num1 * num2 / math.gcd(num1, num2))
 
     def scale_to_integer(self):
-        fractions = {k: Fraction(v).limit_denominator() for k, v in self.inequality_dict.items()}
+        fractions = {
+            k: Fraction(v).limit_denominator() for k, v in self.inequality_dict.items()
+        }
         denominators = [int(fraction.denominator) for fraction in fractions.values()]
         lcm = reduce(LinearInequality.lcm, denominators)
-        fractions = {k: v * lcm for k, v in fractions.items()}  # type: Dict[Tuple, Fraction]
+        fractions = {
+            k: v * lcm for k, v in fractions.items()
+        }  # type: Dict[Tuple, Fraction]
         numerators = [abs(int(fraction.numerator)) for fraction in fractions.values()]
         gcd = reduce(lambda num1, num2: int(math.gcd(num1, num2)), numerators)
-        fractions = {k: int(v / gcd) for k, v in fractions.items()}  # type: Dict[Tuple, int]
+        fractions = {
+            k: int(v / gcd) for k, v in fractions.items()
+        }  # type: Dict[Tuple, int]
         return LinearInequality(fractions)
 
     def __str__(self):
-        terms = ["{}".format(("" if factor == 1 else str(factor)) + "".join(key))
-                 for key, factor in self.inequality_dict.items() if key != CONST_KEY]
-        return "{} < {}".format(" + ".join(terms), -self.inequality_dict.get(CONST_KEY, 0))
+        terms = [
+            "{}".format(("" if factor == 1 else str(factor)) + "".join(key))
+            for key, factor in self.inequality_dict.items()
+            if key != CONST_KEY
+        ]
+        return "{} < {}".format(
+            " + ".join(terms), -self.inequality_dict.get(CONST_KEY, 0)
+        )
 
     def normalize(self):
         if len(self.inequality_dict) == 0:
@@ -203,7 +230,9 @@ class LinearInequality(object):
         factor = max(abs(v) for v in self.inequality_dict.values())
         if factor == 0:
             return self
-        return LinearInequality({k: v / factor for k, v in self.inequality_dict.items()})
+        return LinearInequality(
+            {k: v / factor for k, v in self.inequality_dict.items()}
+        )
 
     def inverted(self):
         return LinearInequality({k: -v for k, v in self.inequality_dict.items()})
@@ -229,7 +258,10 @@ class MathDictConverter(SmtWalker):
 
     def walk_times(self, args):
         # noinspection PyTypeChecker
-        return reduce(partial(Polynomial.dict_times, force_linear=self.force_linear), self.walk_smt_multiple(args))
+        return reduce(
+            partial(Polynomial.dict_times, force_linear=self.force_linear),
+            self.walk_smt_multiple(args),
+        )
 
     def walk_not(self, argument):
         term_dict = self.walk_smt(argument)
@@ -241,11 +273,18 @@ class MathDictConverter(SmtWalker):
     def walk_pow(self, base, exponent):
         exponent = float(exponent.constant_value())
         if int(exponent) != exponent:
-            raise ValueError("Fractional powers ({exponent}) are not supported".format(exponent=exponent))
+            raise ValueError(
+                "Fractional powers ({exponent}) are not supported".format(
+                    exponent=exponent
+                )
+            )
         exponent = int(exponent)
         if exponent != 1 and self.force_linear:
-            raise ValueError("Non-linear constraints are not supported ({base}**{exponent})"
-                             .format(base=base, exponent=exponent))
+            raise ValueError(
+                "Non-linear constraints are not supported ({base}**{exponent})".format(
+                    base=base, exponent=exponent
+                )
+            )
         base = self.walk_smt(base)
         result = base
         for _ in range(exponent - 1):
@@ -274,13 +313,17 @@ class MathDictConverter(SmtWalker):
         if v_type == REAL:
             return {(name,): 1}
         else:
-            raise ValueError("Symbol of type {v_type} not supported".format(v_type=v_type))
+            raise ValueError(
+                "Symbol of type {v_type} not supported".format(v_type=v_type)
+            )
 
     def walk_constant(self, value, v_type):
         if v_type == REAL:
             return {CONST_KEY: float(value)}
         else:
-            raise ValueError("Constant of type {v_type} not supported".format(v_type=v_type))
+            raise ValueError(
+                "Constant of type {v_type} not supported".format(v_type=v_type)
+            )
 
 
 class BoundsWalker(SmtWalker):
@@ -338,12 +381,18 @@ class BoundsWalker(SmtWalker):
 
     def walk_symbol(self, name, v_type):
         if not self.allow_or and v_type != BOOL:
-            raise ValueError("Invalid Symbol node {v_type}:{name}".format(v_type=v_type, name=name))
+            raise ValueError(
+                "Invalid Symbol node {v_type}:{name}".format(v_type=v_type, name=name)
+            )
         return set()
 
     def walk_constant(self, value, v_type):
         if not self.allow_or and v_type != BOOL:
-            raise ValueError("Invalid Constant node {v_type}:{value}".format(v_type=v_type, value=value))
+            raise ValueError(
+                "Invalid Constant node {v_type}:{value}".format(
+                    v_type=v_type, value=value
+                )
+            )
         return set()
 
     @staticmethod
