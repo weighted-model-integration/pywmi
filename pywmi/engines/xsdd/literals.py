@@ -1,6 +1,7 @@
 
 from collections import OrderedDict
 import functools
+from typing import Dict, Tuple
 
 from pysmt.environment import Environment
 from pysmt.operators import (AND, OR, NOT, IMPLIES, IFF, ITE,
@@ -41,7 +42,7 @@ class InverseDictDelegate(dict):
 
 
 class LiteralInfo:
-    def __init__(self, abstractions, booleans):
+    def __init__(self, abstractions, booleans, labels=None):
         self.literals = OrderedDict()
         # TODO: right now, some part of the code does lookups literal -> boolean/abstraction
         # The way to do that easily is an isinstance check, since booleans are strings and abstractions
@@ -58,6 +59,7 @@ class LiteralInfo:
 
         self.abstractions = InverseDictDelegate(abstractions, inverse=self.literals, on_change=self._on_change)
         self.booleans = InverseDictDelegate(booleans, inverse=self.literals, on_change=self._on_change)
+        self.labels = labels or dict()  # type: Dict[str, Tuple[FNode, FNode]]
 
     @property
     def numbered(self):

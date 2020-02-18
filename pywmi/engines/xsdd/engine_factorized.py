@@ -250,22 +250,23 @@ class FactorizedXsddEngine(BaseXsddEngine):
             logger.debug("----- Term %s -----", term)
 
             repl_env, logic_support, literals = extract_and_replace_literals(support)
+            literals.labels = labeling_dict
 
             vtree = self.get_vtree(support, literals)
-
             support_sdd = self.get_sdd(logic_support, literals, vtree)
+
             # TODO
             # if logger.getEffectiveLevel() == logging.DEBUG:
             #    filename = f"sdd_{i}.dot"
             #    sdd_to_dot_file(support_sdd, literals, filename, node_to_groups)
             #    logger.debug(f"saved SDD of piece {i} to {filename}")
 
-            subvolume = self.compute_volume_for_piece(term, literals, support_sdd, labeling_dict)
+            subvolume = self.compute_volume_for_piece(term, literals, support_sdd)
 
             volume = self.algebra.plus(volume, subvolume)
         return volume
 
-    def compute_volume_for_piece(self, term, literals: LiteralInfo, support_sdd, labeling_dict: Dict[str, Any]):
+    def compute_volume_for_piece(self, term, literals: LiteralInfo, support_sdd):
         variable_groups = self.get_variable_groups_poly(term, self.domain.real_vars)
 
         if self.ordered:
@@ -301,7 +302,7 @@ class FactorizedXsddEngine(BaseXsddEngine):
             literal_to_groups[lit_num] = inequality_groups
             literal_to_groups[-lit_num] = inequality_groups
 
-        for var, (true_label, false_label) in labeling_dict.items():
+        for var, (true_label, false_label) in literals.labels.items():
             lit_num = literals.numbered[literals.booleans[var]]
             true_inequality_groups = [get_group(v) for v in map(str, true_label.get_free_variables())]
             false_inequality_groups = [get_group(v) for v in map(str, false_label.get_free_variables())]
@@ -325,7 +326,7 @@ class FactorizedXsddEngine(BaseXsddEngine):
             i for i, e in group_to_vars_poly.items() if len(e[0]) == 0
         ]
         integrator = FactorizedIntegrator(
-            self.domain, literals, group_to_vars_poly, node_to_groups, labeling_dict, self.algebra
+            self.domain, literals, group_to_vars_poly, node_to_groups, literals.labels, self.algebra
         )
         logger.debug("group order %s", group_order)
         expression = integrator.recursive(support_sdd, order=group_order)
