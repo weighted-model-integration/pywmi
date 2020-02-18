@@ -179,8 +179,8 @@ class FactorizedIntegrator:
         var = self.literals.inv_numbered[abs(literal)]  # var as abstracted in SDD
         abstraction = self.literals[var]
         if isinstance(abstraction, str):
-            if var in self.labels:
-                expr = Polynomial.from_smt(self.labels[var][0 if (literal > 0) else 1]).to_expression(self.algebra)
+            if abstraction in self.labels:
+                expr = Polynomial.from_smt(self.labels[abstraction][0 if (literal > 0) else 1]).to_expression(self.algebra)
             else:
                 expr = self.algebra.one()
         else:
