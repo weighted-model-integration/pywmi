@@ -203,7 +203,8 @@ class BaseXsddEngine(Engine):
 
             for lit in all_literals:
                 test = all_support_literals[lit]
-                self.algebra.pool.bool_test(Decision(test))
+                if not isinstance(test, str):
+                    self.algebra.pool.bool_test(Decision(test))
 
         volume = self.compute_volume_from_pieces(base_support, piecewise_function, labeling_dict)
         return self.algebra.to_float(volume)
