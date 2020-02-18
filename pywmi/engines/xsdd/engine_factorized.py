@@ -1,6 +1,7 @@
-from typing import Dict, Tuple, Set, Union, List, Optional
+from typing import Dict, Tuple, Set, Union, List, Optional, Any
 import logging
 from collections import defaultdict
+from pywmi.engines.xsdd.smt_to_sdd import extract_labels_and_weight
 
 import pysmt.shortcuts as smt
 
@@ -101,13 +102,14 @@ class FactorizedIntegrator:
         literals: LiteralInfo,
         groups: Dict[int, Tuple[Set[str], Polynomial]],
         node_to_groups: Dict,
+        labels: Dict[str, Any],
         algebra: Union[AlgebraBackend, IntegrationBackend],
     ):
         self.domain = domain
         self.literals = literals
         self.groups = groups
         self.node_to_groups = node_to_groups
-        # TODO labels
+        self.labels = labels
         self.algebra = algebra
         self.hits = 0
         self.misses = 0
@@ -177,10 +179,10 @@ class FactorizedIntegrator:
         var = self.literals.inv_numbered[abs(literal)]  # var as abstracted in SDD
         abstraction = self.literals[var]
         if isinstance(abstraction, str):
-            # if var in self.labels:  # TODO labels
-            #    expr = Polynomial.from_smt(self.labels[var][0 if (literal > 0) else 1]).to_expression(self.algebra)
-            # else:
-            expr = self.algebra.one()
+            if var in self.labels:
+                expr = Polynomial.from_smt(self.labels[var][0 if (literal > 0) else 1]).to_expression(self.algebra)
+            else:
+                expr = self.algebra.one()
         else:
             if literal < 0:
                 abstraction = ~abstraction
@@ -224,7 +226,10 @@ class FactorizedXsddEngine(BaseXsddEngine):
         else:
             return FactorizedPolynomialAlgebra()
 
-    def compute_volume_from_pieces(self, base_support, piecewise_function):
+    def get_labels_and_weight(self):
+        return extract_labels_and_weight(self.weight)
+
+    def compute_volume_from_pieces(self, base_support, piecewise_function, labeling_dict):
         # Prepare the support for each piece (not compiled yet)
         term_supports = multimap()
         for piece_weight, piece_support in piecewise_function.pieces.items():
@@ -255,12 +260,12 @@ class FactorizedXsddEngine(BaseXsddEngine):
             #    sdd_to_dot_file(support_sdd, literals, filename, node_to_groups)
             #    logger.debug(f"saved SDD of piece {i} to {filename}")
 
-            subvolume = self.compute_volume_for_piece(term, literals, support_sdd)
+            subvolume = self.compute_volume_for_piece(term, literals, support_sdd, labeling_dict)
 
             volume = self.algebra.plus(volume, subvolume)
         return volume
 
-    def compute_volume_for_piece(self, term, literals, support_sdd):
+    def compute_volume_for_piece(self, term, literals: LiteralInfo, support_sdd, labeling_dict: Dict[str, Any]):
         variable_groups = self.get_variable_groups_poly(term, self.domain.real_vars)
 
         if self.ordered:
@@ -296,6 +301,13 @@ class FactorizedXsddEngine(BaseXsddEngine):
             literal_to_groups[lit_num] = inequality_groups
             literal_to_groups[-lit_num] = inequality_groups
 
+        for var, (true_label, false_label) in labeling_dict.items():
+            lit_num = literals.numbered[var]
+            true_inequality_groups = [get_group(v) for v in map(str, true_label.get_free_variables())]
+            false_inequality_groups = [get_group(v) for v in map(str, false_label.get_free_variables())]
+            literal_to_groups[lit_num] = true_inequality_groups
+            literal_to_groups[-lit_num] = false_inequality_groups
+
         # for var, (true_label, false_label) in labels.items():
         #    true_inequality_groups = [get_group(v) for v in map(str, true_label.get_free_variables())]
         #    false_inequality_groups = [get_group(v) for v in map(str, false_label.get_free_variables())]
@@ -313,7 +325,7 @@ class FactorizedXsddEngine(BaseXsddEngine):
             i for i, e in group_to_vars_poly.items() if len(e[0]) == 0
         ]
         integrator = FactorizedIntegrator(
-            self.domain, literals, group_to_vars_poly, node_to_groups, self.algebra
+            self.domain, literals, group_to_vars_poly, node_to_groups, labeling_dict, self.algebra
         )
         logger.debug("group order %s", group_order)
         expression = integrator.recursive(support_sdd, order=group_order)

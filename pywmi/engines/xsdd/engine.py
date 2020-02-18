@@ -175,6 +175,9 @@ class BaseXsddEngine(Engine):
                         logger.debug("%s => %s", ~inequalities[j], inequalities[i])
         return conflicts
 
+    def get_labels_and_weight(self):
+        return dict(), self.weight
+
     def compute_volume(self, add_bounds=True):
         if add_bounds:
             return self.with_constraint(self.domain.get_bounds()).compute_volume(False)
@@ -189,8 +192,9 @@ class BaseXsddEngine(Engine):
         if self.find_conflicts:
             base_support = smt.And(*self.collect_conflicts()) & base_support
 
+        labeling_dict, weight_function = self.get_labels_and_weight()
         # piecewise_function contains a dict of weight -> support pairs
-        piecewise_function = split_up_function(self.weight, descr_algebra, get_env())
+        piecewise_function = split_up_function(weight_function, descr_algebra, get_env())
 
         if isinstance(self.algebra, PyXaddAlgebra):
             _, _, all_support_literals = extract_and_replace_literals(base_support)
@@ -201,7 +205,7 @@ class BaseXsddEngine(Engine):
                 test = all_support_literals[lit]
                 self.algebra.pool.bool_test(Decision(test))
 
-        volume = self.compute_volume_from_pieces(base_support, piecewise_function)
+        volume = self.compute_volume_from_pieces(base_support, piecewise_function, labeling_dict)
         return self.algebra.to_float(volume)
 
     def get_weight_algebra(self):
@@ -213,7 +217,7 @@ class BaseXsddEngine(Engine):
     def get_sdd(self, logic_support, literals: LiteralInfo, vtree: Vtree):
         return compile_to_sdd(logic_support, literals, vtree)
 
-    def compute_volume_from_pieces(self, base_support, piecewise_function):
+    def compute_volume_from_pieces(self, base_support, piecewise_function, labeling_dict):
         raise NotImplementedError()
 
     def copy(self, domain, support, weight, exact, **kwargs):
@@ -283,7 +287,7 @@ class XsddEngine(BaseXsddEngine):
     def get_weight_algebra(self):
         return PolynomialAlgebra()
 
-    def compute_volume_from_pieces(self, base_support, piecewise_function):
+    def compute_volume_from_pieces(self, base_support, piecewise_function, labeling_dict):
         volume = self.algebra.zero()
         for i, (w_weight, w_support) in enumerate(piecewise_function.pieces.items()):
             support = w_support & base_support
