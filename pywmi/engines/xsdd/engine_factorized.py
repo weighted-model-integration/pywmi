@@ -302,7 +302,7 @@ class FactorizedXsddEngine(BaseXsddEngine):
             literal_to_groups[-lit_num] = inequality_groups
 
         for var, (true_label, false_label) in labeling_dict.items():
-            lit_num = literals.numbered[var]
+            lit_num = literals.numbered[literals.booleans[var]]
             true_inequality_groups = [get_group(v) for v in map(str, true_label.get_free_variables())]
             false_inequality_groups = [get_group(v) for v in map(str, false_label.get_free_variables())]
             literal_to_groups[lit_num] = true_inequality_groups
