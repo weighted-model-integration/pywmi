@@ -19,17 +19,17 @@ except NoSolverAvailableError:
     pysmt_installed = False
 
 try:
-    from wmipa import Weights, WMI, PRAiSEInference
+    from wmipa.praiseinference import PRAiSEInference
 except ImportError:
     lib_filename = os.path.join(os.path.dirname(__file__), "lib", "pa", "wmi-pa-master")
     if os.path.exists(lib_filename):
         sys.path.append(lib_filename)
         try:
-            from wmipa import Weights, WMI, PRAiSEInference
+            from wmipa.praiseinference import PRAiSEInference
         except ImportError:
             raise InstallError("Corrupted PA install")
     else:
-        Weights, WMI, PRAiSEInference = None, None, None
+        PRAiSEInference = None
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class PraiseEngine(Engine):
         super().__init__(domain, support, weight)
         if not pysmt_installed:
             raise InstallError("No PySMT solver is installed (not installed or not on path)")
-        if WMI is None:
+        if PRAiSEInference is None:
             raise InstallError("The wmipa library is not in your PYTHONPATH")
 
     def compute_volume(self, timeout=None, add_bounds=True):
