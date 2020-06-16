@@ -1,6 +1,7 @@
 # Not to be confused with the vtree's in PySDD library.
 # This is for ease of use in Python, but eventually you'll want to
 # convert the vtrees here to a vtree usable by the PySDD library.
+from abc import ABC, abstractmethod
 
 from dataclasses import dataclass
 from itertools import product, combinations
@@ -28,7 +29,40 @@ def get_pydot():
     return _pydot
 
 
-class Vtree:
+class Vtree(ABC):
+
+    @abstractmethod
+    def all_leaves(self):
+        pass
+
+    @abstractmethod
+    def count(self) -> int:
+        pass
+
+    @abstractmethod
+    def count_leaves(self) -> int:
+        pass
+
+    @abstractmethod
+    def all_nodes(self):
+        pass
+
+    @abstractmethod
+    def depth(self) -> int:
+        pass
+
+    @abstractmethod
+    def balanced_add(self, vtree, prefer_left):
+        pass
+
+    @abstractmethod
+    def _to_dot(self, g):
+        pass
+
+    @abstractmethod
+    def _to_pysdd(self, f, varnums):
+        pass
+
     def to_dot(self):
         dot = get_pydot()
         g = dot.Dot(graph_type="digraph")
