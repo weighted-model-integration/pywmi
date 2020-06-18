@@ -16,7 +16,7 @@ VERSION = "0.7.0"
 # What packages are required for this module to be executed?
 REQUIRED = [
     'pysmt', 'numpy', 'future', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'graphviz', 'sympy',
-    'scipy>=1.2', 'autodora>=0.3.3', 'deprecated', 'networkx', 'dataclasses', 'sortedcollections'
+    'scipy>=1.2', 'autodora>=0.3.3', 'deprecated', 'networkx', 'antlr4-python3-runtime', 'dataclasses', 'sortedcollections'
 ]
 
 # What packages are optional?
