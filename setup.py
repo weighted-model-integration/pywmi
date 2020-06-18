@@ -11,12 +11,12 @@ URL = 'http://github.com/samuelkolb/pywmi'
 EMAIL = 'samuel.kolb@me.com'
 AUTHOR = 'Samuel Kolb'
 REQUIRES_PYTHON = '>=3.5.0'
-VERSION = "0.7.15"
+VERSION = "0.7.0"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
     'pysmt', 'numpy', 'future', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'graphviz', 'sympy',
-    'scipy>=1.2', 'autodora>=0.3.3', 'deprecated', 'networkx', 'antlr4-python3-runtime'
+    'scipy>=1.2', 'autodora>=0.3.3', 'deprecated', 'networkx', 'dataclasses', 'sortedcollections'
 ]
 
 # What packages are optional?
@@ -25,7 +25,6 @@ EXTRAS = {
 }
 
 # Distribute: python setup.py upload
-# Requires: pip install twine wheel
 
 here = os.path.abspath(os.path.dirname(__file__))
 
