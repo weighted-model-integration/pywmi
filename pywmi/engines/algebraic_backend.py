@@ -191,6 +191,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         #     return float(parts[0]) / float(parts[1])
         return float(string_value)
 
+
     def get_flat_expression(self, expression_with_conditions):
         result = psipy.filter_iverson(expression_with_conditions)
         # result = psipy.simplify(result)
