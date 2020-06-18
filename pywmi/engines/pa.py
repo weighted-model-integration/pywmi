@@ -73,9 +73,9 @@ class PredicateAbstractionEngine(Engine):
         return "pa" + ("" if self.timeout is None else ":t{}".format(self.timeout))
 
     @staticmethod
-    def compute_volume_pa(domain, support, weight):
+    def compute_volume_pa(domain, support, weight, convex_backend=None):
         # noinspection PyCallingNonCallable
-        solver = WMI(support, weight)
+        solver = WMI(support, weight, convex_backend=convex_backend)
         return solver.computeWMI(
             Bool(True),
             mode=WMI.MODE_PA,
