@@ -31,28 +31,20 @@ class RejectionEngine(Engine):
         self.seed = seed
         self.sample_count = sample_count
 
-    def compute_volume(self, sample_count=None, add_bounds=False, ohe_sampling=False):
+    def compute_volume(self, sample_count=None, add_bounds=False, ohe_variables=None):
         sample_count = sample_count if sample_count is not None else self.sample_count
-        samples = uniform(self.domain, sample_count, ohe_sampling=ohe_sampling)
+        samples = uniform(self.domain, sample_count, ohe_variables=ohe_variables)
         labels = evaluate(self.domain, self.support, samples)
 
-        if not ohe_sampling:
+        if ohe_variables is None:
             bound_volume = self.domain.get_volume() if len(self.domain.real_vars) > 0 else 2 ** len(self.domain.bool_vars)
         else:
-            categorical = {}
-            ohevars = set()
-            for var in self.domain.variables:
-                if "_OHE_" in var:
-                    ohevars.add(var)
-                    name, _, _ = var.split("_")
-                    if name not in categorical:
-                        categorical[name] = 0
-                    categorical[name]+= 1
-
+            ohevars = {x for ohe in ohe_variables for x in ohe}
             bound_volume = 2 ** len([v for v in self.domain.bool_vars
                                      if v not in ohevars])
-            for nvals in categorical.values():
-                bound_volume *= nvals
+            for ohe in ohe_variables:
+                bound_volume *= len(ohe)
+
             real_volume = self.domain.get_bounding_box_volume()
             if real_volume != 0:
                 bound_volume *= real_volume
