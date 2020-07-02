@@ -31,11 +31,32 @@ class RejectionEngine(Engine):
         self.seed = seed
         self.sample_count = sample_count
 
-    def compute_volume(self, sample_count=None, add_bounds=False):
+    def compute_volume(self, sample_count=None, add_bounds=False, ohe_sampling=False):
         sample_count = sample_count if sample_count is not None else self.sample_count
-        samples = uniform(self.domain, sample_count)
+        samples = uniform(self.domain, sample_count, ohe_sampling=ohe_sampling)
         labels = evaluate(self.domain, self.support, samples)
-        bound_volume = self.domain.get_volume() if len(self.domain.real_vars) > 0 else 2 ** len(self.domain.bool_vars)
+
+        if not ohe_sampling:
+            bound_volume = self.domain.get_volume() if len(self.domain.real_vars) > 0 else 2 ** len(self.domain.bool_vars)
+        else:
+            categorical = {}
+            ohevars = set()
+            for var in self.domain.variables:
+                if "_OHE_" in var:
+                    ohevars.add(var)
+                    name, _, _ = var.split("_")
+                    if name not in categorical:
+                        categorical[name] = 0
+                    categorical[name]+= 1
+
+            bound_volume = 2 ** len([v for v in self.domain.bool_vars
+                                     if v not in ohevars])
+            for nvals in categorical.values():
+                bound_volume *= nvals
+            real_volume = self.domain.get_bounding_box_volume()
+            if real_volume != 0:
+                bound_volume *= real_volume
+
         approx_volume = bound_volume * sum(labels) / len(labels)
 
         if self.weight is not None:
@@ -118,8 +139,7 @@ class RejectionIntegrator(ConvexIntegrationBackend):
                 samples = uniform(domain, self.sample_count)
                 labels = evaluate(domain, formula, samples)
                 samples = samples[labels == 1]
-                print()
-                print(min(samples[:, -1]))
+
                 try:
                     samples.sort(axis=0)
                     std = abs(samples[0:-1, :] - samples[1:, :]).std(axis=0)

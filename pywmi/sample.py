@@ -9,7 +9,7 @@ class SamplingError(RuntimeError):
         self.msg = msg
 
 
-def uniform(domain: Domain, sample_count: int):
+def uniform(domain: Domain, sample_count: int, ohe_sampling=False):
     samples = np.random.random((sample_count, len(domain.variables)))
     for i, var in enumerate(domain.variables):
         if domain.is_bool(var):
@@ -17,6 +17,21 @@ def uniform(domain: Domain, sample_count: int):
         else:
             lb, ub = domain.var_domains[var]
             samples[:, i] = lb + samples[:, i] * (ub - lb)
+
+    if ohe_sampling:
+        categorical = {}
+        for i, var in enumerate(domain.variables):
+            if "_OHE_" in var:
+                name, _, _ = var.split("_")
+                if name not in categorical:
+                    categorical[name] = []
+                categorical[name].append(i)
+
+        for i in range(len(samples)):
+            for var in categorical:
+                for x in categorical[var]:
+                    samples[i,x] = False
+                samples[i,np.random.choice(categorical[var])] = True
 
     return samples
 
@@ -59,7 +74,6 @@ def positive(required_sample_count, domain, support, weight=None, sample_pool_si
         new_labels = evaluate(domain, support, new_samples)
         new_pos_samples = new_samples[new_labels]
         if pos_samples.shape[0] > 0:
-            print(pos_samples, new_pos_samples)
             pos_samples = numpy.concatenate((pos_samples, new_pos_samples), axis=0)
         else:
             pos_samples = new_pos_samples
