@@ -9,3 +9,4 @@ from .xsdd import XsddEngine, PiecewiseXSDD, sdd_to_dot_file, sdd_to_png_file, S
 from .pyxadd.engine import PyXaddEngine
 from .pyxadd.algebra import PyXaddAlgebra
 from .praise import PraiseEngine
+from .mpwmi import MPWMIEngine
