@@ -24,7 +24,9 @@ class ResolveIntegrator(object):
     NO_SUM_PRODUCT_REDUCE = (True, False, False)
     NO_REDUCE = (False, False, False)
 
-    def __init__(self, pool: Pool, debug_path=None, cache_result=True, reduce_strategy=None):
+    def __init__(
+        self, pool: Pool, debug_path=None, cache_result=True, reduce_strategy=None
+    ):
         self.pool = pool
         self.debug_path = debug_path
         self.cache_hits = 0
@@ -35,7 +37,9 @@ class ResolveIntegrator(object):
         self.resolve_cache = None
         self.symbolic_integration_enabled = False
         self.reduce_strategy = reduce_strategy or self.FULL_REDUCE
-        self.method = "fast_smt" if self.reduce_strategy != self.NO_REDUCE else "no_reduce"
+        self.method = (
+            "fast_smt" if self.reduce_strategy != self.NO_REDUCE else "no_reduce"
+        )
         if self.cache_result:
             if not self.pool.has_cache(__name__):
                 self.pool.add_cache(__name__, dict())
@@ -45,25 +49,39 @@ class ResolveIntegrator(object):
         if self.debug_path is not None:
             if not name.endswith(".dot"):
                 name += ".dot"
-            exporting.export(diagram_to_export, "{}/{}".format(self.debug_path, name), print_node_ids=True)
+            exporting.export(
+                diagram_to_export,
+                "{}/{}".format(self.debug_path, name),
+                print_node_ids=True,
+            )
 
     def symbolic_integrator(self, var: FNode, terminal_node: TerminalNode, d: Diagram):
         algebra = self.pool.algebra
         sym = algebra.symbol(var.symbol_name())
         lb = algebra.symbol("_lb")
         ub = algebra.symbol("_ub")
-        expression_bounds = algebra.times(algebra.greater_than_equal(sym, lb), algebra.less_than_equal(sym, ub))
-        result = algebra.integrate(None, algebra.times(expression_bounds, terminal_node.expression), sym)
+        expression_bounds = algebra.times(
+            algebra.greater_than_equal(sym, lb), algebra.less_than_equal(sym, ub)
+        )
+        result = algebra.integrate(
+            None, algebra.times(expression_bounds, terminal_node.expression), sym
+        )
         return self.pool.terminal(result)
 
-    def concrete_integrate(self, expression: Expression, var: FNode, lb: FNode, ub: FNode, prefix) -> Expression:
+    def concrete_integrate(
+        self, expression: Expression, var: FNode, lb: FNode, ub: FNode, prefix
+    ) -> Expression:
         logger.debug("%s integrate %s, %s <= %s <= %s", prefix, expression, lb, var, ub)
         algebra = self.pool.algebra
         sym = algebra.symbol(var.symbol_name())
         lb = Polynomial.from_smt(lb).to_expression(algebra)
         ub = Polynomial.from_smt(ub).to_expression(algebra)
-        expression_bounds = algebra.times(algebra.greater_than_equal(sym, lb), algebra.less_than_equal(sym, ub))
-        result = algebra.integrate(None, algebra.times(expression_bounds, expression), [sym])
+        expression_bounds = algebra.times(
+            algebra.greater_than_equal(sym, lb), algebra.less_than_equal(sym, ub)
+        )
+        result = algebra.integrate(
+            None, algebra.times(expression_bounds, expression), [sym]
+        )
         result = algebra.get_flat_expression(result)
         logger.debug("%s \t          = %s", prefix, result)
         return result
@@ -76,11 +94,15 @@ class ResolveIntegrator(object):
             node_id = self.pool.diagram(node_id).reduce(method=self.method).root_id
 
         if logger.isEnabledFor(logging.DEBUG):
-            self.pool.diagram(node_id).export_png("log/integrate_{}_d_{}".format(node_id, var), pretty=True)
+            self.pool.diagram(node_id).export_png(
+                "log/integrate_{}_d_{}".format(node_id, var), pretty=True
+            )
 
         if var.symbol_type() != BOOL and self.symbolic_integration_enabled:
             integrator = partial(self.symbolic_integrator, var)
-            integrated = leaf_transform.transform_leaves(integrator, self.pool.diagram(node_id))
+            integrated = leaf_transform.transform_leaves(
+                integrator, self.pool.diagram(node_id)
+            )
         else:
             integrated = node_id
 
@@ -100,8 +122,14 @@ class ResolveIntegrator(object):
             self.resolve_cache[key] = result
         return result
 
-    def resolve_lb_ub(self, node_id: int, var: FNode, ub: Optional[FNode] = None, lb: Optional[FNode] = None,
-                      prefix="") -> int:
+    def resolve_lb_ub(
+        self,
+        node_id: int,
+        var: FNode,
+        ub: Optional[FNode] = None,
+        lb: Optional[FNode] = None,
+        prefix="",
+    ) -> int:
         new_prefix = "  " + prefix
         method = self.method  # "fast_smt"
         # prefix = rl * "." + "({})({})({})".format(node_id, ub, lb)
@@ -131,7 +159,9 @@ class ResolveIntegrator(object):
             if node.node_id == self.pool.zero_id:
                 return self.pool.zero_id
             if var.symbol_type() == BOOL:
-                return self.pool.terminal(algebra.times(algebra.real(2), node.expression))
+                return self.pool.terminal(
+                    algebra.times(algebra.real(2), node.expression)
+                )
 
             if ub is None or lb is None:
                 # TODO: to deal with unbounded constraints, we should either return 0 if we've seen bounds
@@ -144,7 +174,9 @@ class ResolveIntegrator(object):
                 if self.symbolic_integration_enabled:
                     raise NotImplementedError()
                 else:
-                    expression = self.concrete_integrate(node.expression, var, lb, ub, prefix)
+                    expression = self.concrete_integrate(
+                        node.expression, var, lb, ub, prefix
+                    )
 
                 # print "->", self.pool.get_node(res)
                 return cache_result(self.pool.terminal(expression))
@@ -198,19 +230,31 @@ class ResolveIntegrator(object):
                 if tighter_ub_test == TRUE():
                     some_ub = self.pool.zero_id
                 else:
-                    some_ub = self.resolve_lb_ub(ub_branch, var, ub=ub, lb=lb, prefix=new_prefix)
+                    some_ub = self.resolve_lb_ub(
+                        ub_branch, var, ub=ub, lb=lb, prefix=new_prefix
+                    )
 
                 if tighter_ub_test == FALSE():
                     best_ub = self.pool.zero_id
                 else:
-                    best_ub = self.resolve_lb_ub(ub_branch, var, ub=new_bound, lb=lb, prefix=new_prefix)
+                    best_ub = self.resolve_lb_ub(
+                        ub_branch, var, ub=new_bound, lb=lb, prefix=new_prefix
+                    )
 
-                best_ub = self.pool.diagram(best_ub).reduce(method=method).root_id  # RED
-                some_ub = self.pool.diagram(some_ub).reduce(method=method).root_id  # RED
+                best_ub = (
+                    self.pool.diagram(best_ub).reduce(method=method).root_id
+                )  # RED
+                some_ub = (
+                    self.pool.diagram(some_ub).reduce(method=method).root_id
+                )  # RED
 
-                some_or_best_ub = self.pool.internal(Decision(tighter_ub_test), best_ub, some_ub)
+                some_or_best_ub = self.pool.internal(
+                    Decision(tighter_ub_test), best_ub, some_ub
+                )
             elif not pass_ub:
-                some_or_best_ub = self.resolve_lb_ub(ub_branch, var, ub=new_bound, lb=lb, prefix=new_prefix)
+                some_or_best_ub = self.resolve_lb_ub(
+                    ub_branch, var, ub=new_bound, lb=lb, prefix=new_prefix
+                )
 
             pass_lb = False
             if ub is not None:
@@ -232,27 +276,43 @@ class ResolveIntegrator(object):
                 if tighter_lb_test == TRUE():
                     some_lb = self.pool.zero_id
                 else:
-                    some_lb = self.resolve_lb_ub(lb_branch, var, ub=ub, lb=lb, prefix=new_prefix)
+                    some_lb = self.resolve_lb_ub(
+                        lb_branch, var, ub=ub, lb=lb, prefix=new_prefix
+                    )
 
                 if tighter_lb_test == FALSE():
                     best_lb = self.pool.zero_id
                 else:
-                    best_lb = self.resolve_lb_ub(lb_branch, var, ub=ub, lb=new_bound, prefix=new_prefix)
+                    best_lb = self.resolve_lb_ub(
+                        lb_branch, var, ub=ub, lb=new_bound, prefix=new_prefix
+                    )
 
-                best_lb = self.pool.diagram(best_lb).reduce(method=method).root_id  # RED
-                some_lb = self.pool.diagram(some_lb).reduce(method=method).root_id  # RED
+                best_lb = (
+                    self.pool.diagram(best_lb).reduce(method=method).root_id
+                )  # RED
+                some_lb = (
+                    self.pool.diagram(some_lb).reduce(method=method).root_id
+                )  # RED
 
-                some_or_best_lb = self.pool.internal(Decision(tighter_lb_test), best_lb, some_lb)
+                some_or_best_lb = self.pool.internal(
+                    Decision(tighter_lb_test), best_lb, some_lb
+                )
             elif not pass_lb:
-                some_or_best_lb = self.resolve_lb_ub(lb_branch, var, ub=ub, lb=new_bound, prefix=new_prefix)
+                some_or_best_lb = self.resolve_lb_ub(
+                    lb_branch, var, ub=ub, lb=new_bound, prefix=new_prefix
+                )
 
             lb_branch = self.pool.apply(Multiplication, some_or_best_lb, lb_consistency)
             ub_branch = self.pool.apply(Multiplication, some_or_best_ub, ub_consistency)
 
             # print(prefix + " lb done")
             if self.reduce_strategy[1]:
-                lb_branch = self.pool.diagram(lb_branch).reduce(method=method).root_id  # RED
-                ub_branch = self.pool.diagram(ub_branch).reduce(method=method).root_id  # RED
+                lb_branch = (
+                    self.pool.diagram(lb_branch).reduce(method=method).root_id
+                )  # RED
+                ub_branch = (
+                    self.pool.diagram(ub_branch).reduce(method=method).root_id
+                )  # RED
             # self.export(res, "res{}_{}_{}".format(node_id, hash(str(ub)), hash(str(lb))))
             result = self.pool.apply(Summation, lb_branch, ub_branch)
             if self.reduce_strategy[2]:
@@ -261,7 +321,9 @@ class ResolveIntegrator(object):
         else:
             true_branch_id = self.resolve_lb_ub(node.child_true, var, ub=ub, lb=lb)
             false_branch_id = self.resolve_lb_ub(node.child_false, var, ub=ub, lb=lb)
-            return cache_result(self.pool.internal(node.decision, true_branch_id, false_branch_id))
+            return cache_result(
+                self.pool.internal(node.decision, true_branch_id, false_branch_id)
+            )
 
     def operator_to_bound(self, inequality: LinearInequality, var_name: str):
         result = Real(inequality.b())
