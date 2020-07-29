@@ -58,7 +58,7 @@ class AlgebraBackend:
         if power < 0:
             raise ValueError("Unexpected negative power {power}".format(power=power))
         result = self.one()
-        for i in range(int(power)):
+        for _ in range(int(power)):
             result = self.times(result, a)
         return result
 
@@ -82,6 +82,7 @@ class AlgebraBackend:
 
     def parse_condition(self, condition: FNode) -> E:
         from pywmi.smt_math import LinearInequality
+
         return LinearInequality.from_smt(condition).to_expression(self)
 
 
@@ -144,7 +145,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         return psipy.mul(a, b)
 
     def plus(self, a, b):
-        return psipy.add(a,b)
+        return psipy.add(a, b)
 
     def negate(self, a):
         return psipy.mul(psipy.S("-1"), a)
@@ -176,6 +177,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     #     return result
 
     def integrate(self, domain: Domain, expression, variables=None):
+        # print(expression)
         if self.integrate_poly:
             result = psipy.integrate_poly(variables, expression)
         else:
@@ -184,13 +186,12 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         # return psipy.integrate(variables, expression)
 
     def to_float(self, real_value):
-        real_value = self.times(real_value,self.symbol("1.0"))
+        real_value = self.times(real_value, self.symbol("1.0"))
         string_value = str(psipy.simplify(real_value))
         # if "/" in string_value:
         #     parts = string_value.split("/", 1)
         #     return float(parts[0]) / float(parts[1])
         return float(string_value)
-
 
     def get_flat_expression(self, expression_with_conditions):
         result = psipy.filter_iverson(expression_with_conditions)
