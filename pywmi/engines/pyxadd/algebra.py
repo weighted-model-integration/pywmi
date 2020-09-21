@@ -3,7 +3,11 @@ from .resolve import ResolveIntegrator
 from .core import Diagram, Pool
 from .decision import Decision
 from pywmi import Domain
-from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend, PSIAlgebra
+from pywmi.engines.algebraic_backend import (
+    AlgebraBackend,
+    IntegrationBackend,
+    PSIAlgebra,
+)
 from pysmt.fnode import FNode
 
 
@@ -19,10 +23,15 @@ class PyXaddAlgebra(AlgebraBackend, IntegrationBackend):
         self.pool = pool or Pool(algebra=self.symbolic_backend)
         self.reduce_strategy = reduce_strategy or self.FULL_REDUCE
         AlgebraBackend.__init__(self)
-        IntegrationBackend.__init__(self, self.symbolic_backend.exact)
+        IntegrationBackend.__init__(
+            self, self.symbolic_backend.exact, self.symbolic_backend
+        )
 
     def symbol(self, name: str) -> int:
         return self.pool.terminal(self.symbolic_backend.symbol(name))
+
+    def symbolic_weight(self, symbolic_weight) -> int:
+        return self.pool.terminal(symbolic_weight)
 
     def real(self, float_constant: float) -> int:
         return self.pool.terminal(self.symbolic_backend.real(float_constant))
@@ -34,8 +43,12 @@ class PyXaddAlgebra(AlgebraBackend, IntegrationBackend):
 
     def integrate(self, domain: Domain, expression: int, variables=None) -> int:
         result = expression
-        integrator = ResolveIntegrator(self.pool, reduce_strategy=self.reduce_strategy[1])
-        for v in (variables or domain.variables):
+        integrator = ResolveIntegrator(
+            self.pool,
+            reduce_strategy=self.reduce_strategy[1],
+            eval_bounds_cache=self._eval_bounds_cache,
+        )
+        for v in variables or domain.variables:
             result = integrator.integrate(result, domain.get_symbol(v))
         return result
 
