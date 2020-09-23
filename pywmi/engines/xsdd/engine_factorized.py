@@ -1,5 +1,6 @@
 from typing import Dict, Tuple, Set, Union, List, Optional, Any
 import logging
+import copy
 from collections import defaultdict
 from pywmi.engines.xsdd.smt_to_sdd import extract_labels_and_weight
 
@@ -26,40 +27,78 @@ logger = logging.getLogger(__name__)
 
 class VariableTagAnalysis(SddWalker):
     def __init__(self, literal_to_groups):
+        # print(literal_to_groups)
         self.literal_to_groups = literal_to_groups
         self.node_to_groups = dict()
+        self.node_to_variable_heights = dict()
+        # print(literal_to_groups.values())
+        # variabprint(set(l for ltg in literal_to_groups.values() for l in ltg))
+        # self.variable_height = {key}
+
+        # self.variable_height = {key: None for key in keyList}
 
     def walk_true(self, node):
         groups = set()
+        variable_heights = {}
         self.node_to_groups[node.id] = groups
-        return True, groups
+        self.node_to_variable_heights[node.id] = variable_heights
+        return True, groups, variable_heights
 
     def walk_false(self, node):
         groups = set()
+        variable_heights = {}
         self.node_to_groups[node.id] = groups
-        return False, groups
+        self.node_to_variable_heights[node.id] = variable_heights
+        return False, groups, variable_heights
 
     def walk_and(self, prime_result, sub_result, prime_node, sub_node):
-        prime_feasible, prime_groups = prime_result
-        sub_feasible, sub_groups = sub_result
+        prime_feasible, prime_groups, prime_variable_heights = prime_result
+        sub_feasible, sub_groups, sub_variable_heights = sub_result
+
         feasible = prime_feasible and sub_feasible
         groups = (prime_groups | sub_groups) if feasible else set()
+
+        variable_heights = self._aggregate_heights(
+            prime_variable_heights, sub_variable_heights
+        )
+        variable_heights = {k: v + 1 for k, v in variable_heights.items()}
+
         self.node_to_groups[(prime_node.id, sub_node.id)] = groups
-        return feasible, groups
+        self.node_to_variable_heights[(prime_node.id, sub_node.id)] = variable_heights
+
+        return feasible, groups, variable_heights
 
     def walk_or(self, child_results, node):
         feasible = any(t[0] for t in child_results)
         groups = set()
+        variable_heights = {}
         if feasible:
-            for _, child_groups in child_results:
+            for _, child_groups, child_variable_heights in child_results:
                 groups |= child_groups
+                variable_heights = self._aggregate_heights(
+                    variable_heights, child_variable_heights
+                )
         self.node_to_groups[node.id] = groups
-        return feasible, groups
+        self.node_to_variable_heights[node.id] = variable_heights
+
+        return feasible, groups, variable_heights
 
     def walk_literal(self, l, node):
         groups = set(self.literal_to_groups.get(l, []))
         self.node_to_groups[node.id] = groups
-        return True, groups
+
+        variable_heights = {v: 1 for v in groups}
+        self.node_to_variable_heights[node.id] = variable_heights
+        return True, groups, variable_heights
+
+    def _aggregate_heights(self, a: Dict, b: Dict):
+        result = copy.deepcopy(a)
+        for k, v in b.items():
+            if k in result:
+                result[k] = max(result[k], b[k])
+            else:
+                result[k] = b[k]
+        return result
 
 
 class BooleanFinder(Semiring):
@@ -102,6 +141,7 @@ class FactorizedIntegrator:
         literals: LiteralInfo,
         groups: Dict[int, Tuple[Set[str], Polynomial]],
         node_to_groups: Dict,
+        node_to_variable_heights: Dict,
         labels: Dict[str, Any],
         algebra: Union[AlgebraBackend, IntegrationBackend],
     ):
@@ -109,6 +149,7 @@ class FactorizedIntegrator:
         self.literals = literals
         self.groups = groups
         self.node_to_groups = node_to_groups
+        self.node_to_variable_heights = node_to_variable_heights
         self.labels = labels
         self.algebra = algebra
         self.hits = 0
@@ -163,9 +204,14 @@ class FactorizedIntegrator:
         tags_prime = self.node_to_groups[prime.id] & tags
         tags_sub = self.node_to_groups[sub.id] & tags
         tags_shared = tags_prime & tags_sub
+
+        variable_heights_prime = self.node_to_variable_heights[prime.id]
+        variable_heights_sub = self.node_to_variable_heights[sub.id]
+
         if order and len(tags_shared) > 0:
             first_index = min(order.index(tag) for tag in tags_shared)
             tags_shared |= tags & set(order[first_index:])
+
         prime_result = self.recursive(prime, tags_prime - tags_shared, cache, order)
         sub_result = self.recursive(sub, tags_sub - tags_shared, cache, order)
         logger.debug("node AND(%s, %s)", prime.id, sub.id)
@@ -335,6 +381,7 @@ class FactorizedXsddEngine(BaseXsddEngine):
         tag_analysis = VariableTagAnalysis(literal_to_groups)
         walk(tag_analysis, support_sdd)
         node_to_groups = tag_analysis.node_to_groups
+        node_to_variable_heights = tag_analysis.node_to_variable_heights
 
         group_to_vars_poly = {i: g for i, g in enumerate(variable_groups)}
         # all_groups = frozenset(i for i, e in group_to_vars_poly.items() if len(e[0]) > 0)
@@ -347,6 +394,7 @@ class FactorizedXsddEngine(BaseXsddEngine):
             literals,
             group_to_vars_poly,
             node_to_groups,
+            node_to_variable_heights,
             literals.labels,
             self.algebra,
         )
@@ -370,53 +418,31 @@ class FactorizedXsddEngine(BaseXsddEngine):
             )
         return self.algebra.times(constant, result_with_booleans)
 
-    @classmethod
     def get_variable_groups_poly(
-        cls, weight: Polynomial, real_vars: List[str]
+        self, weight: Polynomial, real_vars: List[str],
     ) -> List[Tuple[Set[str], Polynomial]]:
         from psipy import Polynomial as PsiPolynomial
-        from psipy import S
 
         if isinstance(weight, PsiPolynomial):
-
             if len(real_vars) > 0:
                 result = []
                 found_vars = [str(v) for v in weight.variables]
                 for v in real_vars:
                     if v not in found_vars:
-                        result.append(({v}, PsiPolynomial(S(1))))
-                return result + cls.get_variable_groups_poly(weight, [])
+                        result.append(
+                            (
+                                {v},
+                                PsiPolynomial(
+                                    self.algebra.symbolic_backend.symbol("1")
+                                ),
+                            )
+                        )
+                return result + self.get_variable_groups_poly(weight, [])
 
             factors = weight.factorize_list()
             return [(set([str(v) for v in f.variables]), f) for f in factors]
-            # return [(set(f.variables), f) for f in factors]
-        # elif isinstance(weight, Polynomial):
-        #     if len(real_vars) > 0:
-        #         result = []
-        #         found_vars = weight.variables
-        #         for v in real_vars:
-        #             if v not in found_vars:
-        #                 result.append(({v}, Polynomial.from_constant(1)))
-        #         return result + cls.get_variable_groups_poly(weight, [])
-
-        #     if len(weight.poly_dict) > 1:
-        #         return [(weight.variables, weight)]
-        #     elif len(weight.poly_dict) == 0:
-        #         return [(set(), Polynomial.from_constant(0))]
-        #     else:
-        #         result = defaultdict(lambda: Polynomial.from_constant(1))
-        #         for name, value in weight.poly_dict.items():
-        #             if len(name) == 0:
-        #                 result[frozenset()] *= Polynomial.from_constant(value)
-        #             else:
-        #                 for v in name:
-        #                     result[frozenset((v,))] *= Polynomial.from_smt(
-        #                         smt.Symbol(v, smt.REAL)
-        #                     )
-        #                 result[frozenset()] *= Polynomial.from_constant(value)
-        #         return list(result.items())
-        # else:
-        #     raise NotImplementedError
+        else:
+            raise NotImplementedError
 
     def __str__(self):
         return "FXSDD" + super().__str__()
