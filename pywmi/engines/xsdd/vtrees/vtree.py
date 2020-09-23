@@ -30,6 +30,7 @@ def get_pydot():
 
 
 class Vtree(ABC):
+
     @abstractmethod
     def all_leaves(self):
         pass

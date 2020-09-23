@@ -10,9 +10,6 @@ from pywmi.engines.algebraic_backend import AlgebraBackend
 from pywmi import SmtWalker
 from functools import reduce, partial
 
-from psipy import S as PsiS
-from psipy import Polynomial as PsiPolynomial
-
 CONST_KEY = ()
 
 
@@ -137,16 +134,10 @@ class Polynomial(object):
 
 class PolynomialAlgebra(AlgebraBackend):
     def symbol(self, name):
-        return PsiPolynomial(PsiS(name))
-        # return Polynomial({(name,): 1})
+        return Polynomial({(name,): 1})
 
     def real(self, float_constant):
-        if isinstance(float_constant, Fraction):
-            result = PsiS(float_constant.numerator) / PsiS(float_constant.denominator)
-            result = PsiPolynomial(result.simplify())
-            return result
-        else:
-            return PsiPolynomial(PsiS(float_constant))
+        return Polynomial.from_constant(float_constant)
 
     def to_float(self, real_value):
         raise NotImplementedError()
@@ -239,9 +230,7 @@ class LinearInequality(object):
         factor = max(abs(v) for v in self.inequality_dict.values())
         if factor == 0:
             return self
-        return LinearInequality(
-            {k: v / factor for k, v in self.inequality_dict.items()}
-        )
+        return LinearInequality({k: v / factor for k, v in self.inequality_dict.items()})
 
     def inverted(self):
         return LinearInequality({k: -v for k, v in self.inequality_dict.items()})

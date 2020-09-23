@@ -58,7 +58,7 @@ class AlgebraBackend:
         if power < 0:
             raise ValueError("Unexpected negative power {power}".format(power=power))
         result = self.one()
-        for _ in range(int(power)):
+        for i in range(int(power)):
             result = self.times(result, a)
         return result
 
@@ -87,14 +87,8 @@ class AlgebraBackend:
 
 
 class IntegrationBackend:
-    def __init__(self, exact=True, symbolic_backend=None):
+    def __init__(self, exact=True):
         self.exact = exact
-        if symbolic_backend and isinstance(symbolic_backend, PSIAlgebra):
-            from psipy import EvalBoundsCache
-
-            self._eval_bounds_cache = EvalBoundsCache()
-        else:
-            self._eval_bounds_cache = None
 
     def integrate(self, domain: Domain, expression, variables=None):
         raise NotImplementedError()
@@ -148,15 +142,16 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
             raise InstallError("PSIAlgebra requires the psipy library to be installed")
 
     def times(self, a, b):
-        return a * b
+        return psipy.mul(a, b)
 
     def plus(self, a, b):
-        return a + b
+        return psipy.add(a, b)
 
     def negate(self, a):
-        return psipy.S(-1) * a
+        return psipy.mul(psipy.S("-1"), a)
 
     def symbol(self, name):
+        assert isinstance(name, str)
         return psipy.S(name)
 
     def real(self, float_constant):
@@ -171,7 +166,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
         return psipy.simplify(psipy.less(a, b))
 
     def less_than_equal(self, a, b):
-        return a.le(b).simplify()
+        return psipy.simplify(psipy.less_equal(a, b))
 
     # def power(self, a, power):
     #     if not isinstance(power, int) and int(power) != power:
@@ -181,27 +176,25 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     #     result = psipy.pow(str(a), str(power))
     #     return result
 
-    # def integrate(self, domain: Domain, expression, variables=None):
-    #     if instance()
-
-    #     if self.integrate_poly:
-    #         result = psipy.integrate_poly(variables, expression)
-    #     else:
-    #         result = psipy.integrate(variables, expression)
-    #     return result
+    def integrate(self, domain: Domain, expression, variables=None):
+        if self.integrate_poly:
+            result = psipy.integrate_poly(variables, expression)
+        else:
+            result = psipy.integrate(variables, expression)
+        return result
 
     def to_float(self, real_value):
-        real_value = self.times(real_value.to_PsiExpr(), self.symbol(1.0))
-        string_value = str(real_value.simplify())
+        real_value = self.times(real_value, self.symbol("1.0"))
+        string_value = str(psipy.simplify(real_value))
         # if "/" in string_value:
         #     parts = string_value.split("/", 1)
         #     return float(parts[0]) / float(parts[1])
         return float(string_value)
 
-    # def get_flat_expression(self, expression_with_conditions):
-    #     result = psipy.filter_iverson(expression_with_conditions)
-    #     # result = psipy.simplify(result)
-    #     return result
+    def get_flat_expression(self, expression_with_conditions):
+        result = psipy.filter_iverson(expression_with_conditions)
+        # result = psipy.simplify(result)
+        return result
 
 
 class StringAlgebra(AlgebraBackend, IntegrationBackend):
