@@ -89,7 +89,7 @@ class AlgebraBackend:
 class IntegrationBackend:
     def __init__(self, exact=True, symbolic_backend=None):
         self.exact = exact
-        if symbolic_backend and isinstance(symbolic_backend, PSIAlgebra):
+        if symbolic_backend and isinstance(symbolic_backend, PSIPolynomialAlgebra):
             from psipy import EvalBoundsCache
 
             self._eval_bounds_cache = EvalBoundsCache()
@@ -202,6 +202,44 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     #     result = psipy.filter_iverson(expression_with_conditions)
     #     # result = psipy.simplify(result)
     #     return result
+
+
+class PSIPolynomialAlgebra(AlgebraBackend, IntegrationBackend):
+    def __init__(self, integrate_poly=True):
+        super().__init__()
+        self.integrate_poly = integrate_poly
+        if psipy is None:
+            raise InstallError("PSIAlgebra requires the psipy library to be installed")
+
+    def times(self, a, b):
+        return a * b
+
+    def plus(self, a, b):
+        return a + b
+
+    def negate(self, a):
+        return psipy.S(-1) * a
+
+    def symbol(self, name):
+        return psipy.Polynomial(psipy.S(name))
+
+    def real(self, float_constant):
+        assert isinstance(float_constant, (float, int))
+        if int(float_constant) == float_constant:
+            return psipy.Polynomial(psipy.S("{}".format(int(float_constant))))
+        # return psipy.S("{:.64f}".format(float_constant))
+        fraction = Fraction(float_constant).limit_denominator()
+        return psipy.Polynomial(
+            psipy.S("{}/{}".format(fraction.numerator, fraction.denominator))
+        )
+
+    def to_float(self, real_value):
+        real_value = real_value.simplify() * self.symbol(1.0)
+        string_value = str(real_value.simplify())
+        # if "/" in string_value:
+        #     parts = string_value.split("/", 1)
+        #     return float(parts[0]) / float(parts[1])
+        return float(string_value)
 
 
 class StringAlgebra(AlgebraBackend, IntegrationBackend):

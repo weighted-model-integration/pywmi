@@ -6,7 +6,7 @@ from pywmi import Domain
 from pywmi.engines.algebraic_backend import (
     AlgebraBackend,
     IntegrationBackend,
-    PSIAlgebra,
+    PSIPolynomialAlgebra,
 )
 from pysmt.fnode import FNode
 
@@ -19,7 +19,7 @@ class PyXaddAlgebra(AlgebraBackend, IntegrationBackend):
     NO_REDUCE = (False, ResolveIntegrator.NO_REDUCE)
 
     def __init__(self, pool=None, symbolic_backend=None, reduce_strategy=None):
-        self.symbolic_backend = symbolic_backend or PSIAlgebra()
+        self.symbolic_backend = symbolic_backend or PSIPolynomialAlgebra()
         self.pool = pool or Pool(algebra=self.symbolic_backend)
         self.reduce_strategy = reduce_strategy or self.FULL_REDUCE
         AlgebraBackend.__init__(self)
