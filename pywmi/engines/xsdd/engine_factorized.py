@@ -3,6 +3,8 @@ import logging
 import copy
 from collections import defaultdict
 from functools import reduce
+import operator
+
 
 import pysmt.shortcuts as smt
 
@@ -178,79 +180,243 @@ class FactorizedIntegrator:
         return self.algebra.zero()
 
     def walk_and(self, weight_list, prime, sub, variables, cache):
-
         if prime.is_false() or sub.is_false():
             return self.algebra.zero()
 
-        variables_prime = self.node_to_variables(prime.id) & variables
-        variables_sub = self.node_to_variables(sub.id) & variables
-        variables_shared = variables_prime & variables_sub
+        variables_prime_up = self.node_to_variables(prime.id) & variables
+        variables_sub_up = self.node_to_variables(sub.id) & variables
+        variables_shared_up = variables_prime_up & variables_sub_up
+        # print(variables_shared_up)
 
-        weight_groups = self.get_variable_groups(weight_list, exclude=variables_shared)
+        variables_prime_weight = set()
+        variables_sub_weight = set()
 
-        remaining_weight_list = []
-        prime_weight_list = []
-        sub_weight_list = []
+        groups = self.get_variable_groups(weight_list, exclude=variables_shared_up)
+        for g in groups:
+            height_prime = self.group_to_height(prime.id, g, aggregate=sum)
+            height_sub = self.group_to_height(sub.id, g, aggregate=sum)
+            if height_prime > height_sub:
+                variables_prime_weight |= g
+            else:
+                variables_sub_weight |= g
 
-        variables_weight_prime = set()
-        variables_weight_sub = set()
+        variables_prime_to_sub = variables_prime_up & variables_sub_weight
+        variables_sub_to_prime = variables_sub_up & variables_prime_weight
+
+        weight_here_up = []
+        weight_here_weight = []
+        weight_sub_down = []
+        weight_prime_down = []
 
         for w in weight_list:
-            w_var = set(map(str, set(w.variables)))
-            if w_var <= variables_shared:
-                remaining_weight_list.append(w)
+            w_var = set(map(str, w.variables)) & variables
+            # print(w)
+            # print(w_var)
+
+            # print(variables_prime_up, "prime_up")
+            # print(variables_sub_up, "sub_up")
+            # print(variables_prime_weight, "prime_down")
+            # print(variables_sub_weight, "sub_down")
+
+            if w_var <= variables_shared_up:
+                weight_here_up.append(w)
+            elif w_var <= variables_prime_to_sub:
+                weight_here_weight.append(w)
+            elif w_var <= variables_sub_to_prime:
+                weight_here_weight.append(w)
+            elif w_var <= variables_prime_up | variables_sub_to_prime:
+                weight_prime_down.append(w)
+            elif w_var <= variables_sub_up | variables_prime_to_sub:
+                weight_sub_down.append(w)
             else:
-                for g in weight_groups:
-                    if w_var - variables_shared <= g:
-                        height_prime = self.group_to_height(prime.id, g, aggregate=sum)
-                        height_sub = self.group_to_height(sub.id, g, aggregate=sum)
+                raise TypeError
 
-                        to_prime = height_prime > height_sub
-                        if to_prime:
-                            prime_weight_list.append(w)
-                        else:
-                            sub_weight_list.append(w)
+        # print("")
+        # print(weight_list)
+        # print(variables_shared_up, "shared_up")
+        # print(variables_prime_to_sub, "prime_to_sub")
+        # print(variables_sub_to_prime, "sub_to_prime")
 
-                        for v in g:
-                            if v in variables_prime or v in variables_sub:
-                                if to_prime:
-                                    variables_weight_prime.add(v)
-                                else:
-                                    variables_weight_sub.add(v)
-                        break
+        # print(weight_here_up, "weight_here_up")
+        # print(weight_here_weight, "weight_here_weight")
+        # print(weight_sub_down, "weight_sub_down")
+        # print(weight_prime_down, "weight_prime_down")
 
-        remaining_weight = self.algebra.symbolic_backend.one()
-        for w in remaining_weight_list:
-            remaining_weight = remaining_weight * w
-        remaining_weight = remaining_weight.simplify()
-        remaining_weight = self.algebra.symbolic_weight(remaining_weight)
+        # print("")
+        # print(weight_list)
+        # print(weight_prime_down)
+        # print(weight_sub_down)
+        # print(weight_here_up)
+        # print(weight_here_weight)
 
-        variables_weight_shared = (variables_sub & variables_weight_prime) | (
-            variables_prime & variables_weight_sub
+        # print(variables_prime_down)
+        # print(variables_sub_down)
+
+        variables_prime_down = variables_prime_up - (
+            variables_shared_up | variables_prime_to_sub
+        )
+        variables_sub_down = variables_sub_up - (
+            variables_shared_up | variables_sub_to_prime
         )
 
-        variables_prime = variables_prime - (variables_shared | variables_weight_shared)
-        variables_sub = variables_sub - (variables_shared | variables_weight_shared)
-
-        prime_result = self.recursive(prime_weight_list, prime, variables_prime, cache)
-        sub_result = self.recursive(sub_weight_list, sub, variables_sub, cache)
+        prime_result = self.recursive(
+            weight_prime_down, prime, variables_prime_down, cache,
+        )
+        sub_result = self.recursive(weight_sub_down, sub, variables_sub_down, cache,)
 
         result = self.algebra.times(prime_result, sub_result)
 
-        # print(type(remaining_weight))
+        # print("")
+        # print(variables)
+        # print(weight_list)
 
-        if variables_weight_shared:
+        variables_weight_here_weight = variables_prime_to_sub | variables_sub_to_prime
+
+        # print(variables_weight_here_weight)
+        if variables_weight_here_weight:
+            w = reduce(operator.mul, weight_here_weight)
+            w = self.algebra.symbolic_weight(w)
+            result = self.algebra.times(result, w)
             result = self.algebra.integrate(
-                self.domain, result, variables_weight_shared
-            )
-        if variables_shared:
-            result = self.algebra.integrate(
-                self.domain,
-                self.algebra.times(remaining_weight, result),
-                variables_shared,
+                self.domain, result, variables_weight_here_weight
             )
 
+        # print(variables_shared_up)
+        # print(weight_list)
+        # print(variables_shared_up)
+        if variables_shared_up:
+            w = reduce(
+                operator.mul, weight_here_up, self.algebra.symbolic_backend.one()
+            )
+            # print(w)
+            w = self.algebra.symbolic_weight(w)
+            w = self.algebra.times(result, w)
+
+            result = self.algebra.integrate(self.domain, result, variables_shared_up)
+            # print(result)
         return result
+        # import sys
+
+        # sys.exit()
+
+    # def walk_and(self, weight_list, prime, sub, variables, cache):
+    #     if prime.is_false() or sub.is_false():
+    #         return self.algebra.zero()
+
+    #     variables_prime = self.node_to_variables(prime.id) & variables
+    #     variables_sub = self.node_to_variables(sub.id) & variables
+    #     variables_shared = variables_prime & variables_sub
+
+    #     weight_groups = self.get_variable_groups(weight_list, exclude=variables_shared)
+
+    #     shared_remaining_weight_list = []
+    #     prime_weight_list = []
+    #     sub_weight_list = []
+
+    #     variables_weight_prime = set()
+    #     variables_weight_sub = set()
+
+    #     # variables_to_heights = {}
+    #     # for v in variables_prime | variables_sub:
+    #     #     variables_to_heights[v] = {}
+    #     #     variables_to_heights[v]["prime"] = self.node_to_variable_heights[
+    #     #         prime.id
+    #     #     ].get(v, 0)
+    #     #     variables_to_heights[v]["sub"] = self.node_to_variable_heights[sub.id].get(
+    #     #         v, 0
+    #     #     )
+
+    #     #####
+
+    #     for w in weight_list:
+    #         w_var = set(map(str, w.variables))
+    #         if w_var <= variables_shared:
+    #             shared_remaining_weight_list.append(w)
+    #         else:
+    #             group = [g for g in weight_groups if w_var - variables_shared <= g]
+    #             group = group[0]
+
+    #             height_prime = self.group_to_height(prime.id, group, aggregate=sum)
+    #             height_sub = self.group_to_height(sub.id, group, aggregate=sum)
+    #             to_prime = height_prime > height_sub
+    #             if to_prime:
+    #                 prime_weight_list.append(w)
+    #             else:
+    #                 sub_weight_list.append(w)
+
+    #     #####
+    #     variables_sub_to_prime = set()
+    #     variables_prime_to_sub = set()
+    #     prime_pure_weight_list = []
+    #     prime_remaining_weight_list = []
+    #     sub_pure_weight_list = []
+    #     sub_remaining_weight_list = []
+
+    #     for weight in prime_weight_list:
+    #         w_var = set(map(str, weight.variables))
+    #         if w_var <= variables_sub:
+    #             variables_sub_to_prime |= w_var
+    #             prime_remaining_weight_list.append(weight)
+    #         else:
+    #             prime_pure_weight_list.append(weight)
+    #     for weight in sub_weight_list:
+    #         w_var = set(map(str, weight.variables))
+    #         if w_var <= variables_prime:
+    #             variables_prime_to_sub |= w_var
+    #             sub_remaining_weight_list.append(weight)
+    #         else:
+    #             sub_pure_weight_list.append(weight)
+
+    #     variables_prime = variables_prime - (variables_shared | variables_prime_to_sub)
+    #     variables_sub = variables_sub - (variables_shared | variables_sub_to_prime)
+
+    #     #####
+    #     prime_result = self.recursive(
+    #         prime_pure_weight_list, prime, variables_prime, cache
+    #     )
+    #     sub_result = self.recursive(
+    #         sub_remaining_weight_list, sub, variables_sub, cache
+    #     )
+
+    #     #####
+    #     result = self.algebra.times(prime_result, sub_result)
+    #     #####
+    #     prime_sub_remaining_weight_list = (
+    #         prime_remaining_weight_list + sub_remaining_weight_list
+    #     )
+    #     prime_sub_remaining_weight = self.algebra.symbolic_backend.one()
+    #     for w in prime_sub_remaining_weight_list:
+    #         prime_sub_remaining_weight = prime_sub_remaining_weight * w
+    #     prime_sub_remaining_weight = prime_sub_remaining_weight.simplify()
+    #     prime_sub_remaining_weight = self.algebra.symbolic_weight(
+    #         prime_sub_remaining_weight
+    #     )
+    #     if variables_sub_to_prime | variables_prime_to_sub:
+    #         result = (self.algebra.times(prime_sub_remaining_weight, result),)
+
+    #         result = self.algebra.integrate(
+    #             self.domain, result, variables_sub_to_prime | variables_prime_to_sub
+    #         )
+    #     #####
+    #     if variables_shared:
+
+    #         shared_remaining_weight = self.algebra.symbolic_backend.one()
+    #         for w in shared_remaining_weight_list:
+    #             shared_remaining_weight = shared_remaining_weight * w
+    #         shared_remaining_weight = shared_remaining_weight.simplify()
+    #         print(shared_remaining_weight)
+    #         shared_remaining_weight = self.algebra.symbolic_weight(
+    #             shared_remaining_weight
+    #         )
+    #         print(variables_shared)
+
+    #         result = self.algebra.integrate(
+    #             self.domain,
+    #             self.algebra.times(shared_remaining_weight, result),
+    #             variables_shared,
+    #         )
+
+    #     return result
 
     def walk_literal(self, weight_list, node, variables):
         literal = node.literal
@@ -378,8 +544,9 @@ class FactorizedXsddEngine(BaseXsddEngine):
             support_sdd = self.get_sdd(logic_support, literals, vtree)
 
             subvolume = self.compute_volume_for_piece(weight, literals, support_sdd)
+            node = self.algebra.pool.get_node(subvolume)
+            print(node.expression.simplify())
             volume = self.algebra.plus(volume, subvolume)
-
         return volume
 
     def compute_volume_for_piece(self, weight, literals: LiteralInfo, support_sdd):
