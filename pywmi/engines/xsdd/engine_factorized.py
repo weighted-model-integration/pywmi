@@ -186,7 +186,6 @@ class FactorizedIntegrator:
         variables_prime_up = self.node_to_variables(prime.id) & variables
         variables_sub_up = self.node_to_variables(sub.id) & variables
         variables_shared_up = variables_prime_up & variables_sub_up
-        # print(variables_shared_up)
 
         variables_prime_weight = set()
         variables_sub_weight = set()
@@ -210,14 +209,6 @@ class FactorizedIntegrator:
 
         for w in weight_list:
             w_var = set(map(str, w.variables)) & variables
-            # print(w)
-            # print(w_var)
-
-            # print(variables_prime_up, "prime_up")
-            # print(variables_sub_up, "sub_up")
-            # print(variables_prime_weight, "prime_down")
-            # print(variables_sub_weight, "sub_down")
-
             if w_var <= variables_shared_up:
                 weight_here_up.append(w)
             elif w_var <= variables_prime_to_sub:
@@ -231,16 +222,6 @@ class FactorizedIntegrator:
             else:
                 raise TypeError
 
-        # print("")
-        # print(weight_list)
-        # print(weight_prime_down)
-        # print(weight_sub_down)
-        # print(weight_here_up)
-        # print(weight_here_weight)
-
-        # print(variables_prime_down)
-        # print(variables_sub_down)
-
         variables_prime_down = variables_prime_up - (
             variables_shared_up | variables_prime_to_sub
         )
@@ -252,28 +233,10 @@ class FactorizedIntegrator:
             weight_prime_down, prime, variables_prime_down, cache,
         )
         sub_result = self.recursive(weight_sub_down, sub, variables_sub_down, cache,)
-
-        # print("")
-        # print(weight_list)
-        # print(variables)
-        # print(variables_shared_up, "shared_up")
-        # print(variables_prime_to_sub, "prime_to_sub")
-        # print(variables_sub_to_prime, "sub_to_prime")
-
-        # print(weight_here_up, "weight_here_up")
-        # print(weight_here_weight, "weight_here_weight")
-        # print(weight_sub_down, "weight_sub_down")
-        # print(weight_prime_down, "weight_prime_down")
-
         result = self.algebra.times(prime_result, sub_result)
-
-        # print("")
-        # print(variables)
-        # print(weight_list)
 
         variables_weight_here_weight = variables_prime_to_sub | variables_sub_to_prime
 
-        # print(variables_weight_here_weight, "var weight_here_weight")
         if variables_weight_here_weight:
             w = reduce(operator.mul, weight_here_weight)
             w = self.algebra.symbolic_weight(w)
@@ -282,21 +245,13 @@ class FactorizedIntegrator:
                 self.domain, result, variables_weight_here_weight
             )
 
-        # print(variables_shared_up)
-        # print(weight_list)
-        # print(variables_shared_up, "var shared up")
         if variables_shared_up:
             if weight_here_up:
                 w = reduce(operator.mul, weight_here_up)
                 w = self.algebra.symbolic_weight(w)
                 result = self.algebra.times(result, w)
 
-            # print(w)
-            # print(result)
-
             result = self.algebra.integrate(self.domain, result, variables_shared_up)
-            # print(result)
-        # print(result)
         return result
 
     def walk_literal(self, weight_list, node, variables):
@@ -343,22 +298,11 @@ class FactorizedIntegrator:
         return groups
 
     def group_to_height(self, node, group, aggregate=sum):
-        # print(self.node_to_variable_heights[node])
         heights = [self.node_to_variable_heights[node].get(str(v), 0) for v in group]
         if heights:
             return aggregate(heights)
         else:
             return 0
-
-    # def integrate(self, expr, variables):
-    #     # type: (Any, Iterable[int]) -> Any
-    #     result = expr
-    #     variables, poly = self.groups[group_id]
-    #         group_expr = self.algebra.times(result, poly.to_expression(self.algebra))
-    #         if logger.isEnabledFor(logging.DEBUG):
-    #             logger.debug("%s: %s", variables, str(group_expr))
-    #         result = self.algebra.integrate(self.domain, group_expr, variables)
-    #     return result
 
 
 class FactorizedXsddEngine(BaseXsddEngine):
@@ -406,11 +350,7 @@ class FactorizedXsddEngine(BaseXsddEngine):
             vtree = self.get_vtree(support, literals)
             support_sdd = self.get_sdd(logic_support, literals, vtree)
 
-            # from psipy import S, Polynomial
-
             subvolume = self.compute_volume_for_piece(weight, literals, support_sdd)
-            # node = self.algebra.pool.get_node(subvolume)
-            # print((node.expression * Polynomial(S(1.0))).simplify())
             volume = self.algebra.plus(volume, subvolume)
         return volume
 
