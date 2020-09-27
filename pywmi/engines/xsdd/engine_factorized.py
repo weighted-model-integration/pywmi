@@ -286,13 +286,13 @@ class FactorizedIntegrator:
         # print(weight_list)
         # print(variables_shared_up, "var shared up")
         if variables_shared_up:
-            w = reduce(
-                operator.mul, weight_here_up, self.algebra.symbolic_backend.one()
-            )
+            if weight_here_up:
+                w = reduce(operator.mul, weight_here_up)
+                w = self.algebra.symbolic_weight(w)
+                result = self.algebra.times(result, w)
+
             # print(w)
             # print(result)
-            w = self.algebra.symbolic_weight(w)
-            w = self.algebra.times(result, w)
 
             result = self.algebra.integrate(self.domain, result, variables_shared_up)
             # print(result)
@@ -443,14 +443,6 @@ class FactorizedXsddEngine(BaseXsddEngine):
         variables = set(self.domain.real_vars)
         constant, weight_list = self._factorize_list(weight)
 
-        from psipy import S
-
-        print("")
-        print(weight.simplify())
-        print(constant)
-        print((constant.to_PsiExpr() * S(1.0)).simplify())
-        print(weight_list)
-
         integrator = FactorizedIntegrator(
             self.domain,
             literals,
@@ -468,8 +460,6 @@ class FactorizedXsddEngine(BaseXsddEngine):
         result_with_booleans = self.algebra.times(expression, bool_worlds)
 
         node = self.algebra.pool.get_node(result_with_booleans)
-        print((node.expression.to_PsiExpr() * S(1.0)).simplify())
-        # print(result.with)
         constant = self.algebra.symbolic_weight(constant)
         return self.algebra.times(constant, result_with_booleans)
 
