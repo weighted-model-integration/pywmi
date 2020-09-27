@@ -527,14 +527,35 @@ class FactorizedXsddEngine(BaseXsddEngine):
         #     print(w)
         #     print(s)
 
-        weights_dict = {
-            pice_weight: piece_support & base_support
-            for pice_weight, piece_support in piecewise_function.pieces.items()
+        # weights_dict = {
+        #     pice_weight: piece_support & base_support
+        #     for pice_weight, piece_support in piecewise_function.pieces.items()
+        # }
+
+        # l = [w.simplify() for w in weights_dict.keys()]
+        # print(l)
+
+        term_supports = multimap()
+        for piece_weight, piece_support in piecewise_function.pieces.items():
+            logger.debug(
+                "piece with weight %s and support %s", piece_weight, piece_support
+            )
+            for term in piece_weight.get_terms():
+                term_supports[term].add(piece_support)
+
+        # terms_dict = {
+        #     term: smt.Or(*supports) & base_support
+        #     for term, supports in term_supports.items()
+        # }
+
+        terms_dict = {
+            self.algebra.symbolic_backend.one(): smt.Or(*supports) & base_support
+            for term, supports in term_supports.items()
         }
 
         volume = self.algebra.zero()
 
-        for i, (weight, support) in enumerate(weights_dict.items()):
+        for i, (weight, support) in enumerate(terms_dict.items()):
             logger.debug("----- Term %s -----", weight)
 
             repl_env, logic_support, literals = extract_and_replace_literals(support)
