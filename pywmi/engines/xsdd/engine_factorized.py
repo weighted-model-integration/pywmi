@@ -233,17 +233,6 @@ class FactorizedIntegrator:
 
         # print("")
         # print(weight_list)
-        # print(variables_shared_up, "shared_up")
-        # print(variables_prime_to_sub, "prime_to_sub")
-        # print(variables_sub_to_prime, "sub_to_prime")
-
-        # print(weight_here_up, "weight_here_up")
-        # print(weight_here_weight, "weight_here_weight")
-        # print(weight_sub_down, "weight_sub_down")
-        # print(weight_prime_down, "weight_prime_down")
-
-        # print("")
-        # print(weight_list)
         # print(weight_prime_down)
         # print(weight_sub_down)
         # print(weight_here_up)
@@ -264,6 +253,18 @@ class FactorizedIntegrator:
         )
         sub_result = self.recursive(weight_sub_down, sub, variables_sub_down, cache,)
 
+        # print("")
+        # print(weight_list)
+        # print(variables)
+        # print(variables_shared_up, "shared_up")
+        # print(variables_prime_to_sub, "prime_to_sub")
+        # print(variables_sub_to_prime, "sub_to_prime")
+
+        # print(weight_here_up, "weight_here_up")
+        # print(weight_here_weight, "weight_here_weight")
+        # print(weight_sub_down, "weight_sub_down")
+        # print(weight_prime_down, "weight_prime_down")
+
         result = self.algebra.times(prime_result, sub_result)
 
         # print("")
@@ -272,7 +273,7 @@ class FactorizedIntegrator:
 
         variables_weight_here_weight = variables_prime_to_sub | variables_sub_to_prime
 
-        # print(variables_weight_here_weight)
+        # print(variables_weight_here_weight, "var weight_here_weight")
         if variables_weight_here_weight:
             w = reduce(operator.mul, weight_here_weight)
             w = self.algebra.symbolic_weight(w)
@@ -283,140 +284,20 @@ class FactorizedIntegrator:
 
         # print(variables_shared_up)
         # print(weight_list)
-        # print(variables_shared_up)
+        # print(variables_shared_up, "var shared up")
         if variables_shared_up:
             w = reduce(
                 operator.mul, weight_here_up, self.algebra.symbolic_backend.one()
             )
             # print(w)
+            # print(result)
             w = self.algebra.symbolic_weight(w)
             w = self.algebra.times(result, w)
 
             result = self.algebra.integrate(self.domain, result, variables_shared_up)
             # print(result)
+        # print(result)
         return result
-        # import sys
-
-        # sys.exit()
-
-    # def walk_and(self, weight_list, prime, sub, variables, cache):
-    #     if prime.is_false() or sub.is_false():
-    #         return self.algebra.zero()
-
-    #     variables_prime = self.node_to_variables(prime.id) & variables
-    #     variables_sub = self.node_to_variables(sub.id) & variables
-    #     variables_shared = variables_prime & variables_sub
-
-    #     weight_groups = self.get_variable_groups(weight_list, exclude=variables_shared)
-
-    #     shared_remaining_weight_list = []
-    #     prime_weight_list = []
-    #     sub_weight_list = []
-
-    #     variables_weight_prime = set()
-    #     variables_weight_sub = set()
-
-    #     # variables_to_heights = {}
-    #     # for v in variables_prime | variables_sub:
-    #     #     variables_to_heights[v] = {}
-    #     #     variables_to_heights[v]["prime"] = self.node_to_variable_heights[
-    #     #         prime.id
-    #     #     ].get(v, 0)
-    #     #     variables_to_heights[v]["sub"] = self.node_to_variable_heights[sub.id].get(
-    #     #         v, 0
-    #     #     )
-
-    #     #####
-
-    #     for w in weight_list:
-    #         w_var = set(map(str, w.variables))
-    #         if w_var <= variables_shared:
-    #             shared_remaining_weight_list.append(w)
-    #         else:
-    #             group = [g for g in weight_groups if w_var - variables_shared <= g]
-    #             group = group[0]
-
-    #             height_prime = self.group_to_height(prime.id, group, aggregate=sum)
-    #             height_sub = self.group_to_height(sub.id, group, aggregate=sum)
-    #             to_prime = height_prime > height_sub
-    #             if to_prime:
-    #                 prime_weight_list.append(w)
-    #             else:
-    #                 sub_weight_list.append(w)
-
-    #     #####
-    #     variables_sub_to_prime = set()
-    #     variables_prime_to_sub = set()
-    #     prime_pure_weight_list = []
-    #     prime_remaining_weight_list = []
-    #     sub_pure_weight_list = []
-    #     sub_remaining_weight_list = []
-
-    #     for weight in prime_weight_list:
-    #         w_var = set(map(str, weight.variables))
-    #         if w_var <= variables_sub:
-    #             variables_sub_to_prime |= w_var
-    #             prime_remaining_weight_list.append(weight)
-    #         else:
-    #             prime_pure_weight_list.append(weight)
-    #     for weight in sub_weight_list:
-    #         w_var = set(map(str, weight.variables))
-    #         if w_var <= variables_prime:
-    #             variables_prime_to_sub |= w_var
-    #             sub_remaining_weight_list.append(weight)
-    #         else:
-    #             sub_pure_weight_list.append(weight)
-
-    #     variables_prime = variables_prime - (variables_shared | variables_prime_to_sub)
-    #     variables_sub = variables_sub - (variables_shared | variables_sub_to_prime)
-
-    #     #####
-    #     prime_result = self.recursive(
-    #         prime_pure_weight_list, prime, variables_prime, cache
-    #     )
-    #     sub_result = self.recursive(
-    #         sub_remaining_weight_list, sub, variables_sub, cache
-    #     )
-
-    #     #####
-    #     result = self.algebra.times(prime_result, sub_result)
-    #     #####
-    #     prime_sub_remaining_weight_list = (
-    #         prime_remaining_weight_list + sub_remaining_weight_list
-    #     )
-    #     prime_sub_remaining_weight = self.algebra.symbolic_backend.one()
-    #     for w in prime_sub_remaining_weight_list:
-    #         prime_sub_remaining_weight = prime_sub_remaining_weight * w
-    #     prime_sub_remaining_weight = prime_sub_remaining_weight.simplify()
-    #     prime_sub_remaining_weight = self.algebra.symbolic_weight(
-    #         prime_sub_remaining_weight
-    #     )
-    #     if variables_sub_to_prime | variables_prime_to_sub:
-    #         result = (self.algebra.times(prime_sub_remaining_weight, result),)
-
-    #         result = self.algebra.integrate(
-    #             self.domain, result, variables_sub_to_prime | variables_prime_to_sub
-    #         )
-    #     #####
-    #     if variables_shared:
-
-    #         shared_remaining_weight = self.algebra.symbolic_backend.one()
-    #         for w in shared_remaining_weight_list:
-    #             shared_remaining_weight = shared_remaining_weight * w
-    #         shared_remaining_weight = shared_remaining_weight.simplify()
-    #         print(shared_remaining_weight)
-    #         shared_remaining_weight = self.algebra.symbolic_weight(
-    #             shared_remaining_weight
-    #         )
-    #         print(variables_shared)
-
-    #         result = self.algebra.integrate(
-    #             self.domain,
-    #             self.algebra.times(shared_remaining_weight, result),
-    #             variables_shared,
-    #         )
-
-    #     return result
 
     def walk_literal(self, weight_list, node, variables):
         literal = node.literal
@@ -509,53 +390,14 @@ class FactorizedXsddEngine(BaseXsddEngine):
     def compute_volume_from_pieces(
         self, base_support, piecewise_function, labeling_dict
     ):
-        # Prepare the support for each piece (not compiled yet)
-        # term_supports = multimap()
-        # for piece_weight, piece_support in piecewise_function.pieces.items():
-
-        #     print(piece_weight)
-        #     print(piece_support)
-        #     for term in piece_weight.get_terms():
-        #         term_supports[term].add(piece_support)
-
-        # terms_dict = {
-        #     term: smt.Or(*supports) & base_support
-        #     for term, supportsset in term_supports.items()
-        # }
-
-        # for w, s in piecewise_function.pieces.items():
-        #     print(w)
-        #     print(s)
-
-        # weights_dict = {
-        #     pice_weight: piece_support & base_support
-        #     for pice_weight, piece_support in piecewise_function.pieces.items()
-        # }
-
-        # l = [w.simplify() for w in weights_dict.keys()]
-        # print(l)
-
-        term_supports = multimap()
-        for piece_weight, piece_support in piecewise_function.pieces.items():
-            logger.debug(
-                "piece with weight %s and support %s", piece_weight, piece_support
-            )
-            for term in piece_weight.get_terms():
-                term_supports[term].add(piece_support)
-
-        # terms_dict = {
-        #     term: smt.Or(*supports) & base_support
-        #     for term, supports in term_supports.items()
-        # }
-
-        terms_dict = {
-            self.algebra.symbolic_backend.one(): smt.Or(*supports) & base_support
-            for term, supports in term_supports.items()
+        weights_dict = {
+            pice_weight: piece_support & base_support
+            for pice_weight, piece_support in piecewise_function.pieces.items()
         }
 
         volume = self.algebra.zero()
 
-        for i, (weight, support) in enumerate(terms_dict.items()):
+        for i, (weight, support) in enumerate(weights_dict.items()):
             logger.debug("----- Term %s -----", weight)
 
             repl_env, logic_support, literals = extract_and_replace_literals(support)
@@ -564,9 +406,11 @@ class FactorizedXsddEngine(BaseXsddEngine):
             vtree = self.get_vtree(support, literals)
             support_sdd = self.get_sdd(logic_support, literals, vtree)
 
+            # from psipy import S, Polynomial
+
             subvolume = self.compute_volume_for_piece(weight, literals, support_sdd)
-            node = self.algebra.pool.get_node(subvolume)
-            print(node.expression.simplify())
+            # node = self.algebra.pool.get_node(subvolume)
+            # print((node.expression * Polynomial(S(1.0))).simplify())
             volume = self.algebra.plus(volume, subvolume)
         return volume
 
@@ -599,6 +443,14 @@ class FactorizedXsddEngine(BaseXsddEngine):
         variables = set(self.domain.real_vars)
         constant, weight_list = self._factorize_list(weight)
 
+        from psipy import S
+
+        print("")
+        print(weight.simplify())
+        print(constant)
+        print((constant.to_PsiExpr() * S(1.0)).simplify())
+        print(weight_list)
+
         integrator = FactorizedIntegrator(
             self.domain,
             literals,
@@ -615,6 +467,9 @@ class FactorizedXsddEngine(BaseXsddEngine):
         bool_worlds = self.algebra.power(self.algebra.real(2), missing_variable_count)
         result_with_booleans = self.algebra.times(expression, bool_worlds)
 
+        node = self.algebra.pool.get_node(result_with_booleans)
+        print((node.expression.to_PsiExpr() * S(1.0)).simplify())
+        # print(result.with)
         constant = self.algebra.symbolic_weight(constant)
         return self.algebra.times(constant, result_with_booleans)
 
