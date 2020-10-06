@@ -140,7 +140,7 @@ class PiecewiseFunctionConverter(CachedSmtWalker):
     def walk_minus(self, left, right):
         self.assert_boolean_parse_mode(False)
         left, right = self.walk_smt_multiple([left, right])
-        return left + (~right)
+        return left + (-right)
 
     def walk_times(self, args):
         self.assert_boolean_parse_mode(False)
