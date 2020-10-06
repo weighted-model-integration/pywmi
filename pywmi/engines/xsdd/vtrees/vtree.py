@@ -217,7 +217,7 @@ class VtreeVar(Vtree):
         f.write(f"L {self._internal_id} {varnums[self.var]}\n")
 
 
-def conversion_tables(literals: LiteralInfo):
+def _conversion_tables(literals: LiteralInfo):
     logic2cont = defaultdict(set)
     cont2logic = defaultdict(set)
     for formula, lit in literals.abstractions.items():
