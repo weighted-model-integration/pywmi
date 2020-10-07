@@ -233,13 +233,23 @@ class PSIPolynomialAlgebra(AlgebraBackend, IntegrationBackend):
             psipy.S("{}/{}".format(fraction.numerator, fraction.denominator))
         )
 
-    def to_float(self, real_value):
-        real_value = real_value.simplify() * self.symbol(1.0)
-        string_value = str(real_value.simplify())
-        # if "/" in string_value:
-        #     parts = string_value.split("/", 1)
-        #     return float(parts[0]) / float(parts[1])
-        return float(string_value)
+    def to_float(self, rational_value):
+        rational_value = rational_value.simplify()
+        try:
+            return rational_value.to_float()
+        except:
+            rational_value = str(rational_value)
+            num, den = rational_value.split("/")
+            l_num = len(num)
+            l_den = len(den)
+            max_len = max(l_num, l_den)
+            if l_num > l_den:
+                num = num[:250]
+                den = den[: 250 - (l_num - l_den)]
+            else:
+                num = num[: 250 - (l_den - l_num)]
+                den = den[:250]
+            return float(num) / float(den)
 
 
 class StringAlgebra(AlgebraBackend, IntegrationBackend):

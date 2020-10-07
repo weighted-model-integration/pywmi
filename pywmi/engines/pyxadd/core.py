@@ -14,7 +14,9 @@ from .operation import Operation, Summation, Multiplication, LogicalOr, LogicalA
 
 def check_node_id(node_id, name="Node id"):
     if not isinstance(node_id, int):
-        raise RuntimeError("{} must be integer, was {} of type {}".format(name, node_id, type(node_id)))
+        raise RuntimeError(
+            "{} must be integer, was {} of type {}".format(name, node_id, type(node_id))
+        )
     return node_id
 
 
@@ -24,7 +26,7 @@ Expression = Any
 
 
 class Node:
-    def __init__(self, pool: 'Pool', node_id):
+    def __init__(self, pool: "Pool", node_id):
         self.pool = pool
         self._node_id = node_id
 
@@ -37,7 +39,7 @@ class Node:
 
 
 class TerminalNode(Node):
-    def __init__(self, pool: 'Pool', node_id, expression: Expression):
+    def __init__(self, pool: "Pool", node_id, expression: Expression):
         Node.__init__(self, pool, node_id)
         assert not isinstance(expression, FNode)
         self.expression = expression
@@ -74,7 +76,15 @@ class TerminalNode(Node):
 
 
 class InternalNode(Node):
-    def __init__(self, pool: 'Pool', node_id, decision: Decision, child_true, child_false, native_decision=None):
+    def __init__(
+        self,
+        pool: "Pool",
+        node_id,
+        decision: Decision,
+        child_true,
+        child_false,
+        native_decision=None,
+    ):
         Node.__init__(self, pool, node_id)
         self.decision = decision
         self._native_decision = native_decision
@@ -86,7 +96,9 @@ class InternalNode(Node):
     @property
     def native_decision(self):
         if self._native_decision is None:
-            self._native_decision = self.decision.inequality.to_expression(self.pool.algebra)
+            self._native_decision = self.decision.inequality.to_expression(
+                self.pool.algebra
+            )
         return self._native_decision
 
     @property
@@ -98,8 +110,9 @@ class InternalNode(Node):
         return self._child_false
 
     def __repr__(self):
-        return "I(id: {}, decision: {}, true: {}, false: {})"\
-            .format(self.node_id, self.decision, self.child_true, self.child_false)
+        return "I(id: {}, decision: {}, true: {}, false: {})".format(
+            self.node_id, self.decision, self.child_true, self.child_false
+        )
 
     def is_terminal(self):
         return False
@@ -168,7 +181,10 @@ class Pool:
             self.pos_inf_id = 1.1  # TODO How to deal with INF
             self.neg_inf_id = 1.2
 
-        self.add_cache("diagram", DefaultCache(lambda pool, node_id: Diagram(pool, pool.get_node(node_id))))
+        self.add_cache(
+            "diagram",
+            DefaultCache(lambda pool, node_id: Diagram(pool, pool.get_node(node_id))),
+        )
 
     def has_cache(self, name):
         return name in self.caches
@@ -231,12 +247,16 @@ class Pool:
         if len(decision.get_valid_branches()) == 1:
             return child_true if decision.get_valid_branches()[0] else child_false
 
-        decision, child_true, child_false = decision.to_canonical(child_true, child_false)
+        decision, child_true, child_false = decision.to_canonical(
+            child_true, child_false
+        )
         decision_id = self._add_test(decision)
         key = (decision_id, child_true, child_false)
         node_id = self._internal_map.get(key, None)
         if node_id is None:
-            node_id = self._register(lambda n_id: InternalNode(self, n_id, decision, child_true, child_false))
+            node_id = self._register(
+                lambda n_id: InternalNode(self, n_id, decision, child_true, child_false)
+            )
             self._internal_map[key] = node_id
         return node_id
 
@@ -312,7 +332,9 @@ class Pool:
         elif terminal_node.expression == self.algebra.zero():
             return diagram.pool.one_id
         else:
-            raise RuntimeError("Could not invert value {}".format(terminal_node.expression))
+            raise RuntimeError(
+                "Could not invert value {}".format(terminal_node.expression)
+            )
 
     def invert(self, node_id: int) -> int:
         """
@@ -332,13 +354,16 @@ class Pool:
             elif node_id == self.zero_id:
                 return self.one_id
             else:
-                raise RuntimeError("Cannot invert leaf node that is not one or zero: {}".format(node))
+                raise RuntimeError(
+                    "Cannot invert leaf node that is not one or zero: {}".format(node)
+                )
 
         # minus_one = self.terminal("-1")
         # return self.apply(Multiplication, self.apply(Summation, node_id, minus_one), minus_one)
 
         to_invert = self.diagram(node_id)
         from . import leaf_transform
+
         return leaf_transform.transform_leaves(self._transform_invert, to_invert)
 
     def diagram(self, node_id):
@@ -397,7 +422,9 @@ class Diagram:
         elif isinstance(root_node, int):
             self._root_node = pool.get_node(root_node)
         else:
-            raise RuntimeError("Unexpected root node {} of type {}".format(root_node, type(root_node)))
+            raise RuntimeError(
+                "Unexpected root node {} of type {}".format(root_node, type(root_node))
+            )
         self._profile = None
 
     @property
@@ -430,6 +457,7 @@ class Diagram:
         :rtype: pyxadd.walk.WalkingProfile
         """
         from .walk import get_profile
+
         return get_profile(self)
 
     def node(self, node_id):
@@ -446,14 +474,18 @@ class Diagram:
 
         while True:
             if isinstance(node, InternalNode):
-                if node.decision.evaluate(assignment):  # node.test.operator.test(node.test.expression.subs(assignment), 0):
+                if node.decision.evaluate(
+                    assignment
+                ):  # node.test.operator.test(node.test.expression.subs(assignment), 0):
                     node = self.node(node.child_true)
                 else:
                     node = self.node(node.child_false)
             elif isinstance(node, TerminalNode):
                 return node.evaluate(assignment)
             else:
-                raise RuntimeError("Unexpected node type {} of node {}".format(type(node), node))
+                raise RuntimeError(
+                    "Unexpected node type {} of node {}".format(type(node), node)
+                )
 
     def reduce(self, variables=None, method="fast_smt"):
         if method == "no_reduce":
@@ -464,25 +496,33 @@ class Diagram:
         #     reducer = LinearReduction(self.pool)
         if method == "smt":
             from .reduce import SmtReduce
+
             reducer = SmtReduce(self.pool)
         elif method == "fast_smt":
             from .reduce import SmtReduce
+
             reducer = SmtReduce(self.pool, fast=True)
         # elif method == "simple":
         #     from .reduce import SimpleBoundReducer
         #     reducer = SimpleBoundReducer(self.pool)
         else:
             options = "'no_reduce', 'linear', 'smt', 'fast_smt' or 'simple'"
-            raise RuntimeError("Unknown reduction method {} (valid options are {})".format(method, options))
+            raise RuntimeError(
+                "Unknown reduction method {} (valid options are {})".format(
+                    method, options
+                )
+            )
 
         return Diagram(self.pool, reducer.reduce(self.root_node.node_id, variables))
 
-    def show(self, pretty = False):
+    def show(self, pretty=False):
         from . import view
+
         graphviz.Source(view.to_dot(self, pretty=pretty)).render(view=True)
 
     def export(self, output_path, pretty=None):
         from . import view
+
         if not output_path[-4:] == ".dot":
             output_path += ".dot"
         view.export(self, output_path, pretty)
@@ -491,7 +531,10 @@ class Diagram:
         if not output_path.endswith(".dot"):
             output_path += ".dot"
         from . import view
-        graphviz.Source(view.to_dot(self, pretty=pretty)).render(filename=output_path, format="png")
+
+        graphviz.Source(view.to_dot(self, pretty=pretty)).render(
+            filename=output_path, format="png"
+        )
 
     def __invert__(self):
         return Diagram(self.pool, self.pool.invert(self.root_node.node_id))
@@ -501,7 +544,10 @@ class Diagram:
             raise TypeError("Cannot sum diagram with {}".format(type(other)))
         if self.pool != other.pool:
             raise RuntimeError("Can only add diagrams from the same pool")
-        return Diagram(self.pool, self.pool.apply(Summation, self.root_node.node_id, other.root_node.node_id))
+        return Diagram(
+            self.pool,
+            self.pool.apply(Summation, self.root_node.node_id, other.root_node.node_id),
+        )
 
     def __sub__(self, other):
         if not isinstance(other, Diagram):
@@ -509,14 +555,22 @@ class Diagram:
         if self.pool != other.pool:
             raise RuntimeError("Can only substract diagrams from the same pool")
         minus_one = self.pool.terminal(Real(-1))
-        return self + Diagram(self.pool, self.pool.apply(Multiplication, minus_one, other.root_node.node_id))
+        return self + Diagram(
+            self.pool,
+            self.pool.apply(Multiplication, minus_one, other.root_node.node_id),
+        )
 
     def __mul__(self, other):
         if not isinstance(other, Diagram):
             raise TypeError("Cannot multiply diagram with {}".format(type(other)))
         if self.pool != other.pool:
             raise RuntimeError("Can only multiply diagrams from the same pool")
-        return Diagram(self.pool, self.pool.apply(Multiplication, self.root_node.node_id, other.root_node.node_id))
+        return Diagram(
+            self.pool,
+            self.pool.apply(
+                Multiplication, self.root_node.node_id, other.root_node.node_id
+            ),
+        )
 
     def __or__(self, other):
         if not isinstance(other, Diagram):
@@ -524,13 +578,18 @@ class Diagram:
         if self.pool != other.pool:
             raise RuntimeError("Can only operate on diagrams from the same pool")
         try:
-            new_root_id = self.pool.apply(LogicalOr, self.root_node.node_id, other.root_node.node_id)
+            new_root_id = self.pool.apply(
+                LogicalOr, self.root_node.node_id, other.root_node.node_id
+            )
             return Diagram(self.pool, new_root_id)
         except RuntimeError as e:
             if self.debug:
                 print("Runtime error occured during logical OR")
                 from . import view
-                graphviz.Source(view.to_dot(self) + "\n" + view.to_dot(other)).render(view=True)
+
+                graphviz.Source(view.to_dot(self) + "\n" + view.to_dot(other)).render(
+                    view=True
+                )
             raise
 
     def __and__(self, other):
@@ -538,7 +597,12 @@ class Diagram:
             raise TypeError("Cannot perform and on diagram with {}".format(type(other)))
         if self.pool != other.pool:
             raise RuntimeError("Can only operate on diagrams from the same pool")
-        return Diagram(self.pool, self.pool.apply(LogicalAnd, self.root_node.node_id, other.root_node.node_id))
+        return Diagram(
+            self.pool,
+            self.pool.apply(
+                LogicalAnd, self.root_node.node_id, other.root_node.node_id
+            ),
+        )
 
     # T	1	0	null
     # T	2	1	null

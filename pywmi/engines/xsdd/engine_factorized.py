@@ -30,6 +30,9 @@ logger = logging.getLogger(__name__)
 
 
 class VariableTagAnalysis(SddWalker):
+
+    # TODO check if notde in chache and return cache
+    # TODO keep track of how often node is visited
     def __init__(self, literal_to_variables):
         self.literal_to_variables = literal_to_variables
         self.node_to_variable_heights = dict()
@@ -144,7 +147,10 @@ class FactorizedIntegrator:
         if cache is None:
             cache = dict()
 
-        key = (node, frozenset(variables))
+        key = (
+            node,
+            frozenset(variables),
+        )  # TODO probably have to cache with respect to weight?
         if key in cache:
             self.hits += 1
             return cache[key]
