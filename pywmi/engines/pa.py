@@ -4,7 +4,6 @@ import sys
 from argparse import ArgumentParser
 from typing import TYPE_CHECKING
 
-from autodora.parallel import run_command
 from pysmt.exceptions import NoSolverAvailableError
 from pysmt.shortcuts import Solver, Bool
 
@@ -48,20 +47,10 @@ class PredicateAbstractionEngine(Engine):
         self.timeout = timeout
         self.directory = directory
 
-    def compute_volume(self, timeout=None, add_bounds=True):
+    def compute_volume(self, add_bounds=True):
         if add_bounds:
-            return self.with_constraint(self.domain.get_bounds()).compute_volume(timeout=timeout, add_bounds=False)
-
-        timeout = timeout or self.timeout
-        if timeout:
-            with self.temp_file() as filename:
-                out, err = run_command("python {} {}".format(__file__, filename), timeout=timeout)
-            try:
-                return float(out.split("\n")[-1])
-            except TypeError:
-                raise RuntimeError("Could not convert:{}\nError output:\n{}".format(out, err))
-        else:
-            return PredicateAbstractionEngine.compute_volume_pa(self.domain, self.support, self.weight)
+            return self.with_constraint(self.domain.get_bounds()).compute_volume(add_bounds=False)
+        return PredicateAbstractionEngine.compute_volume_pa(self.domain, self.support, self.weight)
 
     def get_samples(self, n):
         raise NotImplementedError()

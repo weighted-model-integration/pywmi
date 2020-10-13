@@ -4,7 +4,6 @@ import sys
 from argparse import ArgumentParser
 from typing import TYPE_CHECKING
 
-from autodora.parallel import run_command
 from pysmt.exceptions import NoSolverAvailableError
 from pysmt.shortcuts import Solver, Bool
 
@@ -48,35 +47,15 @@ class MPWMIEngine(Engine):
         self.timeout = timeout
         self.cache = cache
 
-
-    def compute_probabilities(self, queries, timeout=None):
-        timeout = timeout or self.timeout
-        if timeout:
-            with self.temp_file(queries=queries) as filename:
-                out, err = run_command("python {} {}".format(__file__, filename), timeout=timeout)
-            try:
-                res = out.split("\n")[-2:]
-                Z, vol_Q = float(res[0]), eval(res[1])
-            except TypeError:
-                raise RuntimeError("Could not convert:{}\nError output:\n{}".format(out, err))
-        else:
-            Z, vol_Q = MPWMIEngine.compute_volumes(self.support, self.weight, queries, self.cache)
+    def compute_probabilities(self, queries, add_bounds=True):
+        # TODO Deal with add_bounds
+        Z, vol_Q = MPWMIEngine.compute_volumes(self.support, self.weight, queries, self.cache)
         return [float(q / Z) for q in vol_Q]
 
-    def compute_volume(self, timeout=None, add_bounds=True):
+    def compute_volume(self, add_bounds=True):
         if add_bounds:
-            return self.with_constraint(self.domain.get_bounds()).compute_volume(timeout=timeout, add_bounds=False)
-
-        timeout = timeout or self.timeout
-        if timeout:
-            with self.temp_file() as filename:
-                out, err = run_command("python {} {}".format(__file__, filename), timeout=timeout)
-            try:
-                return float(out.split("\n")[-2])
-            except TypeError:
-                raise RuntimeError("Could not convert:{}\nError output:\n{}".format(out, err))
-        else:
-            return float(MPWMIEngine.compute_volumes(self.support, self.weight, [], self.cache)[0])
+            return self.with_constraint(self.domain.get_bounds()).compute_volume(add_bounds=False)
+        return float(MPWMIEngine.compute_volumes(self.support, self.weight, [], self.cache)[0])
 
     def get_samples(self, n):
         raise NotImplementedError()
