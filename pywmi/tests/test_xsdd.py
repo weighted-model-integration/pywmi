@@ -186,4 +186,4 @@ def test_xsdd_manual(f):
 @pytest.mark.parametrize("f", (XsddEngine, FactorizedXsddEngine))
 @pytest.mark.parametrize("e", get_examples())
 def test_xsdd_examples(f, e):
-    inspect_density(lambda d, s, w: f(d, s, w, convex_backend=LatteIntegrator(), factorized=f), e)
+    inspect_density(lambda d, s, w: f(d, s, w, convex_backend=LatteIntegrator()), e)
