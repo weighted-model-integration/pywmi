@@ -1,4 +1,3 @@
-
 from typing import Dict, Any
 from itertools import product
 from functools import reduce
@@ -12,7 +11,9 @@ from pywmi.engines.algebraic_backend import AlgebraBackend
 
 
 class PiecewiseFunction:
-    def __init__(self, pieces: Dict[Any, FNode], algebra: AlgebraBackend, env: Environment):
+    def __init__(
+        self, pieces: Dict[Any, FNode], algebra: AlgebraBackend, env: Environment
+    ):
         self.pieces = pieces  # expression -> support
         self.algebra = algebra
         self.env = env
@@ -39,7 +40,9 @@ class PiecewiseFunction:
             return self
         else:
             new_pieces = {}
-            for (expr1, sup1), (expr2, sup2) in product(self.pieces.items(), other.pieces.items()):
+            for (expr1, sup1), (expr2, sup2) in product(
+                self.pieces.items(), other.pieces.items()
+            ):
                 possibilities = [
                     (expr1, simplify(And(sup1, Not(sup2)))),
                     (expr2, simplify(And(Not(sup1), sup2))),
@@ -50,7 +53,9 @@ class PiecewiseFunction:
                     # used to be done by actually compiling SDD, currently through smt.simplify
                     # TODO: this used to be `e == zero`, but that seems wrong?
                     if not c.is_false() and e != self.algebra.zero():
-                        new_pieces[e] = simplify(Or(new_pieces.get(e, self.fm.FALSE()), c))
+                        new_pieces[e] = simplify(
+                            Or(new_pieces.get(e, self.fm.FALSE()), c)
+                        )
             return PiecewiseFunction(new_pieces, self.algebra, self.env)
 
     def __mul__(self, other):
@@ -58,7 +63,9 @@ class PiecewiseFunction:
         And, Or, Not, simplify = self.shortcuts()
 
         new_pieces = {}
-        for (expr1, sup1), (expr2, sup2) in product(self.pieces.items(), other.pieces.items()):
+        for (expr1, sup1), (expr2, sup2) in product(
+            self.pieces.items(), other.pieces.items()
+        ):
             sup = simplify(And(sup1, sup2))
             zero = self.algebra.zero()
             one = self.algebra.one()
@@ -72,17 +79,21 @@ class PiecewiseFunction:
                 else:
                     e = self.algebra.times(expr1, expr2)
                 if e != zero:
-                    new_pieces[e] = simplify(Or(new_pieces.get(e, self.fm.FALSE()), sup))
+                    new_pieces[e] = simplify(
+                        Or(new_pieces.get(e, self.fm.FALSE()), sup)
+                    )
         return PiecewiseFunction(new_pieces, self.algebra, self.env)
 
     def __neg__(self):
-        new_pieces = {self.algebra.negate(expr): sup
-                      for expr, sup in self.pieces.items()}
+        new_pieces = {
+            self.algebra.negate(expr): sup for expr, sup in self.pieces.items()
+        }
         return PiecewiseFunction(new_pieces, self.algebra, self.env)
 
     def condition(self, condition):
-        new_pieces = {expr: self.fm.And(sup, condition)
-                      for expr, sup in self.pieces.items()}
+        new_pieces = {
+            expr: self.fm.And(sup, condition) for expr, sup in self.pieces.items()
+        }
         return PiecewiseFunction(new_pieces, self.algebra, self.env)
 
     def __str__(self):
@@ -96,7 +107,9 @@ class PiecewiseFunction:
         assert isinstance(then_expression, PiecewiseFunction)
         assert isinstance(else_expression, PiecewiseFunction)
 
-        return then_expression.condition(condition) + else_expression.condition(env.formula_manager.Not(condition))
+        return then_expression.condition(condition) + else_expression.condition(
+            env.formula_manager.Not(condition)
+        )
 
     @staticmethod
     def symbol(name, algebra: AlgebraBackend, env: Environment):
@@ -120,7 +133,9 @@ class PiecewiseFunctionConverter(CachedSmtWalker):
 
     def assert_boolean_parse_mode(self, boolean):
         if boolean != self.boolean_stack[-1]:
-            raise ValueError("Parsing mode must be " + ("" if boolean else "non-") + "boolean")
+            raise ValueError(
+                "Parsing mode must be " + ("" if boolean else "non-") + "boolean"
+            )
 
     def walk_and(self, args):
         self.assert_boolean_parse_mode(True)
@@ -140,7 +155,7 @@ class PiecewiseFunctionConverter(CachedSmtWalker):
     def walk_minus(self, left, right):
         self.assert_boolean_parse_mode(False)
         left, right = self.walk_smt_multiple([left, right])
-        return left + (~right)
+        return left + (-right)
 
     def walk_times(self, args):
         self.assert_boolean_parse_mode(False)
@@ -170,7 +185,7 @@ class PiecewiseFunctionConverter(CachedSmtWalker):
         assert int(exponent) == exponent
         if exponent == 0:
             return PiecewiseFunction.real(1, self.algebra, self.env)
-        return reduce(mul, [base]*int(exponent))
+        return reduce(mul, [base] * int(exponent))
 
     # Everything below just passes through stuff (while checking parse mode)
 
