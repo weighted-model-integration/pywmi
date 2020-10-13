@@ -19,7 +19,6 @@ from .engine import BaseXsddEngine, IntegratorAndAlgebra
 from .literals import LiteralInfo, extract_and_replace_literals
 from .smt_to_sdd import compile_to_sdd
 from .draw import sdd_to_dot_file
-from .factorized_polynomial import FactorizedPolynomialAlgebra, FactorizedPolynomial
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +179,9 @@ class FactorizedIntegrator:
         abstraction = self.literals[var]
         if isinstance(abstraction, str):
             if abstraction in self.labels:
-                expr = Polynomial.from_smt(self.labels[abstraction][0 if (literal > 0) else 1]).to_expression(self.algebra)
+                expr = Polynomial.from_smt(
+                    self.labels[abstraction][0 if (literal > 0) else 1]
+                ).to_expression(self.algebra)
             else:
                 expr = self.algebra.one()
         else:
@@ -221,15 +222,14 @@ class FactorizedXsddEngine(BaseXsddEngine):
         return super().copy(domain, support, weight, self.algebra.exact, **kwargs)
 
     def get_weight_algebra(self):
-        if True:
-            return PolynomialAlgebra()
-        else:
-            return FactorizedPolynomialAlgebra()
+        return PolynomialAlgebra()
 
     def get_labels_and_weight(self):
         return extract_labels_and_weight(self.weight)
 
-    def compute_volume_from_pieces(self, base_support, piecewise_function, labeling_dict):
+    def compute_volume_from_pieces(
+        self, base_support, piecewise_function, labeling_dict
+    ):
         # Prepare the support for each piece (not compiled yet)
         term_supports = multimap()
         for piece_weight, piece_support in piecewise_function.pieces.items():
@@ -304,8 +304,12 @@ class FactorizedXsddEngine(BaseXsddEngine):
 
         for var, (true_label, false_label) in literals.labels.items():
             lit_num = literals.numbered[literals.booleans[var]]
-            true_inequality_groups = [get_group(v) for v in map(str, true_label.get_free_variables())]
-            false_inequality_groups = [get_group(v) for v in map(str, false_label.get_free_variables())]
+            true_inequality_groups = [
+                get_group(v) for v in map(str, true_label.get_free_variables())
+            ]
+            false_inequality_groups = [
+                get_group(v) for v in map(str, false_label.get_free_variables())
+            ]
             literal_to_groups[lit_num] = true_inequality_groups
             literal_to_groups[-lit_num] = false_inequality_groups
 
@@ -326,7 +330,12 @@ class FactorizedXsddEngine(BaseXsddEngine):
             i for i, e in group_to_vars_poly.items() if len(e[0]) == 0
         ]
         integrator = FactorizedIntegrator(
-            self.domain, literals, group_to_vars_poly, node_to_groups, literals.labels, self.algebra
+            self.domain,
+            literals,
+            group_to_vars_poly,
+            node_to_groups,
+            literals.labels,
+            self.algebra,
         )
         logger.debug("group order %s", group_order)
         expression = integrator.recursive(support_sdd, order=group_order)
@@ -351,21 +360,8 @@ class FactorizedXsddEngine(BaseXsddEngine):
     def get_variable_groups_poly(
         cls, weight: Polynomial, real_vars: List[str]
     ) -> List[Tuple[Set[str], Polynomial]]:
-        if isinstance(weight, FactorizedPolynomial):
-            if len(real_vars) > 0:
-                result = []
-                found_vars = weight.variables
-                for v in real_vars:
-                    if v not in found_vars:
-                        result.append(({v}, weight.from_constant(1)))
-                return result + cls.get_variable_groups_poly(weight, [])
 
-            # print(weight)
-            factors = weight.get_factors()
-            # print(factors)
-            # print("")
-            return [(f.variables, f) for f in factors]
-        elif isinstance(weight, Polynomial):
+        if isinstance(weight, Polynomial):
             if len(real_vars) > 0:
                 result = []
                 found_vars = weight.variables
