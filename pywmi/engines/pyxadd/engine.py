@@ -69,11 +69,14 @@ class ToXaddWalker(CachedSmtWalker):
             if_xadd = self.walk_smt(if_arg)
             self.bool_mode = False
             then_xadd, else_xadd = self.walk_smt_multiple([then_arg, else_arg])
-            return self.pool.apply(Summation, self.pool.apply(Multiplication, if_xadd, then_xadd),
-                                   self.pool.apply(Multiplication, self.pool.invert(if_xadd), else_xadd))
+            return self.pool.apply(
+                Summation,
+                self.pool.apply(Multiplication, if_xadd, then_xadd),
+                self.pool.apply(Multiplication, self.pool.invert(if_xadd), else_xadd),
+            )
 
     def walk_pow(self, base, exponent):
-        base, = self.walk_smt_multiple([base])
+        (base,) = self.walk_smt_multiple([base])
         exponent = exponent.constant_value()
         assert int(exponent) == exponent
         exponent = int(exponent)
@@ -108,14 +111,25 @@ class ToXaddWalker(CachedSmtWalker):
 
     def walk_constant(self, value, v_type):
         if self.bool_mode:
-            return Real(value) if v_type == REAL else self.pool.bool_test(Decision(Bool(value)))
+            return (
+                Real(value)
+                if v_type == REAL
+                else self.pool.bool_test(Decision(Bool(value)))
+            )
         else:
             assert v_type != BOOL
             return self.pool.terminal(self.pool.algebra.real(float(value)))
 
 
 class PyXaddEngine(Engine):
-    def __init__(self, domain=None, support=None, weight=None, pool: Optional[Pool] = None, reduce_strategy=None):
+    def __init__(
+        self,
+        domain=None,
+        support=None,
+        weight=None,
+        pool: Optional[Pool] = None,
+        reduce_strategy=None,
+    ):
         super().__init__(domain, support, weight, True)
         self.pool = pool or Pool(algebra=PSIAlgebra())
         self.reduce_strategy = reduce_strategy
@@ -136,4 +150,10 @@ class PyXaddEngine(Engine):
         return self.pool.algebra.to_float(result_node.expression)
 
     def copy(self, domain, support, weight):
-        return PyXaddEngine(domain, support, weight, pool=self.pool, reduce_strategy=self.reduce_strategy)
+        return PyXaddEngine(
+            domain,
+            support,
+            weight,
+            pool=self.pool,
+            reduce_strategy=self.reduce_strategy,
+        )
