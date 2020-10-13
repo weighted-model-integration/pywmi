@@ -26,14 +26,13 @@ def sample(n_boolean_vars, bounds, n):
 class RejectionEngine(Engine):
     def __init__(self, domain, support, weight, sample_count, seed=None):
         Engine.__init__(self, domain, support, weight, exact=False)
-        if seed is not None:
-            numpy.random.seed(seed)
-        self.seed = seed
         self.sample_count = sample_count
+        self.seed = seed
+        self.rand_gen = numpy.random.RandomState(self.seed)
 
     def compute_volume(self, sample_count=None, add_bounds=False, ohe_variables=None):
         sample_count = sample_count if sample_count is not None else self.sample_count
-        samples = uniform(self.domain, sample_count, ohe_variables=ohe_variables)
+        samples = uniform(self.domain, sample_count, rand_gen=self.rand_gen, ohe_variables=ohe_variables)
         labels = evaluate(self.domain, self.support, samples)
 
         if ohe_variables is None:
@@ -62,14 +61,14 @@ class RejectionEngine(Engine):
             return approx_volume
 
     def copy(self, domain, support, weight):
-        return RejectionEngine(domain, support, weight, self.sample_count, self.seed)
+        return RejectionEngine(domain, support, weight, self.sample_count, seed=self.seed)
 
     def __str__(self):
         return "rej" + (":n{}".format(self.sample_count))
 
     def compute_probabilities(self, queries, sample_count=None, add_bounds=False):
         sample_count = sample_count if sample_count is not None else self.sample_count
-        samples = uniform(self.domain, sample_count)
+        samples = uniform(self.domain, sample_count, rand_gen=self.rand_gen)
         labels = evaluate(self.domain, self.support, samples)
         positive_samples = samples[labels]
 
@@ -96,10 +95,12 @@ class RejectionEngine(Engine):
 
 
 class RejectionIntegrator(ConvexIntegrationBackend):
-    def __init__(self, sample_count, bounding_box=False):
+    def __init__(self, sample_count, bounding_box=False, seed=None):
         super().__init__(False)
         self.sample_count = sample_count
         self.bounding_box = bounding_box
+        self.seed = seed
+        self.rand_gen = numpy.random.RandomState(self.seed)
 
     def partially_integrate(self, domain, convex_bounds: List[LinearInequality], polynomial: Polynomial,
                             variables: List[str]):
@@ -128,7 +129,7 @@ class RejectionIntegrator(ConvexIntegrationBackend):
                     c[j] = 0
                     lb_ub_bounds[domain.real_vars[j]] = (lb, ub)
             elif self.bounding_box == 2:
-                samples = uniform(domain, self.sample_count)
+                samples = uniform(domain, self.sample_count, rand_gen=self.rand_gen)
                 labels = evaluate(domain, formula, samples)
                 samples = samples[labels == 1]
 
@@ -145,7 +146,7 @@ class RejectionIntegrator(ConvexIntegrationBackend):
                 raise ValueError("Illegal bounding box value {}".format(self.bounding_box))
             domain = Domain(domain.variables, domain.var_types, lb_ub_bounds)
 
-        engine = RejectionEngine(domain, formula, polynomial.to_smt(), self.sample_count)
+        engine = RejectionEngine(domain, formula, polynomial.to_smt(), self.sample_count, seed=self.seed)
         result = engine.compute_volume()
         if self.bounding_box:
             result = result

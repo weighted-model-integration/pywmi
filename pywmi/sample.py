@@ -2,7 +2,8 @@
 import numpy as np
 from pywmi import Domain, evaluate
 
-DEF_RNG = np.random.RandomState(666)
+
+DEF_RNG = np.random.RandomState()
 
 class SamplingError(RuntimeError):
     def __init__(self, msg=""):

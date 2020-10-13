@@ -27,6 +27,8 @@ def parse_options(option_strings, *whitelist):
         n, v = None, None
         if option_string.startswith("t"):
             n, v = "timeout", int(option_string[1:])
+        elif option_string.startswith("s") and "seed" in whitelist:
+            n, v = "seed", int(option_string[1:])
         elif option_string.startswith("n"):
             n, v = "sample_count", int(option_string[1:])
         elif option_string.startswith("m"):
@@ -94,10 +96,10 @@ def get_engine(description, domain, support, weight):
         options = parse_options(parts[1:], "timeout", "cache")
         return MPWMIEngine(domain, support, weight, **options)
     if parts[0].lower() == "rej":
-        options = parse_options(parts[1:], "sample_count")
+        options = parse_options(parts[1:], "sample_count", "seed")
         return RejectionEngine(domain, support, weight, **options)
     if parts[0].lower() == "adapt":
-        options = parse_options(parts[1:], "sample_count")
+        options = parse_options(parts[1:], "sample_count", "seed")
         return AdaptiveRejection(domain, support, weight, **options)
     if parts[0].lower() == "xadd":
         options = parse_options(parts[1:], "mode", "timeout")
@@ -118,7 +120,8 @@ def get_engine(description, domain, support, weight):
             if parts[0] == "rej":
                 from .engines.rejection import RejectionIntegrator
                 bb = int(parts[2]) if len(parts) > 2 else 0
-                backend = RejectionIntegrator(int(parts[1]), bb)
+                seed = int(parts[3]) if len(parts) > 3 else None
+                backend = RejectionIntegrator(int(parts[1]), bb, seed=seed)
             elif parts[0] == "xadd":
                 from .engines.xadd import XaddIntegrator
                 backend = XaddIntegrator(parts[1] if len(parts) > 1 else None)

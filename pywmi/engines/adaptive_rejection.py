@@ -11,6 +11,9 @@ from pywmi.sample import uniform
 from typing import Tuple
 
 
+
+
+
 class Oracle(object):
     def __init__(self, formula):
         self.formula = formula
@@ -57,7 +60,7 @@ class SmtOracle(Oracle):
 
 
 class Node(object):
-    def __init__(self, samples, labels, volume, builder, bounds, empty, split=None, children=()):
+    def __init__(self, samples, labels, volume, builder, bounds, empty, rand_gen, split=None, children=()):
         self.samples = samples
         self.labels = labels
         self.volume = volume
@@ -68,6 +71,7 @@ class Node(object):
         self.empty = empty
         self.split = split  # (dimension_index, value)
         self.children = children
+        self.rand_gen = rand_gen
 
     @property
     def is_leaf(self):
@@ -96,7 +100,7 @@ class Node(object):
                     required_samples = int(math.ceil(desired_samples - len(self.samples)))
                 # print("Required: " + str(required_samples))
                 if required_samples > 0:
-                    new_samples = uniform(self.domain, required_samples)
+                    new_samples = uniform(self.domain, required_samples, rand_gen=self.rand_gen)
                     new_labels = self.builder.oracle.check(new_samples)
                     self.samples = np.concatenate([self.samples, new_samples])
                     self.labels = np.concatenate([self.labels, new_labels])
@@ -146,7 +150,7 @@ class Node(object):
 
 
 class TreeBuilder(object):
-    def __init__(self, domain, oracle, stopping_f, scoring_f, sample_count):
+    def __init__(self, domain, oracle, stopping_f, scoring_f, sample_count, rand_gen):
         """
         :param Domain domain: The list of bounds (bound = ((lb, closed?), (ub, closed?)))
         :param Oracle oracle: The oracle for verifying inclusion and finding samples
@@ -162,6 +166,7 @@ class TreeBuilder(object):
         self.stopping_f = stopping_f
         self.scoring_f = scoring_f
         self.sample_count = sample_count
+        self.rand_gen = rand_gen
 
     @property
     def formula(self):
@@ -185,7 +190,7 @@ class TreeBuilder(object):
         if volume is None:
             volume = self.get_volume(bounds)
 
-        samples = uniform(domain, self.sample_count)
+        samples = uniform(domain, self.sample_count, rand_gen=self.rand_gen)
         labels = self.oracle.check(samples)
 
         accepted_count = sum(labels)
@@ -195,7 +200,7 @@ class TreeBuilder(object):
                 pass  # print("Stopping because sufficient samples ({} / {}) with volume={}".format(accepted_count, self.sample_count, volume))
             else:
                 pass  # print("Stopping because insufficient volume ({})".format(volume))
-            return Node(samples, labels, volume, self, bounds, False)  # Sufficiently full region
+            return Node(samples, labels, volume, self, bounds, False, self.rand_gen)  # Sufficiently full region
 
         if accepted_count > 0 or self.oracle.get_accepted_sample() is not None:
             split = None
@@ -222,10 +227,10 @@ class TreeBuilder(object):
             child_2 = self.build_tree(bounds_2, volume / 2, depth + 1)
 
             # print("Done splitting on {} <= {} (volume={})".format(split[0], split[1], volume))
-            return Node(samples, labels, volume, self, bounds, False, split, (child_1, child_2))  # Splitting region
+            return Node(samples, labels, volume, self, bounds, False, self.rand_gen, split, (child_1, child_2))  # Splitting region
 
         # print("Stopping because no samples, volume={}".format(volume))
-        return Node(samples, labels, volume, self, bounds, True)  # Empty region
+        return Node(samples, labels, volume, self, bounds, True, self.rand_gen)  # Empty region
 
     @staticmethod
     def get_volume(bounds):
@@ -264,7 +269,7 @@ def information_gain(samples, labels, dimension_index, split_value):
 
 class AdaptiveRejection(Engine):
     def __init__(self, domain, support, weight, sample_count, sample_count_build=None, stop_criterion=None,
-                 split_criterion=None):
+                 split_criterion=None, seed=None):
         super().__init__(domain, support, weight, False)
 
         self.sample_count = sample_count
@@ -272,8 +277,11 @@ class AdaptiveRejection(Engine):
         self.stop_criterion = stop_criterion or self.make_stop_criterion(max_ratio=0.5, max_depth=6)
         self.split_criterion = split_criterion or information_gain
         oracle = SmtOracle(support, domain)
-        self.builder = TreeBuilder(domain, oracle, self.stop_criterion, self.split_criterion, self.sample_count_build)
+        self.seed = seed
+        self.rand_gen = np.random.RandomState(self.seed)
+        self.builder = TreeBuilder(domain, oracle, self.stop_criterion, self.split_criterion, self.sample_count_build, self.rand_gen)
         self._tree = None
+
 
     @staticmethod
     def make_stop_criterion(max_ratio=None, min_volume=None, max_depth=None):
@@ -310,7 +318,7 @@ class AdaptiveRejection(Engine):
 
     def copy(self, domain, support, weight):
         return AdaptiveRejection(domain, support, weight, self.sample_count, self.sample_count_build,
-                                 self.stop_criterion, self.split_criterion)
+                                 self.stop_criterion, self.split_criterion, seed=self.seed)
 
     def __str__(self):
         return "adapt:n{}:b{}".format(self.sample_count, self.sample_count_build)
