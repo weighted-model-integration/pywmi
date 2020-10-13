@@ -58,7 +58,7 @@ class AlgebraBackend:
         if power < 0:
             raise ValueError("Unexpected negative power {power}".format(power=power))
         result = self.one()
-        for i in range(int(power)):
+        for _ in range(int(power)):
             result = self.times(result, a)
         return result
 
@@ -177,6 +177,7 @@ class PSIAlgebra(AlgebraBackend, IntegrationBackend):
     #     return result
 
     def integrate(self, domain: Domain, expression, variables=None):
+        # print(expression)
         if self.integrate_poly:
             result = psipy.integrate_poly(variables, expression)
         else:

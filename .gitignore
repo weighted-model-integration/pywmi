@@ -14,3 +14,6 @@
 
 /env/
 /.idea/
+
+# visual_studio
+./.vs_*
