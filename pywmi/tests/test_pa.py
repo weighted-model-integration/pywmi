@@ -18,7 +18,7 @@ def test_manual():
     inspect_manual(pa_factory, REL_ERROR)
 
 
-@pytest.mark.skipif(True or WMI is None, reason="PA solver is not installed")
+@pytest.mark.skipif(WMI is None, reason="PA solver is not installed")
 @pytest.mark.parametrize("e", get_examples())
 def test_pa(e):
     inspect_density(pa_factory, e)
