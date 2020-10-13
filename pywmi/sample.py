@@ -1,16 +1,17 @@
-import numpy
-import numpy as np
 
+import numpy as np
 from pywmi import Domain, evaluate
 
+DEF_RNG = np.random.RandomState(666)
 
 class SamplingError(RuntimeError):
     def __init__(self, msg=""):
         self.msg = msg
 
 
-def uniform(domain: Domain, sample_count: int):
-    samples = np.random.random((sample_count, len(domain.variables)))
+def uniform(domain: Domain, sample_count: int, ohe_variables=None, rand_gen=DEF_RNG):
+    #samples = np.random.random((sample_count, len(domain.variables)))
+    samples = rand_gen.random((sample_count, len(domain.variables)))
     for i, var in enumerate(domain.variables):
         if domain.is_bool(var):
             samples[:, i] = samples[:, i] < 0.5
@@ -18,16 +19,27 @@ def uniform(domain: Domain, sample_count: int):
             lb, ub = domain.var_domains[var]
             samples[:, i] = lb + samples[:, i] * (ub - lb)
 
+    if ohe_variables is not None:
+        ohe_indexes = [[domain.variables.index(varname)
+                        for varname in ohe]
+                       for ohe in ohe_variables]
+
+        for i in range(len(samples)):
+            for ohe in ohe_indexes:
+                for x in ohe:
+                    samples[i,x] = False
+                samples[i,rand_gen.choice(ohe)] = True
+
     return samples
 
 
-def weighted_sample(weights, values, n):
+def weighted_sample(weights, values, n, rand_gen=DEF_RNG):
     # https://stackoverflow.com/a/2151885/253387
     total = float(sum(weights))
     i = 0
     w, v = weights[0], values[0]
     while n:
-        x = total * (1 - numpy.random.random() ** (1.0 / n))
+        x = total * (1 - rand_gen.random() ** (1.0 / n))
         total -= x
         while x > w:
             x -= w
@@ -39,11 +51,11 @@ def weighted_sample(weights, values, n):
 
 
 def positive(required_sample_count, domain, support, weight=None, sample_pool_size=None, sample_count=None,
-             max_samples=None):
+             max_samples=None, rand_gen=DEF_RNG):
     sample_pool_size = sample_pool_size or (required_sample_count if weight is None else required_sample_count * 10)
     sample_count = sample_count or sample_pool_size * 2
     max_samples = max_samples or sample_count * 10
-    samples = uniform(domain, sample_count)
+    samples = uniform(domain, sample_count, rand_gen=rand_gen)
     labels = evaluate(domain, support, samples)
     pos_samples = samples[labels]
 
@@ -59,8 +71,7 @@ def positive(required_sample_count, domain, support, weight=None, sample_pool_si
         new_labels = evaluate(domain, support, new_samples)
         new_pos_samples = new_samples[new_labels]
         if pos_samples.shape[0] > 0:
-            print(pos_samples, new_pos_samples)
-            pos_samples = numpy.concatenate((pos_samples, new_pos_samples), axis=0)
+            pos_samples = np.concatenate((pos_samples, new_pos_samples), axis=0)
         else:
             pos_samples = new_pos_samples
         sample_count = sample_count + new_sample_count
@@ -72,6 +83,6 @@ def positive(required_sample_count, domain, support, weight=None, sample_pool_si
 
     if weight is not None:
         sample_weights = evaluate(domain, weight, pos_samples)
-        return numpy.array(list(weighted_sample(sample_weights, pos_samples, required_sample_count))), pos_ratio
+        return np.array(list(weighted_sample(sample_weights, pos_samples, required_sample_count, rand_gen=rand_gen))), pos_ratio
     else:
         return pos_samples, pos_ratio

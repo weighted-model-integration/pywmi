@@ -9,3 +9,4 @@ from .xsdd import XsddEngine, FactorizedXsddEngine, PiecewiseFunction, sdd_to_do
 from .pyxadd.engine import PyXaddEngine
 from .pyxadd.algebra import PyXaddAlgebra
 from .praise import PraiseEngine
+from .mpwmi import MPWMIEngine

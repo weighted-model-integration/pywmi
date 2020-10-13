@@ -13,7 +13,7 @@ from .engine import Engine
 from .convert import Import
 from .domain import Density
 from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, plot, AdaptiveRejection, \
-    PyXaddEngine, PyXaddAlgebra, PSIAlgebra, PraiseEngine
+    PyXaddEngine, PyXaddAlgebra, PSIAlgebra, PraiseEngine, XsddEngine, MPWMIEngine
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,8 @@ def parse_options(option_strings, *whitelist):
             n, v = "ordered", True
         elif option_string=="collapse":
             n, v = "collapse", True
+        elif option_string=="cache":
+            n, v = "cache", True
         elif option_string=="repeated":
             n, v = "repeated", True
         else:
@@ -88,6 +90,9 @@ def get_engine(description, domain, support, weight):
     if parts[0].lower() == "pa":
         options = parse_options(parts[1:], "timeout")
         return PredicateAbstractionEngine(domain, support, weight, **options)
+    if parts[0].lower() == "mpwmi":
+        options = parse_options(parts[1:], "timeout", "cache")
+        return MPWMIEngine(domain, support, weight, **options)
     if parts[0].lower() == "rej":
         options = parse_options(parts[1:], "sample_count")
         return RejectionEngine(domain, support, weight, **options)
@@ -125,7 +130,9 @@ def get_engine(description, domain, support, weight):
 
         if "backend" in options:
             del options["backend"]
-        from pywmi import XsddEngine
+
+        # TODO figure out this
+        # return XsddEngine(domain, support, weight, factorized=True,algebra=PyXaddAlgebra(), ordered=True)
         return XsddEngine(domain, support, weight, backend, **options)
 
 
