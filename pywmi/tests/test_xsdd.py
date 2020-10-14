@@ -30,6 +30,7 @@ pytestmark = pytest.mark.skipif(len(missing_installs) > 0, reason=", ".join(miss
 ERROR = 0.1
 REL_ERROR = 0.000001
 
+
 def test_volume():
     # Support:  (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 10)
     # Weight:   {
@@ -85,7 +86,7 @@ def test_trivial_weight_function_partial():
     a, b, x, y = domain.get_symbols(domain.variables)
     support = (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 1)
     weight = Real(1.0)
-    xsdd = FactorizedXsddEngine(domain=domain, support=support, weight=weight, convex_backend=XaddIntegrator())
+    xsdd = FactorizedXsddEngine(domain=domain, support=support, weight=weight)
     computed_volume = xsdd.compute_volume()
     correction_volume_rej = RejectionEngine(domain, support, weight, 1000000).compute_volume()
     correction_volume_xadd = XaddEngine(domain, support, weight).compute_volume()
