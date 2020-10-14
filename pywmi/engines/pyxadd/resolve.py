@@ -25,7 +25,12 @@ class ResolveIntegrator(object):
     NO_REDUCE = (False, False, False)
 
     def __init__(
-        self, pool: Pool, debug_path=None, cache_result=True, reduce_strategy=None
+        self,
+        pool: Pool,
+        debug_path=None,
+        cache_result=True,
+        reduce_strategy=None,
+        eval_bounds_cache=None,
     ):
         self.pool = pool
         self.debug_path = debug_path
@@ -76,13 +81,14 @@ class ResolveIntegrator(object):
         sym = algebra.symbol(var.symbol_name())
         lb = Polynomial.from_smt(lb).to_expression(algebra)
         ub = Polynomial.from_smt(ub).to_expression(algebra)
-        expression_bounds = algebra.times(
-            algebra.greater_than_equal(sym, lb), algebra.less_than_equal(sym, ub)
-        )
-        result = algebra.integrate(
-            None, algebra.times(expression_bounds, expression), [sym]
-        )
-        result = algebra.get_flat_expression(result)
+
+        if self.pool.algebra._eval_bounds_cache:
+            result = expression.integrate(
+                sym, lb, ub, self.pool.algebra._eval_bounds_cache
+            )
+        else:
+            result = expression.integrate(sym, lb, ub)
+
         logger.debug("%s \t          = %s", prefix, result)
         return result
 

@@ -1,0 +1,26 @@
+digraph G {
+	rankdir = TB;
+	229 [label="(0.25*x < -1)", shape=""]
+	229 -> 1
+	229 -> 228 [style=dashed]
+	{rank = same; 229;}
+	1 [label="0", shape="box"]
+	215 [label="1", shape="box"]
+	{rank = same; 1; 215;}
+	228 [label="(x - 1*y < 0)", shape=""]
+	228 -> 227
+	228 -> 1 [style=dashed]
+	{rank = same; 228;}
+	227 [label="(-0.1111111111111111*y < -1)", shape=""]
+	227 -> 1
+	227 -> 226 [style=dashed]
+	{rank = same; 227;}
+	226 [label="(y < -1)", shape=""]
+	226 -> 215
+	226 -> 225 [style=dashed]
+	{rank = same; 226;}
+	225 [label="(-0.16666666666666666*y < -1)", shape=""]
+	225 -> 215
+	225 -> 1 [style=dashed]
+	{rank = same; 225;}
+}

@@ -1,0 +1,18 @@
+digraph G {
+	rankdir = TB;
+	365 [label="(x < 0)", shape=""]
+	365 -> 1
+	365 -> 364 [style=dashed]
+	{rank = same; 365;}
+	1 [label="0", shape="box"]
+	354 [label="1", shape="box"]
+	{rank = same; 1; 354;}
+	364 [label="(x - 1*y < 0)", shape=""]
+	364 -> 363
+	364 -> 1 [style=dashed]
+	{rank = same; 364;}
+	363 [label="(-1*y < -1)", shape=""]
+	363 -> 1
+	363 -> 354 [style=dashed]
+	{rank = same; 363;}
+}

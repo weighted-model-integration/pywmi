@@ -1,0 +1,6 @@
+
+def main(a) {
+    x := a;
+    y := x - x;
+    return y; // expected: δ(0)[y]
+}

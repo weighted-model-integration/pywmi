@@ -3,7 +3,11 @@ from .resolve import ResolveIntegrator
 from .core import Diagram, Pool
 from .decision import Decision
 from pywmi import Domain
-from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend, PSIAlgebra
+from pywmi.engines.algebraic_backend import (
+    AlgebraBackend,
+    IntegrationBackend,
+    PsiPolynomialAlgebra,
+)
 from pysmt.fnode import FNode
 
 
@@ -15,10 +19,11 @@ class PyXaddAlgebra(AlgebraBackend, IntegrationBackend):
     NO_REDUCE = (False, ResolveIntegrator.NO_REDUCE)
 
     def __init__(self, pool=None, symbolic_backend=None, reduce_strategy=None):
-        self.symbolic_backend = symbolic_backend or PSIAlgebra()
+        self.symbolic_backend = symbolic_backend or PsiPolynomialAlgebra()
         self.pool = pool or Pool(algebra=self.symbolic_backend)
         self.reduce_strategy = reduce_strategy or self.FULL_REDUCE
         AlgebraBackend.__init__(self)
+
         IntegrationBackend.__init__(self, self.symbolic_backend.exact)
 
     def symbol(self, name: str) -> int:
@@ -34,8 +39,10 @@ class PyXaddAlgebra(AlgebraBackend, IntegrationBackend):
 
     def integrate(self, domain: Domain, expression: int, variables=None) -> int:
         result = expression
-        integrator = ResolveIntegrator(self.pool, reduce_strategy=self.reduce_strategy[1])
-        for v in (variables or domain.variables):
+        integrator = ResolveIntegrator(
+            self.pool, reduce_strategy=self.reduce_strategy[1],
+        )
+        for v in variables or domain.variables:
             result = integrator.integrate(result, domain.get_symbol(v))
         return result
 

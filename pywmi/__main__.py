@@ -12,8 +12,20 @@ from pywmi.smt_print import pretty_print
 from .engine import Engine
 from .convert import Import
 from .domain import Density
-from pywmi import Domain, RejectionEngine, PredicateAbstractionEngine, XaddEngine, plot, AdaptiveRejection, \
-    PyXaddEngine, PyXaddAlgebra, PSIAlgebra, PraiseEngine, XsddEngine, MPWMIEngine
+from pywmi import (
+    Domain,
+    RejectionEngine,
+    PredicateAbstractionEngine,
+    XaddEngine,
+    plot,
+    AdaptiveRejection,
+    PyXaddEngine,
+    PyXaddAlgebra,
+    PsiPolynomialAlgebra,
+    PraiseEngine,
+    XsddEngine,
+    MPWMIEngine,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +47,7 @@ def parse_options(option_strings, *whitelist):
             n, v = "mode", option_string[1:]
         elif option_string.startswith("r") and "reduce" in whitelist:
             from pywmi.engines.pyxadd.resolve import ResolveIntegrator
+
             arg = option_string[1:]
             if arg == "init_only":
                 n, v = "reduce_strategy", ResolveIntegrator.NO_SUM_PRODUCT_REDUCE
@@ -50,14 +63,16 @@ def parse_options(option_strings, *whitelist):
             n, v = "balance", option_string[1:]
         elif option_string == "min" and "minimize" in whitelist:
             n, v = "minimize", True
-        elif option_string=="pint":
+        elif option_string == "pint":
             n, v = "pint", True
-        elif option_string.startswith("factorized") or option_string.startswith("unfactorized"):
+        elif option_string.startswith("factorized") or option_string.startswith(
+            "unfactorized"
+        ):
             n, v = "factorized", option_string.startswith("factorized")
             parts = option_string.split(".")
             if n in whitelist and len(parts) > 1:
                 if parts[1] == "psi":
-                    options["algebra"] = PSIAlgebra()
+                    options["algebra"] = PsiPolynomialAlgebra()
                 elif parts[1] == "pyxadd":
                     reduce_strategy = None
                     if len(parts) > 2:
@@ -70,11 +85,11 @@ def parse_options(option_strings, *whitelist):
             n, v = "find_conflicts", True
         elif option_string == "order":
             n, v = "ordered", True
-        elif option_string=="collapse":
+        elif option_string == "collapse":
             n, v = "collapse", True
-        elif option_string=="cache":
+        elif option_string == "cache":
             n, v = "cache", True
-        elif option_string=="repeated":
+        elif option_string == "repeated":
             n, v = "repeated", True
         else:
             raise ValueError("Unknown option {}".format(option_string))
@@ -111,7 +126,15 @@ def get_engine(description, domain, support, weight):
         # options = parse_options(parts[1:])
         return PraiseEngine(domain, support, weight)
     if parts[0].lower() == "xsdd":
-        options = parse_options(parts[1:], "backend", "factorized", "find_conflicts", "ordered", "balance", "minimize")
+        options = parse_options(
+            parts[1:],
+            "backend",
+            "factorized",
+            "find_conflicts",
+            "ordered",
+            "balance",
+            "minimize",
+        )
         backend_string = options.get("backend", None)
         if backend_string is None:
             backend = None
@@ -119,17 +142,22 @@ def get_engine(description, domain, support, weight):
             parts = backend_string.split(".")
             if parts[0] == "rej":
                 from .engines.rejection import RejectionIntegrator
+
                 bb = int(parts[2]) if len(parts) > 2 else 0
                 seed = int(parts[3]) if len(parts) > 3 else None
                 backend = RejectionIntegrator(int(parts[1]), bb, seed=seed)
             elif parts[0] == "xadd":
                 from .engines.xadd import XaddIntegrator
+
                 backend = XaddIntegrator(parts[1] if len(parts) > 1 else None)
             elif parts[0] == "latte":
                 from .engines.latte_backend import LatteIntegrator
+
                 backend = LatteIntegrator()
             else:
-                raise ValueError("Please specify a valid backend instead of {}".format(parts[0]))
+                raise ValueError(
+                    "Please specify a valid backend instead of {}".format(parts[0])
+                )
 
         if "backend" in options:
             del options["backend"]
@@ -171,12 +199,18 @@ def compare(engines, query=None):
     def error(_exact_volume, _volume):
         if _exact_volume is None or _volume is None:
             return "-"
-        return "{:.4f}".format(abs(_volume - _exact_volume) / abs(_exact_volume) if _exact_volume != 0 else 0)
+        return "{:.4f}".format(
+            abs(_volume - _exact_volume) / abs(_exact_volume)
+            if _exact_volume != 0
+            else 0
+        )
 
     def r_duration(_reference_time, _duration):
         if _reference_time is None:
             return "-"
-        return "{:.2f}".format(_duration / _reference_time if _reference_time != 0 else 0)
+        return "{:.2f}".format(
+            _duration / _reference_time if _reference_time != 0 else 0
+        )
 
     def d_string(_d):
         return "{:.2f}s".format(_d) if _d is not None else "-"
@@ -188,10 +222,21 @@ def compare(engines, query=None):
     exact_durations = []
     delta = 10 ** -5
 
-    header = ["Engine", "Time", "R Time", "Volume" if not query else "Probability", "Error", "Std.Dev"]
+    header = [
+        "Engine",
+        "Time",
+        "R Time",
+        "Volume" if not query else "Probability",
+        "Error",
+        "Std.Dev",
+    ]
     stats = []
     for i, engine in enumerate(engines):
-        print("Running engine {} of {}: {: <70}".format(i + 1, len(engines), str(engine)), end="\r", flush=True)
+        print(
+            "Running engine {} of {}: {: <70}".format(i + 1, len(engines), str(engine)),
+            end="\r",
+            flush=True,
+        )
 
         durations = []
         volumes = []
@@ -213,17 +258,27 @@ def compare(engines, query=None):
     disagree = False
     for i in range(len(exact_volumes) - 1):
         for j in range(i + 1, len(exact_volumes)):
-            if abs(exact_volumes[i][1] - exact_volumes[j][1]) >\
-                    delta * min(abs(exact_volumes[i][1]), abs(exact_volumes[j][1])):
-                logger.warning("Exact solvers disagree on volume: {} ({}) vs {} ({})"
-                               .format(engines[i], exact_volumes[i], engines[j], exact_volumes[j]))
+            if abs(exact_volumes[i][1] - exact_volumes[j][1]) > delta * min(
+                abs(exact_volumes[i][1]), abs(exact_volumes[j][1])
+            ):
+                logger.warning(
+                    "Exact solvers disagree on volume: {} ({}) vs {} ({})".format(
+                        engines[i], exact_volumes[i], engines[j], exact_volumes[j]
+                    )
+                )
                 disagree = True
 
     ev = None if disagree or len(exact_volumes) == 0 else exact_volumes[0][1]
-    fd = None if len(exact_durations) == 0 else min(exact_durations, key=lambda t: t[1])[1]
+    fd = (
+        None
+        if len(exact_durations) == 0
+        else min(exact_durations, key=lambda t: t[1])[1]
+    )
 
-    stats = [[str(e), d_string(d), r_duration(fd, d), vol_string(v), error(ev, v), std_v]
-             for e, d, v, std_v in stats]
+    stats = [
+        [str(e), d_string(d), r_duration(fd, d), vol_string(v), error(ev, v), std_v]
+        for e, d, v, std_v in stats
+    ]
 
     print(tabulate.tabulate(stats, headers=header))
 
@@ -234,39 +289,72 @@ def parse():
     task_parsers = parser.add_subparsers(dest="task", help="Which task to run")
 
     vp = task_parsers.add_parser("volume")
-    vp.add_argument("engines", help="One or more engines (later engines are used if earlier engines fail)", nargs="+")
+    vp.add_argument(
+        "engines",
+        help="One or more engines (later engines are used if earlier engines fail)",
+        nargs="+",
+    )
     vp.add_argument("-s", "--status", help="Print current status", action="store_true")
 
     pp = task_parsers.add_parser("prob")
-    pp.add_argument("engines", help="One or more engines (later engines are used if earlier engines fail)", nargs="+")
+    pp.add_argument(
+        "engines",
+        help="One or more engines (later engines are used if earlier engines fail)",
+        nargs="+",
+    )
     pp.add_argument("-s", "--status", help="Print current status", action="store_true")
 
     cp = task_parsers.add_parser("convert")
-    cp.add_argument("-o", "--json_file", help="The output path for the json file", default=None)
+    cp.add_argument(
+        "-o", "--json_file", help="The output path for the json file", default=None
+    )
 
     compare_p = task_parsers.add_parser("compare")
-    compare_p.add_argument("engines", help="The engines to compare (see engine input format)", nargs="+")
-    compare_p.add_argument("-q", "--query_index", help="The query index to check", default=None, type=int)
+    compare_p.add_argument(
+        "engines", help="The engines to compare (see engine input format)", nargs="+"
+    )
+    compare_p.add_argument(
+        "-q", "--query_index", help="The query index to check", default=None, type=int
+    )
 
     normalize_p = task_parsers.add_parser("normalize")
     normalize_p.add_argument("new_support", type=str, help="The new support")
-    normalize_p.add_argument("output_path", type=str, help="Output path for normalized xadd")
-    normalize_p.add_argument("-t", "--total", action="store_true", help="Dump total model instead of paths")
+    normalize_p.add_argument(
+        "output_path", type=str, help="Output path for normalized xadd"
+    )
+    normalize_p.add_argument(
+        "-t", "--total", action="store_true", help="Dump total model instead of paths"
+    )
 
     plot_p = task_parsers.add_parser("plot")
     plot_p.add_argument("-o", "--output", type=str, help="Output path", default=None)
     plot_p.add_argument("-x", "--feat_x", type=str, help="Feature x", default=None)
     plot_p.add_argument("-y", "--feat_y", type=str, help="Feature y", default=None)
-    plot_p.add_argument("-d", "--difference", type=str, help="Path to density to compute difference for", default=None)
+    plot_p.add_argument(
+        "-d",
+        "--difference",
+        type=str,
+        help="Path to density to compute difference for",
+        default=None,
+    )
 
     print_p = task_parsers.add_parser("print")
 
-    parser.add_argument("-d", "--dialect", default=None, type=str, help="The dialect to use for import")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument(
+        "-d", "--dialect", default=None, type=str, help="The dialect to use for import"
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable verbose output"
+    )
     args = parser.parse_args()
 
     density = Import.import_density(args.file, args.dialect)
-    domain, support, weight, queries = density.domain, density.support, density.weight, density.queries
+    domain, support, weight, queries = (
+        density.domain,
+        density.support,
+        density.weight,
+        density.queries,
+    )
 
     if args.verbose:
         logging.basicConfig(level=logging.INFO)
@@ -279,10 +367,21 @@ def parse():
         density.to_file(json_file)
 
     elif args.task == "volume":
-        print(get_volume([get_engine(d, domain, support, weight) for d in args.engines], print_status=args.status))
+        print(
+            get_volume(
+                [get_engine(d, domain, support, weight) for d in args.engines],
+                print_status=args.status,
+            )
+        )
 
     elif args.task == "prob":
-        print(get_volume([get_engine(d, domain, support, weight) for d in args.engines], queries, args.status))
+        print(
+            get_volume(
+                [get_engine(d, domain, support, weight) for d in args.engines],
+                queries,
+                args.status,
+            )
+        )
 
     elif args.task == "compare":
         query = None
@@ -303,7 +402,9 @@ def parse():
         if args.difference:
             other = Density.from_file(args.difference)  # type: Density
             difference = support & ~other.support | ~support & other.support
-            plot.plot_formula(output_file, domain, difference, (args.feat_x, args.feat_y))
+            plot.plot_formula(
+                output_file, domain, difference, (args.feat_x, args.feat_y)
+            )
         else:
             plot.plot_formula(output_file, domain, support, (args.feat_x, args.feat_y))
 

@@ -1,0 +1,19 @@
+digraph G {
+	rankdir = TB;
+	124 [label="(-1*y < -1)", shape=""]
+	124 -> 1
+	124 -> 123 [style=dashed]
+	{rank = same; 124;}
+	1 [label="0", shape="box"]
+	121 [label="(-1*y < -0.5)", shape=""]
+	121 -> 120
+	121 -> 114 [style=dashed]
+	{rank = same; 1; 121;}
+	123 [label="(y < 0)", shape=""]
+	123 -> 1
+	123 -> 121 [style=dashed]
+	{rank = same; 123;}
+	120 [label="-11/400+-11/500·y+77/500·y²+11/2000+77/500·y", shape="box"]
+	114 [label="33/100·y²", shape="box"]
+	{rank = same; 120; 114;}
+}
