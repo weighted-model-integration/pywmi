@@ -108,7 +108,7 @@ def get_engine(description, domain, support, weight):
         options = parse_options(parts[1:], "timeout")
         return PredicateAbstractionEngine(domain, support, weight, **options)
     if parts[0].lower() == "mpwmi":
-        options = parse_options(parts[1:], "timeout", "cache")
+        options = parse_options(parts[1:], "cache")
         return MPWMIEngine(domain, support, weight, **options)
     if parts[0].lower() == "rej":
         options = parse_options(parts[1:], "sample_count", "seed")
