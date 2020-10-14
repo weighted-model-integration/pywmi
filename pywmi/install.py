@@ -83,25 +83,25 @@ def main():
     args = parser.parse_args()
     if args.solver is None and args.list:
         solvers = [
-            ("XSDD / F-XSDD", ["psi"]),
-            ("XADD", ["gurobi", "smt_solver"]),
-            ("pyxadd", ["psi", "smt_solver"]),
-            ("pa", ["latte", "smt_solver"])
+            ("XSDD / F-XSDD", ["PSI"]),
+            ("XADD", ["Gurobi", "SMT Solver"]),
+            ("pyxadd", ["PSI", "SMT Solver"]),
+            ("pa", ["Latte", "SMT Solver"])
         ]
 
-        def check_solvers(_comp):
-            return ", ".join([solver[0] for solver in solvers if _comp in solver[1]])
+        components = {
+            "PSI": check_installation_psi(),
+            "Latte": check_installation_latte(),
+            "SMT Solver": check_installation_smt_solver(),
+            "Gurobi": check_installation_gurobi(),
+        }
 
-        print(tabulate.tabulate([
-            ["pysdd", "installed" if check_installation_pysdd() else "not installed", check_solvers("pysdd")],
-            ["PSI", "installed" if check_installation_psi() else "not installed", check_solvers("psi")],
-            ["SMT Solver", "installed" if check_installation_smt_solver() else "not installed", check_solvers("smt_solver")],
-            ["Gurobi", "installed" if check_installation_gurobi() else "not installed",
-             check_solvers("gurobi")],
-            ["Latte", "installed" if check_installation_latte() else "not installed",
-             check_solvers("latte")],
-
-        ], headers=["Component", "Status", "Used by"]))
+        print(tabulate.tabulate(
+            [[solver, "ready" if all(components[c] for c in dependencies) else "not ready"] + [
+                ("installed" if components[component] else "not installed") if component in dependencies else "-" for
+                component in components] for solver, dependencies in solvers],
+            headers=["Solver", "Status"] + [c for c in components]
+        ))
     elif args.solver == "xadd":
         install_xadd(args.force, args.remove)
     else:
