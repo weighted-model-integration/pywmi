@@ -21,7 +21,8 @@ REQUIRED = [
 
 # What packages are optional?
 EXTRAS = {
-        'sdd': ["pysdd"]
+    'sdd': ['pysdd'],
+    'pa' : ['wmipa'],
 }
 
 # Distribute: python setup.py upload
