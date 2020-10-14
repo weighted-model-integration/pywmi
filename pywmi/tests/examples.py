@@ -4,8 +4,9 @@ import pytest
 from pysmt.shortcuts import Ite, Real, TRUE
 
 from pywmi.errors import InstallError, InfiniteVolumeError
-from pywmi import Domain, RejectionEngine, XaddEngine, Density
+from pywmi import Domain, RejectionEngine, XaddEngine, Density, PyXaddEngine, PredicateAbstractionEngine
 from pywmi.engine import Engine
+from pywmi.install import check_installation_pyxadd, check_installation_pa
 
 TEST_SAMPLE_COUNT = 1000000
 TEST_RELATIVE_TOLERANCE = 0.05
@@ -54,6 +55,15 @@ def get_examples(exclude_boolean=False, exclude_continuous=False):
         (ex2_b0_r2, False, True)
     ]
     return [e() for e, b, c in examples if (not exclude_boolean or not b) and (not exclude_continuous or not c)]
+
+
+def get_test_engine_factory():
+    if check_installation_pyxadd():
+        return lambda d, f, w: PyXaddEngine(d, f, w)
+    elif check_installation_pa():
+        return lambda d, f, w: PredicateAbstractionEngine(d, f, w)
+    else:
+        return lambda d, f, w: RejectionEngine(d, f, w, TEST_SAMPLE_COUNT)
 
 
 def inspect_density(engine_or_factory, density, test_unweighted=True, test_weighted=True, test_volume=True,
