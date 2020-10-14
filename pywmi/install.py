@@ -47,6 +47,14 @@ def check_installation_latte():
     return True
 
 
+def check_installation_pyxadd():
+    return check_installation_psi() and check_installation_smt_solver()
+
+
+def check_installation_pa():
+    return check_installation_latte() and check_installation_smt_solver()
+
+
 def install_xadd(upgrade=False, remove=False):
     file_name = os.path.join(os.path.dirname(__file__), "engines", "xadd.jar")
     if remove:
@@ -98,7 +106,7 @@ def main():
     parser.add_argument("solver", nargs='?', help="Specify the solver to install, options are: [xadd, pa]")
     parser.add_argument("-f", "--force", action="store_true", help="Reinstall solver if it already exists")
     parser.add_argument("-r", "--remove", action="store_true", help="Remove solver")
-    parser.add_argument("-l", "--list", action="store_true", help="Remove solver")
+    parser.add_argument("-l", "--list", action="store_true", help="List available solvers")
 
     args = parser.parse_args()
     if args.solver is None and args.list:
@@ -106,7 +114,7 @@ def main():
             ("XSDD / F-XSDD", ["pysdd", "psi"]),
             ("XADD", ["gurobi", "smt_solver"]),
             ("pyxadd", ["psi", "smt_solver"]),
-            ("pa", ["wmipa", "latte"])
+            ("pa", ["wmipa", "latte", "smt_solver"])
         ]
 
         def check_solvers(_comp):
