@@ -2,6 +2,8 @@ import sys
 import os
 import pathlib
 
+from ...errors import InstallError
+
 file_path = pathlib.Path(__file__).parent.absolute()
 
 include_dirs = [
@@ -10,15 +12,12 @@ include_dirs = [
     if "psilibrary" in x[0] and not x[0].endswith("psipy")
 ]
 
-assert len(include_dirs) == 1
-lib_dir = include_dirs[0]
-lib_dir = os.path.join(file_path, lib_dir)
+if len(include_dirs) == 1:
+    lib_dir = os.path.join(file_path, include_dirs[0])
 
+    if lib_dir not in sys.path:
+        sys.path.append(lib_dir)
 
-if lib_dir not in sys.path:
-    sys.path.append(lib_dir)
-
-import psipy
-
-from . import psipy as psi
-
+    from . import psipy as psi
+else:
+    raise InstallError()

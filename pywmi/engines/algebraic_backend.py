@@ -10,10 +10,10 @@ from pywmi.errors import InstallError
 from pywmi import Domain
 
 # try:
-from ..weight_algebra.psi import psi
-
-# except ImportError:
-# psi = None
+try:
+    from ..weight_algebra.psi import psi
+except InstallError:
+    psi = None
 
 
 E = Any
