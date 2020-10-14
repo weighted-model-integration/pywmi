@@ -42,8 +42,7 @@ In order to use the PA engine, you need to install the MathSAT SMT solver (see i
 
 ### PSI support
 
-
-activate your python environement.
+Make sure you have activate your Python virtual environment.
 
 ```
 curl -fsS https://dlang.org/install.sh | bash -s dmd -p PATH/TO/WHERE/YOU/WANT/DLAN/
