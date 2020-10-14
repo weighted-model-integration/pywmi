@@ -83,10 +83,10 @@ def main():
     args = parser.parse_args()
     if args.solver is None and args.list:
         solvers = [
-            ("XSDD / F-XSDD", ["PSI"]),
-            ("XADD", ["Gurobi", "SMT Solver"]),
+            ("pa", ["Latte", "SMT Solver"]),
             ("pyxadd", ["PSI", "SMT Solver"]),
-            ("pa", ["Latte", "SMT Solver"])
+            ("XADD", ["Gurobi", "SMT Solver"]),
+            ("XSDD", ["PSI"]),
         ]
 
         components = {
@@ -97,10 +97,10 @@ def main():
         }
 
         print(tabulate.tabulate(
-            [[solver, "ready" if all(components[c] for c in dependencies) else "not ready"] + [
-                ("installed" if components[component] else "not installed") if component in dependencies else "-" for
+            [["{} ({})".format(solver, "v" if all(components[c] for c in dependencies) else "x")] + [
+                ("v" if components[component] else "x") if component in dependencies else "-" for
                 component in components] for solver, dependencies in solvers],
-            headers=["Solver", "Status"] + [c for c in components]
+            headers=["Solver \\ Component"] + ["{}".format(c) for c, r in components.items()]
         ))
     elif args.solver == "xadd":
         install_xadd(args.force, args.remove)
