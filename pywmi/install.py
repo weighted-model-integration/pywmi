@@ -100,7 +100,7 @@ def main():
             [["{} ({})".format(solver, "v" if all(components[c] for c in dependencies) else "x")] + [
                 ("v" if components[component] else "x") if component in dependencies else "-" for
                 component in components] for solver, dependencies in solvers],
-            headers=["Solver \\ Component"] + ["{}".format(c) for c, r in components.items()]
+            headers=["Solver \\ Component"] + ["{} ({})".format(c, "v" if r else "x") for c, r in components.items()]
         ))
     elif args.solver == "xadd":
         install_xadd(args.force, args.remove)
