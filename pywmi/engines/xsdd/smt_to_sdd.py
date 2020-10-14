@@ -130,11 +130,11 @@ def compile_to_sdd(formula: FNode, literals: LiteralInfo, vtree: Vtree) -> SddNo
 def recover_formula(
     sdd_node: SddNode,
     literals: LiteralInfo,
-    env: Environment = None,
+    env: Environment,
     simplify_result=True,
 ) -> FNode:
     # TODO: provide a similar recover procedure in literals.py to re-insert abstractions etc
-    result = amc(PySmtConversion(literals, env), sdd_node)
+    result = amc(PySmtConversion(literals.abstractions, env), sdd_node)
     return env.formula_manager.simplify(result) if simplify_result else result
 
 
