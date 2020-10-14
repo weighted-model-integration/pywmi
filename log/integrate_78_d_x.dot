@@ -1,0 +1,22 @@
+digraph G {
+	rankdir = TB;
+	78 [label="(-1*x < -0.5)", shape=""]
+	78 -> 71
+	78 -> 77 [style=dashed]
+	{rank = same; 78;}
+	71 [label="(-1*x < -1)", shape=""]
+	71 -> 1
+	71 -> 70 [style=dashed]
+	76 [label="(x < 0)", shape=""]
+	76 -> 1
+	76 -> 56 [style=dashed]
+	{rank = same; 71; 76;}
+	77 [label="(-1*x < -0.2)", shape=""]
+	77 -> 71
+	77 -> 76 [style=dashed]
+	{rank = same; 77;}
+	1 [label="0", shape="box"]
+	56 [label="3/10·x", shape="box"]
+	70 [label="3/10·x+7/10·x", shape="box"]
+	{rank = same; 1; 56; 70;}
+}

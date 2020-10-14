@@ -49,7 +49,6 @@ class ResolveIntegrator(object):
             if not self.pool.has_cache(__name__):
                 self.pool.add_cache(__name__, dict())
             self.resolve_cache = self.pool.caches[__name__]
-        self._eval_bounds_cache = eval_bounds_cache
 
     def export(self, diagram_to_export, name):
         if self.debug_path is not None:
@@ -83,8 +82,10 @@ class ResolveIntegrator(object):
         lb = Polynomial.from_smt(lb).to_expression(algebra)
         ub = Polynomial.from_smt(ub).to_expression(algebra)
 
-        if self._eval_bounds_cache:
-            result = expression.integrate(sym, lb, ub, self._eval_bounds_cache)
+        if self.pool.algebra._eval_bounds_cache:
+            result = expression.integrate(
+                sym, lb, ub, self.pool.algebra._eval_bounds_cache
+            )
         else:
             result = expression.integrate(sym, lb, ub)
 

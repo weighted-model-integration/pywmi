@@ -40,9 +40,7 @@ class PyXaddAlgebra(AlgebraBackend, IntegrationBackend):
     def integrate(self, domain: Domain, expression: int, variables=None) -> int:
         result = expression
         integrator = ResolveIntegrator(
-            self.pool,
-            reduce_strategy=self.reduce_strategy[1],
-            eval_bounds_cache=self._eval_bounds_cache,
+            self.pool, reduce_strategy=self.reduce_strategy[1],
         )
         for v in variables or domain.variables:
             result = integrator.integrate(result, domain.get_symbol(v))

@@ -1,0 +1,14 @@
+digraph G {
+	rankdir = TB;
+	403 [label="(-1*y < -1)", shape=""]
+	403 -> 1
+	403 -> 402 [style=dashed]
+	{rank = same; 403;}
+	1 [label="0", shape="box"]
+	400 [label="y", shape="box"]
+	{rank = same; 1; 400;}
+	402 [label="(y < 0)", shape=""]
+	402 -> 1
+	402 -> 400 [style=dashed]
+	{rank = same; 402;}
+}

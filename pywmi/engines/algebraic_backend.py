@@ -90,12 +90,7 @@ class AlgebraBackend:
 class IntegrationBackend:
     def __init__(self, exact=True, symbolic_backend=None):
         self.exact = exact
-        if symbolic_backend and isinstance(symbolic_backend, PsiPolynomialAlgebra):
-            from psi import EvalBoundsCache
-
-            self._eval_bounds_cache = EvalBoundsCache()
-        else:
-            self._eval_bounds_cache = None
+        self._eval_bounds_cache = None
 
     def integrate(self, domain: Domain, expression, variables=None):
         raise NotImplementedError()
@@ -188,6 +183,8 @@ class PsiPolynomialAlgebra(AlgebraBackend, IntegrationBackend):
             raise InstallError(
                 "PsiPolynomialAlgebra requires the psi library to be installed"
             )
+            print(psi)
+        self._eval_bounds_cache = psi.EvalBoundsCache()
 
     def times(self, a, b):
         return a * b
