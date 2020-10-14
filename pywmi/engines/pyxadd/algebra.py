@@ -24,7 +24,7 @@ class PyXaddAlgebra(AlgebraBackend, IntegrationBackend):
         self.reduce_strategy = reduce_strategy or self.FULL_REDUCE
         AlgebraBackend.__init__(self)
 
-        IntegrationBackend.__init__(self, self.symbolic_backend)
+        IntegrationBackend.__init__(self, self.symbolic_backend.exact)
 
     def symbol(self, name: str) -> int:
         return self.pool.terminal(self.symbolic_backend.symbol(name))
