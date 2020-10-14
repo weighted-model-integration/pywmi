@@ -6,7 +6,7 @@ from pysmt.typing import REAL
 from pywmi.errors import InstallError
 from pywmi import Domain
 from pywmi.engines.latte_backend import LatteIntegrator
-from pywmi.engines.xadd import XaddIntegrator, XaddEngine
+from pywmi.engines.xadd import XaddEngine
 from pywmi.smt_math import Polynomial, LinearInequality, implies
 
 
