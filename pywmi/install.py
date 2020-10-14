@@ -83,7 +83,7 @@ def main():
     args = parser.parse_args()
     if args.solver is None and args.list:
         solvers = [
-            ("XSDD / F-XSDD", ["pysdd", "psi"]),
+            ("XSDD / F-XSDD", ["psi"]),
             ("XADD", ["gurobi", "smt_solver"]),
             ("pyxadd", ["psi", "smt_solver"]),
             ("pa", ["latte", "smt_solver"])
