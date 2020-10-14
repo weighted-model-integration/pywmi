@@ -64,6 +64,27 @@ class SddConversionWalker(CachedSmtWalker):
         else:
             return self.manager.false()
 
+    def walk_plus(self, args):
+        raise NotImplemented()
+
+    def walk_minus(self, left, right):
+        raise NotImplemented()
+
+    def walk_times(self, args):
+        raise NotImplemented()
+
+    def walk_pow(self, base, exponent):
+        raise NotImplemented()
+
+    def walk_lte(self, left, right):
+        raise NotImplemented()
+
+    def walk_lt(self, left, right):
+        raise NotImplemented()
+
+    def walk_equals(self, left, right):
+        raise NotImplemented()
+
 
 class PySmtConversion(Semiring):
     def __init__(self, abstractions, var_to_lit):

@@ -4,7 +4,7 @@ import pysmt.shortcuts as smt
 from pysmt.operators import POW, IMPLIES
 
 
-class SmtWalker(object):
+class SmtWalker(ABC):
     def walk_and(self, args):
         raise NotImplementedError()
 
@@ -90,7 +90,7 @@ class SmtWalker(object):
 
 
 class CachedSmtWalker(SmtWalker, ABC):
-    def __init__(self,cache_key=None):
+    def __init__(self, cache_key=None):
         self._cache = dict()
         self.cache_key = cache_key or (lambda f: f)
 
