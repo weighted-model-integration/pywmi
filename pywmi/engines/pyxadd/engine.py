@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 
-from pysmt.shortcuts import Symbol, Real, Bool, Times, Plus
+from pysmt.shortcuts import Symbol, Real, Bool, Times, Plus, And
 from pysmt.typing import REAL, BOOL
 
 from pywmi.engines.algebraic_backend import PSIAlgebra
@@ -10,6 +10,8 @@ from pywmi.engine import Engine
 from pywmi.smt_walk import CachedSmtWalker
 from .core import Pool
 from .decision import Decision
+from ... import ConvexIntegrationBackend
+from ...smt_math import LinearInequality, Polynomial
 
 
 class ToXaddWalker(CachedSmtWalker):

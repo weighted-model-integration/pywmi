@@ -43,9 +43,6 @@ class LatteIntegrator(ConvexIntegrationBackend):
             raise InstallError("Latte (integrate) is not installed")
         self.algorithm = "--cone-decompose"
 
-    def partially_integrate(self, domain, convex_bounds: List[LinearInequality], polynomial: Polynomial, variables: List[str]):
-        raise NotImplementedError()
-
     @staticmethod
     def key_to_exponents(domain, key: tuple):
         return [key.count(v) for v in domain.real_vars]
