@@ -1,0 +1,17 @@
+*~
+*.o
+psi
+*.def
+*.log
+test/runtests
+test/misc
+*/octave_workspace
+*~
+**/tmp.prb
+*tmp.deleteme
+Cuba*
+*octave-workspace
+*.zip
+*.exe
+*.obj
+dmd*

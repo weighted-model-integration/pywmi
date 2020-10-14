@@ -17,3 +17,5 @@
 
 # visual_studio
 ./.vs_*
+
+/log

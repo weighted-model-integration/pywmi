@@ -9,10 +9,11 @@ import sympy
 from pywmi.errors import InstallError
 from pywmi import Domain
 
-try:
-    import psipy
-except ImportError:
-    psipy = None
+# try:
+from ..weight_algebra.psi import psi
+
+# except ImportError:
+# psi = None
 
 
 E = Any
@@ -87,8 +88,9 @@ class AlgebraBackend:
 
 
 class IntegrationBackend:
-    def __init__(self, exact=True):
+    def __init__(self, exact=True, symbolic_backend=None):
         self.exact = exact
+        self._eval_bounds_cache = None
 
     def integrate(self, domain: Domain, expression, variables=None):
         raise NotImplementedError()
@@ -134,68 +136,94 @@ class SympyAlgebra(AlgebraBackend):
         return float(real_value)
 
 
-class PSIAlgebra(AlgebraBackend, IntegrationBackend):
+class PsiAlgebra(AlgebraBackend, IntegrationBackend):
     def __init__(self, integrate_poly=True):
         super().__init__()
         self.integrate_poly = integrate_poly
-        if psipy is None:
-            raise InstallError("PSIAlgebra requires the psipy library to be installed")
+        if psi is None:
+            raise InstallError("PsiAlgebra requires the psi library to be installed")
 
     def times(self, a, b):
-        return psipy.mul(a, b)
+        return a * b
 
     def plus(self, a, b):
-        return psipy.add(a, b)
+        return a + b
 
     def negate(self, a):
-        return psipy.mul(psipy.S("-1"), a)
+        return psi.S(-1) * a
 
     def symbol(self, name):
-        assert isinstance(name, str)
-        return psipy.S(name)
+        return psi.S(name)
 
     def real(self, float_constant):
         assert isinstance(float_constant, (float, int))
         if int(float_constant) == float_constant:
-            return psipy.S("{}".format(int(float_constant)))
-        # return psipy.S("{:.64f}".format(float_constant))
+            return psi.S("{}".format(int(float_constant)))
+        # return psi.S("{:.64f}".format(float_constant))
         fraction = Fraction(float_constant).limit_denominator()
-        return psipy.S("{}/{}".format(fraction.numerator, fraction.denominator))
+        return psi.S("{}/{}".format(fraction.numerator, fraction.denominator))
 
     def less_than(self, a, b):
-        return psipy.simplify(psipy.less(a, b))
+        return psi.simplify(psi.less(a, b))
 
     def less_than_equal(self, a, b):
-        return psipy.simplify(psipy.less_equal(a, b))
-
-    # def power(self, a, power):
-    #     if not isinstance(power, int) and int(power) != power:
-    #         raise ValueError("Expected integer power, got {power}".format(power=power))
-    #     if power < 0:
-    #         raise ValueError("Unexpected negative power {power}".format(power=power))
-    #     result = psipy.pow(str(a), str(power))
-    #     return result
-
-    def integrate(self, domain: Domain, expression, variables=None):
-        # print(expression)
-        if self.integrate_poly:
-            result = psipy.integrate_poly(variables, expression)
-        else:
-            result = psipy.integrate(variables, expression)
-        return result
+        return a.le(b).simplify()
 
     def to_float(self, real_value):
-        real_value = self.times(real_value, self.symbol("1.0"))
-        string_value = str(psipy.simplify(real_value))
-        # if "/" in string_value:
-        #     parts = string_value.split("/", 1)
-        #     return float(parts[0]) / float(parts[1])
+        real_value = self.times(real_value.to_PsiExpr(), self.symbol(1.0))
+        string_value = str(real_value.simplify())
         return float(string_value)
 
-    def get_flat_expression(self, expression_with_conditions):
-        result = psipy.filter_iverson(expression_with_conditions)
-        # result = psipy.simplify(result)
-        return result
+
+class PsiPolynomialAlgebra(AlgebraBackend, IntegrationBackend):
+    def __init__(self, integrate_poly=True):
+        super().__init__()
+        self.integrate_poly = integrate_poly
+        if psi is None:
+            raise InstallError(
+                "PsiPolynomialAlgebra requires the psi library to be installed"
+            )
+            print(psi)
+        self._eval_bounds_cache = psi.EvalBoundsCache()
+
+    def times(self, a, b):
+        return a * b
+
+    def plus(self, a, b):
+        return a + b
+
+    def negate(self, a):
+        return psi.Polynomial(S.psi.S(-1)) * a
+
+    def symbol(self, name):
+        return psi.Polynomial(psi.S(name))
+
+    def real(self, float_constant):
+        assert isinstance(float_constant, (float, int))
+        if int(float_constant) == float_constant:
+            return psi.Polynomial(psi.S("{}".format(int(float_constant))))
+        fraction = Fraction(float_constant).limit_denominator()
+        return psi.Polynomial(
+            psi.S("{}/{}".format(fraction.numerator, fraction.denominator))
+        )
+
+    def to_float(self, rational_value):
+        rational_value = rational_value.simplify()
+        try:
+            return rational_value.to_float()
+        except:
+            rational_value = str(rational_value)
+            num, den = rational_value.split("/")
+            l_num = len(num)
+            l_den = len(den)
+            max_len = max(l_num, l_den)
+            if l_num > l_den:
+                num = num[:250]
+                den = den[: 250 - (l_num - l_den)]
+            else:
+                num = num[: 250 - (l_den - l_num)]
+                den = den[:250]
+            return float(num) / float(den)
 
 
 class StringAlgebra(AlgebraBackend, IntegrationBackend):
@@ -246,7 +274,7 @@ class StringAlgebra(AlgebraBackend, IntegrationBackend):
             raise ValueError("Expected integer power, got {power}".format(power=power))
         if power < 0:
             raise ValueError("Unexpected negative power {power}".format(power=power))
-        result = psipy.pow(str(a), str(power))
+        result = psi.pow(str(a), str(power))
         return result
 
 
