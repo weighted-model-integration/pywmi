@@ -25,7 +25,7 @@ from pywmi.engines.algebraic_backend import (
     PSIAlgebra,
 )
 from pywmi.engines.convex_integrator import ConvexIntegrationBackend
-from pywmi.engines.xsdd.vtrees.vtree import balanced
+from pywmi.engines.xsdd.vtrees.vtree import balanced, bami
 
 from .semiring import amc, Semiring, SddWalker, walk
 from .literals import extract_and_replace_literals, LiteralInfo
@@ -124,7 +124,7 @@ class BaseXsddEngine(Engine):
         algebra: Optional[IntegratorAndAlgebra] = None,
         find_conflicts=False,
         ordered=False,
-        vtree_strategy=balanced,
+        vtree_strategy=bami,
         minimize=False,
     ):
 
