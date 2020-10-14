@@ -335,7 +335,7 @@ class XsddEngine(BaseXsddEngine):
                 {v: REAL for v in self.domain.real_vars},
                 self.domain.var_domains,
             )
-            return self.algebra.integrate(
+            return self.backend.integrate(
                 domain,
                 BoundsWalker.get_inequalities(convex_support),
                 Polynomial.from_smt(polynomial_weight),
