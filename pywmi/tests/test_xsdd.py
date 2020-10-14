@@ -4,7 +4,7 @@ from pysmt.shortcuts import Ite, Real
 from pywmi.engines.latte_backend import LatteIntegrator
 from pywmi.errors import InstallError
 from .examples import inspect_manual, get_examples, inspect_density
-from pywmi import Domain, RejectionEngine, XaddEngine, FactorizedXsddEngine, PyXaddEngine
+from pywmi import Domain, RejectionEngine, FactorizedXsddEngine, PyXaddEngine
 from pywmi import XsddEngine
 from ..engines.convex_integrator import EngineConvexIntegrationBackend
 
@@ -187,9 +187,9 @@ def test_fxsdd_manual():
     inspect_manual(lambda d, s, w: FactorizedXsddEngine(d, s, w), REL_ERROR)
 
 
-@pytest.mark.parametrize("e", get_examples())
-def test_xsdd_examples(e):
-    inspect_density(lambda d, s, w: XsddEngine(d, s, w, convex_backend=LatteIntegrator()), e)
+# @pytest.mark.parametrize("e", get_examples())
+# def test_xsdd_examples(e):
+#     inspect_density(lambda d, s, w: XsddEngine(d, s, w, convex_backend=LatteIntegrator()), e)
 
 
 @pytest.mark.parametrize("e", get_examples())
