@@ -25,7 +25,7 @@ def make_files_executable():
 
 def _build_psi():
     if get_system() == "windows":
-        print("The PSI library is not yet available for Windows.")
+        print("The Psi library is not yet available for Windows.")
         return
 
     path = os.path.dirname(os.path.abspath(__file__))

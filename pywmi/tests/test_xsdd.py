@@ -16,19 +16,22 @@ except ImportError:
     missing_installs.append("pysdd")
 
 try:
-    import psipy
+    from ..weight_algebra.psi import psi
 except ImportError:
-    missing_installs.append("PSI")
+    missing_installs.append("Psi")
 
 try:
     LatteIntegrator()
 except InstallError:
     missing_installs.append("Latte")
 
-pytestmark = pytest.mark.skipif(len(missing_installs) > 0, reason=", ".join(missing_installs) + " not installed")
+pytestmark = pytest.mark.skipif(
+    len(missing_installs) > 0, reason=", ".join(missing_installs) + " not installed"
+)
 
 ERROR = 0.1
 REL_ERROR = 0.000001
+
 
 def test_volume():
     # Support:  (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 10)
@@ -49,11 +52,24 @@ def test_volume():
     domain = Domain.make(["a", "b"], ["x", "y"], [(0, 1), (0, 1)])
     a, b, x, y = domain.get_symbols(domain.variables)
     support = (a | b) & (~a | ~b) & (x >= 0.0) & (x <= y) & (y <= 1.0)
-    weight = Ite(a, Real(0.6), Real(0.4)) * Ite(b, Real(0.8), Real(0.2))\
-             * (Ite(x >= Real(0.5), Real(0.5) * x + Real(0.1) * y, Real(0.1) * x + Real(0.7) * y))
-    xsdd = XsddEngine(domain=domain, support=support, weight=weight, convex_backend=XaddIntegrator())
+    weight = (
+        Ite(a, Real(0.6), Real(0.4))
+        * Ite(b, Real(0.8), Real(0.2))
+        * (
+            Ite(
+                x >= Real(0.5),
+                Real(0.5) * x + Real(0.1) * y,
+                Real(0.1) * x + Real(0.7) * y,
+            )
+        )
+    )
+    xsdd = XsddEngine(
+        domain=domain, support=support, weight=weight, convex_backend=XaddIntegrator()
+    )
     computed_volume = xsdd.compute_volume()
-    correction_volume_rej = RejectionEngine(domain, support, weight, 1000000).compute_volume()
+    correction_volume_rej = RejectionEngine(
+        domain, support, weight, 1000000
+    ).compute_volume()
     correction_volume_xadd = XaddEngine(domain, support, weight).compute_volume()
     print(correction_volume_rej, correction_volume_xadd, computed_volume)
     assert computed_volume == pytest.approx(correction_volume_rej, rel=ERROR)
@@ -68,9 +84,13 @@ def test_trivial_weight_function():
     a, b, x, y = domain.get_symbols(domain.variables)
     support = (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 1)
     weight = Real(1.0)
-    xsdd = XsddEngine(domain=domain, support=support, weight=weight, convex_backend=XaddIntegrator())
+    xsdd = XsddEngine(
+        domain=domain, support=support, weight=weight, convex_backend=XaddIntegrator()
+    )
     computed_volume = xsdd.compute_volume()
-    correction_volume_rej = RejectionEngine(domain, support, weight, 1000000).compute_volume()
+    correction_volume_rej = RejectionEngine(
+        domain, support, weight, 1000000
+    ).compute_volume()
     correction_volume_xadd = XaddEngine(domain, support, weight).compute_volume()
     print(correction_volume_rej, correction_volume_xadd, computed_volume)
     assert computed_volume == pytest.approx(correction_volume_rej, rel=ERROR)
@@ -85,9 +105,13 @@ def test_trivial_weight_function_partial():
     a, b, x, y = domain.get_symbols(domain.variables)
     support = (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 1)
     weight = Real(1.0)
-    xsdd = FactorizedXsddEngine(domain=domain, support=support, weight=weight, convex_backend=XaddIntegrator())
+    xsdd = FactorizedXsddEngine(
+        domain=domain, support=support, weight=weight, convex_backend=XaddIntegrator()
+    )
     computed_volume = xsdd.compute_volume()
-    correction_volume_rej = RejectionEngine(domain, support, weight, 1000000).compute_volume()
+    correction_volume_rej = RejectionEngine(
+        domain, support, weight, 1000000
+    ).compute_volume()
     correction_volume_xadd = XaddEngine(domain, support, weight).compute_volume()
     print(correction_volume_rej, correction_volume_xadd, computed_volume)
     assert computed_volume == pytest.approx(correction_volume_rej, rel=ERROR)
@@ -96,7 +120,7 @@ def test_trivial_weight_function_partial():
 
 def test_trivial_weight_function_partial_0b_1r_overlap():
     domain = Domain.make([], ["x"], real_bounds=(0, 1))
-    x, = domain.get_symbols(domain.variables)
+    (x,) = domain.get_symbols(domain.variables)
     support = (x >= 0.2) & (x <= 0.6) | (x >= 0.4) & (x <= 0.8)
     weight = Real(2.0)
 
@@ -110,7 +134,7 @@ def test_trivial_weight_function_partial_0b_1r_overlap():
 
 def test_trivial_weight_function_partial_0b_1r_disjoint():
     domain = Domain.make([], ["x"], real_bounds=(0, 1))
-    x, = domain.get_symbols(domain.variables)
+    (x,) = domain.get_symbols(domain.variables)
     support = (x >= 0.1) & (x <= 0.9) & ~((x >= 0.3) & (x <= 0.7))
     weight = Real(2.0)
 
@@ -180,7 +204,9 @@ def test_partial_0b_2r_branch_weight():
 
 @pytest.mark.parametrize("f", (XsddEngine, FactorizedXsddEngine))
 def test_xsdd_manual(f):
-    inspect_manual(lambda d, s, w: f(d, s, w, convex_backend=LatteIntegrator()), REL_ERROR)
+    inspect_manual(
+        lambda d, s, w: f(d, s, w, convex_backend=LatteIntegrator()), REL_ERROR
+    )
 
 
 @pytest.mark.parametrize("f", (XsddEngine, FactorizedXsddEngine))

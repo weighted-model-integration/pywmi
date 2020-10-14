@@ -7,7 +7,7 @@ from .algebraic_backend import (
     AlgebraBackend,
     IntegrationBackend,
     PySmtAlgebra,
-    PSIAlgebra,
+    PsiPolynomialAlgebra,
     StringAlgebra,
 )
 from .adaptive_rejection import AdaptiveRejection

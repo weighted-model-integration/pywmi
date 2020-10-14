@@ -1,0 +1,10 @@
+digraph G {
+	rankdir = TB;
+	21 [label="a", shape=""]
+	21 -> 19
+	21 -> 1 [style=dashed]
+	{rank = same; 21;}
+	19 [label="3/10", shape="box"]
+	1 [label="0", shape="box"]
+	{rank = same; 19; 1;}
+}

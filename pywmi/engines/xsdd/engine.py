@@ -22,7 +22,7 @@ from pywmi.engines.pyxadd.decision import Decision
 from pywmi.engines.algebraic_backend import (
     AlgebraBackend,
     IntegrationBackend,
-    PSIAlgebra,
+    PsiPolynomialAlgebra,
 )
 from pywmi.engines.convex_integrator import ConvexIntegrationBackend
 from pywmi.engines.xsdd.vtrees.vtree import balanced
@@ -138,7 +138,9 @@ class BaseXsddEngine(Engine):
                 f"{type(self).__name__} requires the pysdd package"
             ) from e
 
-        self.algebra = algebra or PSIAlgebra()  # Algebra used to solve SMT theory
+        self.algebra = (
+            algebra or PsiPolynomialAlgebra()
+        )  # Algebra used to solve SMT theory
         self.find_conflicts = find_conflicts
         self.ordered = ordered
         self.vtree_strategy = vtree_strategy
@@ -194,7 +196,9 @@ class BaseXsddEngine(Engine):
 
         labeling_dict, weight_function = self.get_labels_and_weight()
         # piecewise_function contains a dict of weight -> support pairs
-        piecewise_function = split_up_function(weight_function, descr_algebra, get_env())
+        piecewise_function = split_up_function(
+            weight_function, descr_algebra, get_env()
+        )
 
         if isinstance(self.algebra, PyXaddAlgebra):
             _, _, all_support_literals = extract_and_replace_literals(base_support)
@@ -206,7 +210,9 @@ class BaseXsddEngine(Engine):
                 if not isinstance(test, str):
                     self.algebra.pool.bool_test(Decision(test))
 
-        volume = self.compute_volume_from_pieces(base_support, piecewise_function, labeling_dict)
+        volume = self.compute_volume_from_pieces(
+            base_support, piecewise_function, labeling_dict
+        )
         return self.algebra.to_float(volume)
 
     def get_weight_algebra(self):
@@ -218,7 +224,9 @@ class BaseXsddEngine(Engine):
     def get_sdd(self, logic_support, literals: LiteralInfo, vtree: Vtree):
         return compile_to_sdd(logic_support, literals, vtree)
 
-    def compute_volume_from_pieces(self, base_support, piecewise_function, labeling_dict):
+    def compute_volume_from_pieces(
+        self, base_support, piecewise_function, labeling_dict
+    ):
         raise NotImplementedError()
 
     def copy(self, domain, support, weight, exact, **kwargs):
@@ -264,7 +272,7 @@ class XsddEngine(BaseXsddEngine):
         **kwargs,
     ):
 
-        algebra = algebra or PSIAlgebra()
+        algebra = algebra or PsiPolynomialAlgebra()
         super().__init__(
             domain,
             support,
@@ -288,7 +296,9 @@ class XsddEngine(BaseXsddEngine):
     def get_weight_algebra(self):
         return PolynomialAlgebra()
 
-    def compute_volume_from_pieces(self, base_support, piecewise_function, labeling_dict):
+    def compute_volume_from_pieces(
+        self, base_support, piecewise_function, labeling_dict
+    ):
         volume = self.algebra.zero()
         for i, (w_weight, w_support) in enumerate(piecewise_function.pieces.items()):
             support = w_support & base_support

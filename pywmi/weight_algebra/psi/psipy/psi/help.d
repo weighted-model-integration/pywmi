@@ -6,7 +6,7 @@ import options,dutil;
 enum commit = tryImport!(".git/"~tryImport!(".git/HEAD","ref: ")["ref: ".length..$],"unknown commit");
 
 // TODO: auto-format depending on size of console
-enum help=`PSI solver
+enum help=`Psi solver
 Usage: psi [OPTION]... [FILE]...
 
 The options below may be used.

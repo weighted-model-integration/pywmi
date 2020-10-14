@@ -26,7 +26,7 @@ def get_lib_build_dir():
     libDir = os.path.join(
         path,
         "build",
-        "lib.%s-%s"
+        "psilibrary-%s-%s"
         % (
             distutils.util.get_platform(),
             ".".join(str(v) for v in sys.version_info[:2]),
@@ -68,7 +68,7 @@ def build_psipy(force=False):
             version="0.1",
             author="Pedro Zuidberg Dos Martires",
             ext_modules=[psipy_module],
-            description="python wrapper for PSI",
+            description="python wrapper for Psi",
             script_args=[
                 "build",
                 "--compiler=dmd",
@@ -86,4 +86,3 @@ if __name__ == "__main__":
     build_psipy(force=force)
     print("\n")
     print("psipy library is now available")
-    )

@@ -14,6 +14,7 @@ from pywmi.temp import TemporaryFile
 def check_installation_pysdd():
     try:
         import pysdd
+
         return True
     except ImportError:
         return False
@@ -22,6 +23,7 @@ def check_installation_pysdd():
 def check_installation_psi():
     try:
         import psipy
+
         return True
     except ImportError:
         return False
@@ -61,7 +63,7 @@ def install_xadd(upgrade=False, remove=False):
     else:
         print("Downloading JAR file to {}".format(file_name))
         url = "https://www.dropbox.com/s/e33axb83ftghrfb/xadd.jar?dl=1"
-        with urllib.request.urlopen(url) as response, open(file_name, 'wb') as out_file:
+        with urllib.request.urlopen(url) as response, open(file_name, "wb") as out_file:
             shutil.copyfileobj(response, out_file)
 
 
@@ -81,22 +83,35 @@ def install_pa(upgrade=False, remove=False):
     else:
         with TemporaryFile() as zip_name:
             print("Downloading ZIP file to {}".format(zip_name))
-            with urllib.request.urlopen(url) as response, open(zip_name, 'wb') as out_file:
+            with urllib.request.urlopen(url) as response, open(
+                zip_name, "wb"
+            ) as out_file:
                 shutil.copyfileobj(response, out_file)
 
             if os.path.exists(file_name):
                 shutil.rmtree(file_name)
             os.makedirs(file_name)
             print("Extracting ZIP file to {}".format(file_name))
-            with zipfile.ZipFile(zip_name, 'r') as zip_ref:
+            with zipfile.ZipFile(zip_name, "r") as zip_ref:
                 zip_ref.extractall(file_name)
         print("Deleted ZIP file")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Installation utility for install external requirements")
-    parser.add_argument("solver", nargs='?', help="Specify the solver to install, options are: [xadd, pa]")
-    parser.add_argument("-f", "--force", action="store_true", help="Reinstall solver if it already exists")
+    parser = argparse.ArgumentParser(
+        description="Installation utility for install external requirements"
+    )
+    parser.add_argument(
+        "solver",
+        nargs="?",
+        help="Specify the solver to install, options are: [xadd, pa]",
+    )
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Reinstall solver if it already exists",
+    )
     parser.add_argument("-r", "--remove", action="store_true", help="Remove solver")
     parser.add_argument("-l", "--list", action="store_true", help="Remove solver")
 
@@ -106,22 +121,46 @@ def main():
             ("XSDD / F-XSDD", ["pysdd", "psi"]),
             ("XADD", ["gurobi", "smt_solver"]),
             ("pyxadd", ["psi", "smt_solver"]),
-            ("pa", ["wmipa", "latte"])
+            ("pa", ["wmipa", "latte"]),
         ]
 
         def check_solvers(_comp):
             return ", ".join([solver[0] for solver in solvers if _comp in solver[1]])
 
-        print(tabulate.tabulate([
-            ["pysdd", "installed" if check_installation_pysdd() else "not installed", check_solvers("pysdd")],
-            ["PSI", "installed" if check_installation_psi() else "not installed", check_solvers("psi")],
-            ["SMT Solver", "installed" if check_installation_smt_solver() else "not installed", check_solvers("smt_solver")],
-            ["Gurobi", "installed" if check_installation_gurobi() else "not installed",
-             check_solvers("gurobi")],
-            ["Latte", "installed" if check_installation_latte() else "not installed",
-             check_solvers("latte")],
-
-        ], headers=["Component", "Status", "Used by"]))
+        print(
+            tabulate.tabulate(
+                [
+                    [
+                        "pysdd",
+                        "installed" if check_installation_pysdd() else "not installed",
+                        check_solvers("pysdd"),
+                    ],
+                    [
+                        "Psi",
+                        "installed" if check_installation_psi() else "not installed",
+                        check_solvers("psi"),
+                    ],
+                    [
+                        "SMT Solver",
+                        "installed"
+                        if check_installation_smt_solver()
+                        else "not installed",
+                        check_solvers("smt_solver"),
+                    ],
+                    [
+                        "Gurobi",
+                        "installed" if check_installation_gurobi() else "not installed",
+                        check_solvers("gurobi"),
+                    ],
+                    [
+                        "Latte",
+                        "installed" if check_installation_latte() else "not installed",
+                        check_solvers("latte"),
+                    ],
+                ],
+                headers=["Component", "Status", "Used by"],
+            )
+        )
     elif args.solver == "xadd":
         install_xadd(args.force, args.remove)
     elif args.solver == "pa":
