@@ -4,9 +4,9 @@ from pysmt.shortcuts import Ite, Real
 from pywmi.engines.latte_backend import LatteIntegrator
 from pywmi.errors import InstallError
 from .examples import inspect_manual, get_examples, inspect_density
-from pywmi import Domain, RejectionEngine, XaddEngine, FactorizedXsddEngine
+from pywmi import Domain, RejectionEngine, XaddEngine, FactorizedXsddEngine, PyXaddEngine
 from pywmi import XsddEngine
-from pywmi.engines.xadd import XaddIntegrator
+from ..engines.convex_integrator import EngineConvexIntegrationBackend
 
 missing_installs = []
 
@@ -50,13 +50,13 @@ def test_volume():
     domain = Domain.make(["a", "b"], ["x", "y"], [(0, 1), (0, 1)])
     a, b, x, y = domain.get_symbols(domain.variables)
     support = (a | b) & (~a | ~b) & (x >= 0.0) & (x <= y) & (y <= 1.0)
-    weight = Ite(a, Real(0.6), Real(0.4)) * Ite(b, Real(0.8), Real(0.2))\
-             * (Ite(x >= Real(0.5), Real(0.5) * x + Real(0.1) * y, Real(0.1) * x + Real(0.7) * y))
-    xsdd = XsddEngine(domain=domain, support=support, weight=weight, convex_backend=PyXaddIntegrator())
-    computed_volume = xsdd.compute_volume()
+    weight = Ite(a, Real(0.6), Real(0.4)) * Ite(b, Real(0.8), Real(0.2)) * (
+        Ite(x >= Real(0.5), Real(0.5) * x + Real(0.1) * y, Real(0.1) * x + Real(0.7) * y))
+    computed_volume = XsddEngine(domain=domain, support=support, weight=weight,
+                                 convex_backend=EngineConvexIntegrationBackend(PyXaddEngine())).compute_volume()
     correction_volume_rej = RejectionEngine(domain, support, weight, 1000000).compute_volume()
-    correction_volume_xadd = XaddEngine(domain, support, weight).compute_volume()
-    print(correction_volume_rej, correction_volume_xadd, computed_volume)
+    correction_volume_xadd = PyXaddEngine(domain, support, weight).compute_volume()
+    # print(correction_volume_rej, correction_volume_xadd, computed_volume)
     assert computed_volume == pytest.approx(correction_volume_rej, rel=ERROR)
     assert computed_volume == pytest.approx(correction_volume_xadd, rel=ERROR)
 
@@ -69,11 +69,11 @@ def test_trivial_weight_function():
     a, b, x, y = domain.get_symbols(domain.variables)
     support = (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 1)
     weight = Real(1.0)
-    xsdd = XsddEngine(domain=domain, support=support, weight=weight, convex_backend=XaddIntegrator())
-    computed_volume = xsdd.compute_volume()
+    computed_volume = XsddEngine(domain=domain, support=support, weight=weight,
+                                 convex_backend=EngineConvexIntegrationBackend(PyXaddEngine())).compute_volume()
     correction_volume_rej = RejectionEngine(domain, support, weight, 1000000).compute_volume()
-    correction_volume_xadd = XaddEngine(domain, support, weight).compute_volume()
-    print(correction_volume_rej, correction_volume_xadd, computed_volume)
+    correction_volume_xadd = PyXaddEngine(domain, support, weight).compute_volume()
+    # print(correction_volume_rej, correction_volume_xadd, computed_volume)
     assert computed_volume == pytest.approx(correction_volume_rej, rel=ERROR)
     assert computed_volume == pytest.approx(correction_volume_xadd, rel=ERROR)
 
@@ -86,11 +86,11 @@ def test_trivial_weight_function_partial():
     a, b, x, y = domain.get_symbols(domain.variables)
     support = (a | b) & (~a | ~b) & (x >= 0) & (x <= y) & (y <= 1)
     weight = Real(1.0)
-    xsdd = FactorizedXsddEngine(domain=domain, support=support, weight=weight)
-    computed_volume = xsdd.compute_volume()
+    computed_volume = XsddEngine(domain=domain, support=support, weight=weight,
+                                 convex_backend=EngineConvexIntegrationBackend(PyXaddEngine())).compute_volume()
     correction_volume_rej = RejectionEngine(domain, support, weight, 1000000).compute_volume()
-    correction_volume_xadd = XaddEngine(domain, support, weight).compute_volume()
-    print(correction_volume_rej, correction_volume_xadd, computed_volume)
+    correction_volume_xadd = PyXaddEngine(domain, support, weight).compute_volume()
+    # print(correction_volume_rej, correction_volume_xadd, computed_volume)
     assert computed_volume == pytest.approx(correction_volume_rej, rel=ERROR)
     assert computed_volume == pytest.approx(correction_volume_xadd, rel=ERROR)
 
@@ -104,7 +104,7 @@ def test_trivial_weight_function_partial_0b_1r_overlap():
     engine = FactorizedXsddEngine(domain, support, weight)
     computed_volume = engine.compute_volume()
 
-    should_be = XaddEngine(domain, support, weight).compute_volume()
+    should_be = PyXaddEngine(domain, support, weight).compute_volume()
     print(computed_volume, should_be)
     assert computed_volume == pytest.approx(should_be, rel=ERROR)
 
@@ -118,8 +118,8 @@ def test_trivial_weight_function_partial_0b_1r_disjoint():
     engine = FactorizedXsddEngine(domain, support, weight)
     computed_volume = engine.compute_volume()
 
-    should_be = XaddEngine(domain, support, weight).compute_volume()
-    print(computed_volume, should_be)
+    should_be = PyXaddEngine(domain, support, weight).compute_volume()
+    # print(computed_volume, should_be)
     assert computed_volume == pytest.approx(should_be, rel=ERROR)
 
 
@@ -132,8 +132,8 @@ def test_partial_0b_2r_trivial_weight():
     engine = FactorizedXsddEngine(domain, support, weight)
     computed_volume = engine.compute_volume()
 
-    should_be = XaddEngine(domain, support, weight).compute_volume()
-    print(computed_volume, should_be)
+    should_be = PyXaddEngine(domain, support, weight).compute_volume()
+    # print(computed_volume, should_be)
     assert computed_volume == pytest.approx(should_be, rel=ERROR)
 
 
@@ -146,8 +146,8 @@ def test_partial_0b_2r_factorized_weight():
     engine = FactorizedXsddEngine(domain, support, weight)
     computed_volume = engine.compute_volume()
 
-    should_be = XaddEngine(domain, support, weight).compute_volume()
-    print(computed_volume, should_be)
+    should_be = PyXaddEngine(domain, support, weight).compute_volume()
+    # print(computed_volume, should_be)
     assert computed_volume == pytest.approx(should_be, rel=ERROR)
 
 
@@ -160,8 +160,8 @@ def test_partial_0b_2r_factorized_weight_common_test():
     engine = FactorizedXsddEngine(domain, support, weight)
     computed_volume = engine.compute_volume()
 
-    should_be = XaddEngine(domain, support, weight).compute_volume()
-    print(computed_volume, should_be)
+    should_be = PyXaddEngine(domain, support, weight).compute_volume()
+    # print(computed_volume, should_be)
     assert computed_volume == pytest.approx(should_be, rel=ERROR)
 
 
@@ -174,24 +174,24 @@ def test_partial_0b_2r_branch_weight():
     engine = FactorizedXsddEngine(domain, support, weight)
     computed_volume = engine.compute_volume()
 
-    should_be = XaddEngine(domain, support, weight).compute_volume()
-    print(computed_volume, should_be)
+    should_be = PyXaddEngine(domain, support, weight).compute_volume()
+    # print(computed_volume, should_be)
     assert computed_volume == pytest.approx(should_be, rel=ERROR)
 
 
-def test_xsdd_manual(f):
+def test_xsdd_manual():
     inspect_manual(lambda d, s, w: XsddEngine(d, s, w, convex_backend=LatteIntegrator()), REL_ERROR)
 
 
-def test_fxsdd_manual(f):
+def test_fxsdd_manual():
     inspect_manual(lambda d, s, w: FactorizedXsddEngine(d, s, w), REL_ERROR)
 
 
 @pytest.mark.parametrize("e", get_examples())
-def test_xsdd_examples(f, e):
+def test_xsdd_examples(e):
     inspect_density(lambda d, s, w: XsddEngine(d, s, w, convex_backend=LatteIntegrator()), e)
 
 
 @pytest.mark.parametrize("e", get_examples())
-def test_fxsdd_examples(f, e):
+def test_fxsdd_examples(e):
     inspect_density(lambda d, s, w: FactorizedXsddEngine(d, s, w), e)

@@ -1,4 +1,4 @@
-from .xadd import XaddEngine, XaddIntegrator
+from .xadd import XaddEngine
 from .rejection import RejectionEngine, RejectionIntegrator
 from .pa import PredicateAbstractionEngine
 from .convex_integrator import ConvexIntegrationBackend

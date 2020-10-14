@@ -10,7 +10,6 @@ from pywmi.engine import Engine
 from pywmi.smt_walk import CachedSmtWalker
 from .core import Pool
 from .decision import Decision
-from ... import ConvexIntegrationBackend
 from ...smt_math import LinearInequality, Polynomial
 
 
