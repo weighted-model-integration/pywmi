@@ -29,18 +29,7 @@ however, you need to install Java and Gurobi manually. Once you did that, just c
 ### Predicate abstraction engine
 The predicate abstraction engine (short PA engine) uses MathSAT and Latte to solve WMI using predicate abstraction, as 
 described in [Morettin et al., 2017](https://www.ijcai.org/proceedings/2017/0100.pdf).
-In order to use the PA engine, you need to install the MathSAT SMT solver (see instructions above),
-Latte (see instructions below) and the [wmipa library](https://github.com/unitn-sml/wmi-pa). You can use the
-`pysmt-install` utility to download the library.
-
-    pywmi-install pa
-    pywmi-install pa --force  # To download a new version
-
-**Manual installation**
-
-You can also download or clone the library manually and add it to your `PYTHONPATH`
-1. Download / clone the [wmipa library](https://github.com/unitn-sml/wmi-pa)
-2. Add the directory containing the library to your `PYTHONPATH`
+In order to use the PA engine, you need to install the MathSAT SMT solver (see instructions above) and Latte (see instructions below).
 
 ### Native XSDD engine
 The native XSDD engine (and the PiecewiseXSDD class for representing piecewise functions) are implemented using the
@@ -83,6 +72,7 @@ The Latte integration backend as well as the predicate abstraction solver requir
 4. `./configure`
 5. `make`
 
+Then, include the binaries folder to your `PATH` variable.
 
 ## Usage
 ### Calling pywmi
