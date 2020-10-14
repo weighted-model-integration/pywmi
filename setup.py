@@ -16,13 +16,12 @@ VERSION = "0.7.0"
 # What packages are required for this module to be executed?
 REQUIRED = [
     'pysmt', 'numpy', 'future', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'graphviz', 'sympy',
-    'scipy>=1.2', 'deprecated', 'networkx', 'antlr4-python3-runtime', 'dataclasses', 'sortedcollections'
-]
+    'scipy>=1.2', 'deprecated', 'networkx', 'antlr4-python3-runtime', 'dataclasses', 'sortedcollections',
+    'pysdd', 'wmipa']
 
-# What packages are optional?
-EXTRAS = {
-        'sdd': ["pysdd"]
-}
+
+# Optional packages
+EXTRAS = {}
 
 # Distribute: python setup.py upload
 

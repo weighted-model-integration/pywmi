@@ -9,16 +9,13 @@ from pysmt.fnode import FNode
 from pysmt.shortcuts import Real, TRUE
 
 from pywmi import Density
-from pywmi.errors import InstallError
-from pywmi.smt_math import LinearInequality, Polynomial
-from pywmi.temp import TemporaryFile
-from .convex_integrator import ConvexIntegrationBackend
 from pywmi.engine import Engine
-import pysmt.shortcuts as smt
+from pywmi.errors import InstallError
+from pywmi.temp import TemporaryFile
 
 logger = logging.getLogger(__name__)
 
-# TODO Latte for integration
+
 class XaddEngine(Engine):
     pattern = re.compile(r"\n(-?\d+\.\d+E?-?\d*) (-?\d+\.\d+E?-?\d*)\n")
 
