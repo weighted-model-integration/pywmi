@@ -1,0 +1,41 @@
+digraph G {
+	rankdir = TB;
+	107 [label="b", shape=""]
+	107 -> 104
+	107 -> 100 [style=dashed]
+	{rank = same; 107;}
+	104 [label="(x < 0)", shape=""]
+	104 -> 1
+	104 -> 103 [style=dashed]
+	100 [label="(x < 0)", shape=""]
+	100 -> 1
+	100 -> 99 [style=dashed]
+	{rank = same; 104; 100;}
+	1 [label="0", shape="box"]
+	75 [label="(-1*x < -0.5)", shape=""]
+	75 -> 73
+	75 -> 74 [style=dashed]
+	79 [label="(-1*x < -0.5)", shape=""]
+	79 -> 77
+	79 -> 78 [style=dashed]
+	{rank = same; 1; 75; 79;}
+	99 [label="(x - 1*y < 0)", shape=""]
+	99 -> 98
+	99 -> 1 [style=dashed]
+	103 [label="(x - 1*y < 0)", shape=""]
+	103 -> 102
+	103 -> 1 [style=dashed]
+	{rank = same; 99; 103;}
+	98 [label="(-1*y < -1)", shape=""]
+	98 -> 1
+	98 -> 75 [style=dashed]
+	102 [label="(-1*y < -1)", shape=""]
+	102 -> 1
+	102 -> 79 [style=dashed]
+	{rank = same; 98; 102;}
+	73 [label="(1/10·y+1/2·x)·1/5·3/5", shape="box"]
+	74 [label="(1/10·x+7/10·y)·1/5·3/5", shape="box"]
+	77 [label="(1/10·y+1/2·x)·2/5·4/5", shape="box"]
+	78 [label="(1/10·x+7/10·y)·2/5·4/5", shape="box"]
+	{rank = same; 73; 74; 77; 78;}
+}

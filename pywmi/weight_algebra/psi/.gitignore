@@ -1,0 +1,6 @@
+build
+*.pyc
+psipy/linux
+install.sh
+*.gpg
+/dmd*

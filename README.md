@@ -3,18 +3,26 @@
 
     pip install pywmi
 
-pywmi offers various services and engines that require additional installation steps.
+pywmi offers various services and engines that require additional installation steps.  pywmi includes a helper utility
+`pywmi-install` to help installing components required by various engines.  To see an overview of the solvers, the
+components they depend on and wether or not they are installed run:
+
+    pywmi-install --list
 
 ### SMT solvers
 pywmi relies upon pysmt to interface with SMT solvers. If you want to benefit from functionality relying on SMT solvers
 please install an SMT solver through the pysmt-install tool that comes as part of your pywmi installation.
 
     pysmt-install --msat  # example to install mathsat, more solvers are available
-    
-For older versions of PySMT (older than version 0.8), you have to make sure that when you use pywmi, the SMT solvers are on your path.
-The pysmt-install tool can show you the necessary commands.
 
-    pysmt-install --env
+
+
+
+
+### PyXADD engine
+pywmi includes a native Python implementation of XADDs (a sublibrary called pyxadd).  The PyXaddEngine uses pyxadd to
+perform WMI inference.  To use the PyXaddEngine, you need to install an SMT solver (see instructions above) and the
+symbolic computation library PSI (see instructions below).
 
 ### XADD engine
 The XADD engine performs WMI using XADDs as described in [Kolb et al., 2018](https://www.ijcai.org/proceedings/2018/698).
@@ -31,28 +39,41 @@ The predicate abstraction engine (short PA engine) uses MathSAT and Latte to sol
 described in [Morettin et al., 2017](https://www.ijcai.org/proceedings/2017/0100.pdf).
 In order to use the PA engine, you need to install the MathSAT SMT solver (see instructions above) and Latte (see instructions below).
 
-### External XSDD engine
-WMI using XSDD inference is also supported by pywmi. To use the XSDD engine you need to install
-[HAL-ProbLog](https://bitbucket.org/pedrozudo/hal_problog) by following the instructions provided in the README file.
+### MPWMI engine
+The MPWMI engine performs WMI using the message-passing scheme described in [Zeng et al., 2020](https://arxiv.org/pdf/2003.00126.pdf).
+The solver works exclusively with problems having a dependency (aka primal) graph with treewidth 1 and per-literal weights, i.e.:
 
-**Summary**
-1. Install the [dmd compiler v2.078.3](http://downloads.dlang.org/releases/2.x/2.078.3/)
-2. `git clone https://github.com/ariovistus/pyd.git`
-3. `cd pyd`
-4. `python setup.py install`
-5. `cd ../`
-6. `git clone --recursive https://github.com/ML-KULeuven/psipy.git`
-7. `cd psypi`
-8. `python psipy/build_psi.py`
-9. `python setup.py install`
-10. Add the psi library to your path (command printed during the previous step)
-11. `cd ../`
-12. `git clone https://bitbucket.org/pedrozudo/hal_problog.git`
-13. `cd hal_problog`
-14. `python setup.py install`
+    weight = Times(Ite(lit_1, wlit_1, Real(1)), ... , Ite(lit_k, wlit_k, Real(1)))
 
-Take care that your code does not run in the same directory as the one you cloned the libraries, as they will pollute
-your namespace.
+**Installation**
+1. `git clone https://github.com/UCLA-StarAI/mpwmi`
+2. `pip install -e mpwmi/`
+
+### PSI support
+
+Make sure you have activate your Python virtual environment.
+
+```
+curl -fsS https://dlang.org/install.sh | bash -s dmd -p PATH/TO/WHERE/YOU/WANT/DLAN/
+source PATH/TO/WHERE/YOU/WANT/DLANG/dmd-2.0**.*/activate
+```
+
+
+```
+git clone git@github.com:ariovistus/pyd.git
+cd pyd
+python setup.py install
+```
+
+
+```
+cd pywmi/pywmi/weight_algebra/psi/psipy
+python build_psi.py
+cd ..
+python setup.py install 
+```
+
+
 
 ### Latte
 The Latte integration backend as well as the predicate abstraction solver require

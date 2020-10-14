@@ -3,7 +3,7 @@ from typing import Optional, List
 from pysmt.shortcuts import Symbol, Real, Bool, Times, Plus, And
 from pysmt.typing import REAL, BOOL
 
-from pywmi.engines.algebraic_backend import PSIAlgebra
+from pywmi.engines.algebraic_backend import PsiPolynomialAlgebra
 from .resolve import ResolveIntegrator
 from .operation import Summation, Multiplication, LogicalAnd, LogicalOr
 from pywmi.engine import Engine
@@ -132,7 +132,7 @@ class PyXaddEngine(Engine):
         reduce_strategy=None,
     ):
         super().__init__(domain, support, weight, True)
-        self.pool = pool or Pool(algebra=PSIAlgebra())
+        self.pool = pool or Pool(algebra=PsiPolynomialAlgebra())
         self.reduce_strategy = reduce_strategy
 
     def compute_volume(self, add_bounds=True):
