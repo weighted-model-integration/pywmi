@@ -1,0 +1,16 @@
+dat List{
+    head: ℝ;
+    tail: List;
+    def List(h:ℝ,t:List){
+        this.head = h;
+        this.tail = t;
+    }
+}
+
+def main(null:List){
+    x := List(1,null);
+    for i in [2..20){
+        x = List(i,x);
+    }
+    return x; // expected: δ({.head ↦ 19,.tail ↦ {.head ↦ 18,.tail ↦ {.head ↦ 17,.tail ↦ {.head ↦ 16,.tail ↦ {.head ↦ 15,.tail ↦ {.head ↦ 14,.tail ↦ {.head ↦ 13,.tail ↦ {.head ↦ 12,.tail ↦ {.head ↦ 11,.tail ↦ {.head ↦ 10,.tail ↦ {.head ↦ 9,.tail ↦ {.head ↦ 8,.tail ↦ {.head ↦ 7,.tail ↦ {.head ↦ 6,.tail ↦ {.head ↦ 5,.tail ↦ {.head ↦ 4,.tail ↦ {.head ↦ 3,.tail ↦ {.head ↦ 2,.tail ↦ {.head ↦ 1,.tail ↦ null}}}}}}}}}}}}}}}}}}})[x]
+}
