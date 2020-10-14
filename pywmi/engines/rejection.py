@@ -102,10 +102,6 @@ class RejectionIntegrator(ConvexIntegrationBackend):
         self.seed = seed
         self.rand_gen = numpy.random.RandomState(self.seed)
 
-    def partially_integrate(self, domain, convex_bounds: List[LinearInequality], polynomial: Polynomial,
-                            variables: List[str]):
-        raise NotImplementedError()
-
     def integrate(self, domain, convex_bounds: List[LinearInequality], polynomial: Polynomial):
         formula = smt.And(*[i.to_smt() for i in convex_bounds])
 

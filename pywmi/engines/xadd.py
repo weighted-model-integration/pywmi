@@ -120,21 +120,3 @@ class XaddEngine(Engine):
         if self.timeout is not None:
             result += ":t{}".format(self.timeout)
         return result
-
-
-class XaddIntegrator(ConvexIntegrationBackend):
-    def __init__(self, mode=None):
-        super().__init__(True)
-        self.mode = mode
-
-    def partially_integrate(self, domain, convex_bounds: List[LinearInequality], polynomial: Polynomial,
-                            variables: List[str]):
-        raise NotImplementedError()
-
-    def integrate(self, domain, convex_bounds: List[LinearInequality], polynomial: Polynomial):
-        formula = smt.And(*[i.to_smt() for i in convex_bounds])
-        engine = XaddEngine(domain, formula, polynomial.to_smt(), self.mode)
-        return engine.compute_volume()
-
-    def __str__(self):
-        return "xadd_int.{}".format(self.mode) if self.mode else "xadd_int"
