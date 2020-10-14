@@ -1,5 +1,0 @@
-digraph G {
-	rankdir = TB;
-	39 [label="1", shape="box"]
-	{rank = same; 39;}
-}
