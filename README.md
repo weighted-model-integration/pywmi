@@ -31,12 +31,6 @@ The predicate abstraction engine (short PA engine) uses MathSAT and Latte to sol
 described in [Morettin et al., 2017](https://www.ijcai.org/proceedings/2017/0100.pdf).
 In order to use the PA engine, you need to install the MathSAT SMT solver (see instructions above) and Latte (see instructions below).
 
-### Native XSDD engine
-The native XSDD engine (and the PiecewiseXSDD class for representing piecewise functions) are implemented using the
-[PySDD](https://github.com/wannesm/PySDD) library. The PySDD package can be installed as follows:
-
-    pip install git+https://github.com/wannesm/PySDD.git#egg=PySDD
-
 ### External XSDD engine
 WMI using XSDD inference is also supported by pywmi. To use the XSDD engine you need to install
 [HAL-ProbLog](https://bitbucket.org/pedrozudo/hal_problog) by following the instructions provided in the README file.
