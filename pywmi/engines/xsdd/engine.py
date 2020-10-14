@@ -318,8 +318,14 @@ class XsddEngine(BaseXsddEngine):
                 volume = semiring_algebra.plus(volume, vol)
 
             else:
-                raise NotImplementedError
-
+                _, logic_support, literals = extract_and_replace_literals(support)
+                sdd_logic_support = compile_to_sdd(formula=logic_support, literals=literals, vtree=None)
+                convex_supports = amc(ConvexWMISemiring(literals), sdd_logic_support)
+                logger.debug("#convex regions %s", len(convex_supports))
+                for convex_support, variables in convex_supports:
+                    missing_variable_count = len(self.domain.bool_vars) - len(variables)
+                    vol = self.integrate_convex(convex_support, w_weight.to_smt()) * 2 ** missing_variable_count
+                    volume = self.algebra.plus(volume, self.algebra.real(vol))
         return volume
 
     def integrate_convex(self, convex_support, polynomial_weight):

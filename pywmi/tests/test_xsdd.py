@@ -178,12 +178,19 @@ def test_partial_0b_2r_branch_weight():
     assert computed_volume == pytest.approx(should_be, rel=ERROR)
 
 
-@pytest.mark.parametrize("f", (XsddEngine, FactorizedXsddEngine))
 def test_xsdd_manual(f):
-    inspect_manual(lambda d, s, w: f(d, s, w, convex_backend=LatteIntegrator()), REL_ERROR)
+    inspect_manual(lambda d, s, w: XsddEngine(d, s, w, convex_backend=LatteIntegrator()), REL_ERROR)
 
 
-@pytest.mark.parametrize("f", (XsddEngine, FactorizedXsddEngine))
+def test_fxsdd_manual(f):
+    inspect_manual(lambda d, s, w: FactorizedXsddEngine(d, s, w), REL_ERROR)
+
+
 @pytest.mark.parametrize("e", get_examples())
 def test_xsdd_examples(f, e):
-    inspect_density(lambda d, s, w: f(d, s, w, convex_backend=LatteIntegrator()), e)
+    inspect_density(lambda d, s, w: XsddEngine(d, s, w, convex_backend=LatteIntegrator()), e)
+
+
+@pytest.mark.parametrize("e", get_examples())
+def test_fxsdd_examples(f, e):
+    inspect_density(lambda d, s, w: FactorizedXsddEngine(d, s, w), e)

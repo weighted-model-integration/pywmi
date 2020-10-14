@@ -16,7 +16,7 @@ from pywmi.smt_walk import CachedSmtWalker
 from pywmi.errors import InstallError
 
 from .semiring import Semiring, amc
-from pywmi.engines.xsdd.vtrees.vtree import Vtree
+from pywmi.engines.xsdd.vtrees.vtree import Vtree, bami
 from .literals import LiteralInfo
 
 
@@ -28,6 +28,11 @@ def product(*elements):
 
 
 class SddConversionWalker(CachedSmtWalker):
+    """
+    A walker, converting an SMT formula into an SDD representation.
+    This does not yet support arithmetic operations, these should be abstracted and replaced with booleans
+    (cf extract_and_replace_literals(...) in pywmi/engines/xsdd/literals.py)
+    """
     def __init__(self, manager: SddManager, varnums: Dict[int, Any]):
         super().__init__()
         self.manager = manager
@@ -87,10 +92,9 @@ class SddConversionWalker(CachedSmtWalker):
 
 
 class PySmtConversion(Semiring):
-    def __init__(self, abstractions, var_to_lit):
+    def __init__(self, literals: LiteralInfo):
         super()
-        self.reverse_abstractions = {v: k for k, v in abstractions.items()}
-        self.lit_to_var = {v: k for k, v in var_to_lit.items()}
+        self.literals = literals
 
     def times_neutral(self):
         return TRUE()
@@ -108,18 +112,32 @@ class PySmtConversion(Semiring):
         return ~a
 
     def positive_weight(self, a):
-        return (
-            self.reverse_abstractions[a]
-            if a in self.reverse_abstractions
-            else Symbol(self.lit_to_var[a], BOOL)
-        )
+        result = self.literals[self.literals.inv_numbered[a]]
+        if result in self.literals.booleans:
+            result = Symbol(result, BOOL)
+        return result
+        # (
+        #     self.reverse_abstractions[a]
+        #     if a in self.reverse_abstractions
+        #     else Symbol(self.lit_to_var[a], BOOL)
+        # )
 
 
-def compile_to_sdd(formula: FNode, literals: LiteralInfo, vtree: Vtree) -> SddNode:
+def compile_to_sdd(formula: FNode, literals: LiteralInfo, vtree: Optional[Vtree]) -> SddNode:
+    """
+    Compile a formula into an SDD.
+    :param formula: The formula to represent as sdd. This formula must be a purely (abstracted) boolean formula
+    (cf. extract_and_replace_literals(...) in literals.py)
+    :param literals: The information of the literals in the formula
+    :param vtree: The vtree to use. If None, a default vtree heuristic is used.
+    :return: An SDD representing the given formula
+    """
     if SddManager is None:
         raise InstallError(
             "The pysdd package is required for this function but is not currently installed."
         )
+    if vtree is None:
+        vtree = bami(literals)
     varnums = literals.numbered
     pysdd_vtree = vtree.to_pysdd(varnums)
     manager = SddManager.from_vtree(pysdd_vtree)
@@ -134,8 +152,9 @@ def recover_formula(
     simplify_result=True,
 ) -> FNode:
     # TODO: provide a similar recover procedure in literals.py to re-insert abstractions etc
-    result = amc(PySmtConversion(literals.abstractions, env), sdd_node)
-    return env.formula_manager.simplify(result) if simplify_result else result
+    result = amc(PySmtConversion(literals), sdd_node)
+    return env.simplifier.simplify(result) if simplify_result else result
+    #return env.formula_manager.simplify(result) if simplify_result else result
 
 
 # TODO: labels are not used currently. See TODO in engine.py
