@@ -17,7 +17,7 @@ VERSION = "0.7.0"
 REQUIRED = [
     'pysmt', 'numpy', 'future', 'matplotlib', 'pillow', 'polytope', 'tabulate', 'graphviz', 'sympy',
     'scipy>=1.2', 'deprecated', 'networkx', 'antlr4-python3-runtime', 'dataclasses', 'sortedcollections',
-    'sdd', 'pa']
+    'pysdd', 'wmipa']
 
 
 # Distribute: python setup.py upload
