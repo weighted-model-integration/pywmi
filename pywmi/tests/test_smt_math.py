@@ -3,8 +3,9 @@ from pysmt.exceptions import NoSolverAvailableError
 from pysmt.shortcuts import Symbol, Pow, Real, Solver
 from pysmt.typing import REAL
 
+from pywmi.engines.convex_integrator import EngineConvexIntegrationBackend
 from pywmi.errors import InstallError
-from pywmi import Domain
+from pywmi import Domain, PyXaddEngine
 from pywmi.engines.latte_backend import LatteIntegrator
 from pywmi.engines.xadd import XaddEngine
 from pywmi.smt_math import Polynomial, LinearInequality, implies
@@ -88,7 +89,7 @@ def test_latte_backend():
     polynomial = Polynomial.from_smt((x*2/3 + 13/15) * (y*1/8 + x))
     domain = Domain.make([], ["x", "y"], [(0, 1), (0, 1)])
     result = LatteIntegrator().integrate(domain, inequalities, polynomial)
-    xadd_result = XaddIntegrator().integrate(domain, inequalities, polynomial)
+    xadd_result = EngineConvexIntegrationBackend(PyXaddEngine()).integrate(domain, inequalities, polynomial)
     print(result, xadd_result)
     assert result == pytest.approx(xadd_result, rel=0.001)
 
