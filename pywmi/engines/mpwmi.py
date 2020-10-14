@@ -21,50 +21,46 @@ except NoSolverAvailableError:
     pysmt_installed = False
 
 try:
-    from pympwmi import MPWMI
+    from mpwmi import MPWMI
+
 except ImportError:
-    lib_filename = os.path.join(os.path.dirname(__file__), "lib", "mpwmi", "pympwmi-master")
-    if os.path.exists(lib_filename):
-        sys.path.append(lib_filename)
-        try:
-            from pympwmi import MPWMI
-        except ImportError:
-            raise RuntimeError("Corrupted pympwmi install")
-    else:
-        WMI = None
+    MPWMI = None
 
 
 logger = logging.getLogger(__name__)
 
 
 class MPWMIEngine(Engine):
-    def __init__(self, domain, support, weight, timeout=None, cache=False):
+    def __init__(self, domain, support, weight, cache=False):
         super().__init__(domain, support, weight)
         if not pysmt_installed:
             raise InstallError("No PySMT solver is installed (not installed or not on path)")
         if MPWMI is None:
             raise InstallError("The pympwmi library is not in your PYTHONPATH")
-        self.timeout = timeout
+
         self.cache = cache
 
     def compute_probabilities(self, queries, add_bounds=True):
-        # TODO Deal with add_bounds
-        Z, vol_Q = MPWMIEngine.compute_volumes(self.support, self.weight, queries, self.cache)
+        if add_bounds:
+            return self.with_constraint(self.domain.get_bounds()).compute_probabilities(queries, add_bounds=False)
+
+        Z, vol_Q = MPWMIEngine.compute_volumes(self.support, self.weight, queries=queries, cache=self.cache)
         return [float(q / Z) for q in vol_Q]
 
     def compute_volume(self, add_bounds=True):
         if add_bounds:
             return self.with_constraint(self.domain.get_bounds()).compute_volume(add_bounds=False)
-        return float(MPWMIEngine.compute_volumes(self.support, self.weight, [], self.cache)[0])
+
+        return float(MPWMIEngine.compute_volumes(self.support, self.weight, queries=[], cache=self.cache)[0])
 
     def get_samples(self, n):
         raise NotImplementedError()
 
     def copy(self, domain, support, weight):
-        return MPWMIEngine(domain, support, weight, timeout=self.timeout, cache=self.cache)
+        return MPWMIEngine(domain, support, weight, cache=self.cache)
 
     def __str__(self):
-        return "mpwmi" + ("" if self.timeout is None else ":t{}".format(self.timeout))
+        return "mpwmi" + (" w/cache" if self.cache else "")
 
     @staticmethod
     def compute_volumes(support, weight, queries=None, cache=False):
