@@ -3,7 +3,11 @@
 
     pip install pywmi
 
-pywmi offers various services and engines that require additional installation steps.
+pywmi offers various services and engines that require additional installation steps.  pywmi includes a helper utility
+`pywmi-install` to help installing components required by various engines.  To see an overview of the solvers, the
+components they depend on and wether or not they are installed run:
+
+    pywmi-install --list
 
 ### SMT solvers
 pywmi relies upon pysmt to interface with SMT solvers. If you want to benefit from functionality relying on SMT solvers
@@ -15,6 +19,11 @@ For older versions of PySMT (older than version 0.8), you have to make sure that
 The pysmt-install tool can show you the necessary commands.
 
     pysmt-install --env
+
+### PyXADD engine
+pywmi includes a native Python implementation of XADDs (a sublibrary called pyxadd).  The PyXaddEngine uses pyxadd to
+perform WMI inference.  To use the PyXaddEngine, you need to install an SMT solver (see instructions above) and the
+symbolic computation library PSI (see instructions below).
 
 ### XADD engine
 The XADD engine performs WMI using XADDs as described in [Kolb et al., 2018](https://www.ijcai.org/proceedings/2018/698).
