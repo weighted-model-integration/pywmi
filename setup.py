@@ -20,6 +20,9 @@ REQUIRED = [
     'pysdd', 'wmipa']
 
 
+# Optional packages
+EXTRAS = {}
+
 # Distribute: python setup.py upload
 
 here = os.path.abspath(os.path.dirname(__file__))
