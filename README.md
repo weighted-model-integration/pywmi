@@ -39,6 +39,15 @@ The predicate abstraction engine (short PA engine) uses MathSAT and Latte to sol
 described in [Morettin et al., 2017](https://www.ijcai.org/proceedings/2017/0100.pdf).
 In order to use the PA engine, you need to install the MathSAT SMT solver (see instructions above) and Latte (see instructions below).
 
+### MPWMI engine
+The MPWMI engine performs WMI using the message-passing scheme described in [Zeng et al., 2020](https://arxiv.org/pdf/2003.00126.pdf).
+The solver works exclusively with problems having a dependency (aka primal) graph with treewidth 1 and per-literal weights, i.e.:
+
+    weight = Times(Ite(lit_1, wlit_1, Real(1)), ... , Ite(lit_k, wlit_k, Real(1)))
+
+**Installation**
+1. `git clone https://github.com/UCLA-StarAI/mpwmi`
+2. `pip install -e mpwmi/`
 
 ### PSI support
 
