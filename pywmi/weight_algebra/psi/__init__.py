@@ -19,5 +19,7 @@ if len(include_dirs) == 1:
         sys.path.append(lib_dir)
 
     from . import psipy as psi
+elif len(include_dirs) > 1:
+    raise RuntimeError("You have multiple libraries installed (multiple psilibrary files in the psi/build directory)")
 else:
     raise InstallError()
