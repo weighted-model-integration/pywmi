@@ -10,7 +10,7 @@ from pywmi.smt_math import PolynomialAlgebra, Polynomial, LinearInequality
 from pywmi.engines.algebraic_backend import (
     AlgebraBackend,
     IntegrationBackend,
-    PsiPolynomialAlgebra,
+    PsiPiecewisePolynomialAlgebra,
 )
 from pywmi.multimap import multimap
 
@@ -213,7 +213,7 @@ class FactorizedXsddEngine(BaseXsddEngine):
         algebra: Optional[IntegratorAndAlgebra] = None,
         **kwargs
     ):
-        algebra = algebra or PsiPolynomialAlgebra()
+        algebra = algebra or PsiPiecewisePolynomialAlgebra()
         super().__init__(
             domain, support, weight, algebra.exact, algebra=algebra, **kwargs
         )

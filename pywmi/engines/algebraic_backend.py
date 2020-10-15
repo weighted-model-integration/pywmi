@@ -168,12 +168,14 @@ class SympyAlgebra(PolynomialIntegrationBackend):
         return upper - lower
 
 
-class PsiAlgebra(IntegrationBackend):
+class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
     def __init__(self, integrate_poly=True):
         super().__init__()
         self.integrate_poly = integrate_poly
         if psi is None:
-            raise InstallError("PsiAlgebra requires the psi library to be installed")
+            raise InstallError(
+                "PiecewisePolynomialAlgebra requires the psi library to be installed"
+            )
 
     def times(self, a, b):
         return a * b
@@ -182,29 +184,37 @@ class PsiAlgebra(IntegrationBackend):
         return a + b
 
     def negate(self, a):
-        return psi.S(-1) * a
+        return psi.PiecewisePolynomial(psi.S(-1)) * a
 
     def symbol(self, name):
-        return psi.S(name)
+        return psi.PiecewisePolynomial(psi.S(name))
 
     def real(self, float_constant):
         assert isinstance(float_constant, (float, int))
         if int(float_constant) == float_constant:
-            return psi.S("{}".format(int(float_constant)))
+            return psi.PiecewisePolynomial((psi.S("{}".format(int(float_constant)))))
         # return psi.S("{:.64f}".format(float_constant))
         fraction = Fraction(float_constant).limit_denominator()
-        return psi.S("{}/{}".format(fraction.numerator, fraction.denominator))
+        return psi.PiecewisePolynomial(
+            psi.S("{}/{}".format(fraction.numerator, fraction.denominator))
+        )
 
     def less_than(self, a, b):
-        return psi.simplify(psi.less(a, b))
+        return a.lt(b)
 
     def less_than_equal(self, a, b):
-        return a.le(b).simplify()
+        return a.le(b)
 
     def to_float(self, real_value):
-        real_value = self.times(real_value.to_PsiExpr(), self.symbol(1.0))
+        real_value = self.times(real_value, self.symbol(1.0))
         string_value = str(real_value.simplify())
         return float(string_value)
+
+    def integrate(self, domain, expression, variables):
+        for v in variables:
+            var = self.symbol(v)
+            expression = expression.integrate(var)
+        return expression
 
 
 class PsiPolynomialAlgebra(PolynomialIntegrationBackend):

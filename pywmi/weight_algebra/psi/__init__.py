@@ -12,7 +12,7 @@ include_dirs = [
     if "psilibrary" in x[0] and not x[0].endswith("psipy")
 ]
 
-
+print(file_path)
 if len(include_dirs) == 1:
     lib_dir = os.path.join(file_path, include_dirs[0])
 
@@ -21,6 +21,9 @@ if len(include_dirs) == 1:
 
     import psipy as psi
 elif len(include_dirs) > 1:
-    raise RuntimeError("You have multiple libraries installed (multiple psilibrary files in the psi/build directory)")
+    raise RuntimeError(
+        "You have multiple libraries installed (multiple psilibrary files in the psi/build directory)"
+    )
 else:
+    print(include_dirs)
     raise InstallError()

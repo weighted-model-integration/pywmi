@@ -22,7 +22,7 @@ from pywmi.engines.pyxadd.decision import Decision
 from pywmi.engines.algebraic_backend import (
     AlgebraBackend,
     IntegrationBackend,
-    PsiPolynomialAlgebra,
+    PsiPiecewisePolynomialAlgebra,
 )
 from pywmi.engines.convex_integrator import ConvexIntegrationBackend
 from pywmi.engines.xsdd.vtrees.vtree import balanced, bami
@@ -139,7 +139,7 @@ class BaseXsddEngine(Engine):
             ) from e
 
         self.algebra = (
-            algebra or PsiPolynomialAlgebra()
+            algebra or PsiPiecewisePolynomialAlgebra()
         )  # Algebra used to solve SMT theory
         self.find_conflicts = find_conflicts
         self.ordered = ordered
@@ -151,8 +151,6 @@ class BaseXsddEngine(Engine):
 
     def collect_conflicts(self):
         conflicts = []
-        print(self.support)
-        print(self.weight)
         inequalities = list(
             BoundsWalker(True).walk_smt(self.support)
             | BoundsWalker(True).walk_smt(self.weight)
@@ -272,7 +270,7 @@ class XsddEngine(BaseXsddEngine):
         **kwargs,
     ):
 
-        algebra = algebra or PsiPolynomialAlgebra()
+        algebra = algebra or PsiPiecewisePolynomialAlgebra()
         super().__init__(
             domain,
             support,
@@ -329,12 +327,17 @@ class XsddEngine(BaseXsddEngine):
 
             else:
                 _, logic_support, literals = extract_and_replace_literals(support)
-                sdd_logic_support = compile_to_sdd(formula=logic_support, literals=literals, vtree=None)
+                sdd_logic_support = compile_to_sdd(
+                    formula=logic_support, literals=literals, vtree=None
+                )
                 convex_supports = amc(ConvexWMISemiring(literals), sdd_logic_support)
                 logger.debug("#convex regions %s", len(convex_supports))
                 for convex_support, variables in convex_supports:
                     missing_variable_count = len(self.domain.bool_vars) - len(variables)
-                    vol = self.integrate_convex(convex_support, w_weight.to_smt()) * 2 ** missing_variable_count
+                    vol = (
+                        self.integrate_convex(convex_support, w_weight.to_smt())
+                        * 2 ** missing_variable_count
+                    )
                     volume = self.algebra.plus(volume, self.algebra.real(vol))
         return volume
 
