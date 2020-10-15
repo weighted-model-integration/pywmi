@@ -230,7 +230,9 @@ class LinearInequality(object):
         factor = max(abs(v) for v in self.inequality_dict.values())
         if factor == 0:
             return self
-        return LinearInequality({k: v / factor for k, v in self.inequality_dict.items()})
+        return LinearInequality(
+            {k: v / factor for k, v in self.inequality_dict.items()}
+        )
 
     def inverted(self):
         return LinearInequality({k: -v for k, v in self.inequality_dict.items()})

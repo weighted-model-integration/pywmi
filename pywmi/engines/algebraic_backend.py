@@ -181,7 +181,6 @@ class PsiPolynomialAlgebra(AlgebraBackend, IntegrationBackend):
             raise InstallError(
                 "PsiPolynomialAlgebra requires the psi library to be installed"
             )
-            print(psi)
         self._eval_bounds_cache = psi.EvalBoundsCache()
 
     def times(self, a, b):
