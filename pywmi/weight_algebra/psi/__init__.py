@@ -12,12 +12,12 @@ include_dirs = [
     if "psilibrary" in x[0] and not x[0].endswith("psipy")
 ]
 
+
 if len(include_dirs) == 1:
     lib_dir = os.path.join(file_path, include_dirs[0])
 
     if lib_dir not in sys.path:
         sys.path.append(lib_dir)
-
-    from . import psipy as psi
+    import psipy as psi
 else:
     raise InstallError()
