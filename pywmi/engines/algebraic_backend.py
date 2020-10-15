@@ -87,7 +87,9 @@ class AlgebraBackend(ABC):
 
 
 class PolynomialIntegrationBackend(AlgebraBackend, ABC):
-    def integrate_poly(self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]):
+    def integrate_poly(
+        self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]
+    ):
         raise NotImplementedError()
 
 
@@ -98,11 +100,17 @@ class IntegrationBackend(PolynomialIntegrationBackend, ABC):
     def integrate(self, domain: Domain, expression, variables=None):
         raise NotImplementedError()
 
-    def integrate_poly(self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]):
+    def integrate_poly(
+        self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]
+    ):
         symbols = [self.symbol(v) for v in variables]
         for var, sym in zip(variables, symbols):
-            expression = self.times(self.greater_than_equal(sym, bounds[var][0]), expression)
-            expression = self.times(self.less_than_equal(sym, bounds[var][1]), expression)
+            expression = self.times(
+                self.greater_than_equal(sym, bounds[var][0]), expression
+            )
+            expression = self.times(
+                self.less_than_equal(sym, bounds[var][1]), expression
+            )
 
         result = self.integrate(None, expression, variables)
         return self.get_flat_expression(result)
@@ -152,7 +160,9 @@ class SympyAlgebra(PolynomialIntegrationBackend):
             real_value = sympy.simplify(real_value)
         return float(real_value)
 
-    def integrate_poly(self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]):
+    def integrate_poly(
+        self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]
+    ):
         symbols = [self.symbol(v) for v in variables]
         result = expression
         for var, sym in zip(variables, symbols):
@@ -266,15 +276,15 @@ class PsiPolynomialAlgebra(PolynomialIntegrationBackend):
                 den = den[:250]
             return float(num) / float(den)
 
-    def integrate_poly(self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]):
+    def integrate_poly(
+        self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]
+    ):
         symbols = [self.symbol(v) for v in variables]
         result = expression
         for var, sym in zip(variables, symbols):
             lb, ub = bounds[var]
             if self._eval_bounds_cache:
-                result = result.integrate(
-                    sym, lb, ub, self._eval_bounds_cache
-                )
+                result = result.integrate(sym, lb, ub, self._eval_bounds_cache)
             else:
                 result = result.integrate(sym, lb, ub)
         return result
