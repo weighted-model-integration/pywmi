@@ -4,7 +4,7 @@ import sys
 from argparse import ArgumentParser
 from typing import TYPE_CHECKING
 
-from pysmt.exceptions import NoSolverAvailableError
+
 from pysmt.shortcuts import Solver, Bool
 
 from pywmi import Density
@@ -14,24 +14,10 @@ from pywmi.errors import InstallError
 if TYPE_CHECKING:
     pass
 
-try:
-    with Solver() as solver:
-        pysmt_installed = True
-except NoSolverAvailableError:
-    pysmt_installed = False
 
-try:
-    from wmipa import WMI
-except ImportError:
-    lib_filename = os.path.join(os.path.dirname(__file__), "lib", "pa", "wmi-pa-master")
-    if os.path.exists(lib_filename):
-        sys.path.append(lib_filename)
-        try:
-            from wmipa import WMI
-        except ImportError:
-            raise RuntimeError("Corrupted PA install")
-    else:
-        WMI = None
+from wmipa import WMI
+    
+
 
 
 logger = logging.getLogger(__name__)
@@ -40,10 +26,6 @@ logger = logging.getLogger(__name__)
 class PredicateAbstractionEngine(Engine):
     def __init__(self, domain, support, weight, directory=None, timeout=None):
         super().__init__(domain, support, weight)
-        if not pysmt_installed:
-            raise InstallError("No PySMT solver is installed (not installed or not on path)")
-        if WMI is None:
-            raise InstallError("The wmipa library is not in your PYTHONPATH")
         self.timeout = timeout
         self.directory = directory
 
@@ -74,8 +56,6 @@ class PredicateAbstractionEngine(Engine):
 
 
 if __name__ == "__main__":
-    if WMI is None:
-        raise InstallError("The wmipa library is not in your PYTHONPATH")
 
     parser = ArgumentParser()
     parser.add_argument("filename", type=str)
