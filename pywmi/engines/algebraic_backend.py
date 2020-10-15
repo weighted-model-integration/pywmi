@@ -9,12 +9,10 @@ import sympy
 from pywmi.errors import InstallError
 from pywmi import Domain
 
-# try:
 try:
     from ..weight_algebra.psi import psi
 except InstallError:
     psi = None
-
 
 E = Any
 
