@@ -97,7 +97,7 @@ def main():
     if args.solver is None and args.list:
         solvers = [
             ("pa", ["Latte", "SMT Solver"]),
-            ("pyxadd", ["PSI", "SMT Solver"]),
+            ("pyxadd", ["SMT Solver"]),
             ("XADD", ["Gurobi", "SMT Solver"]),
             ("XSDD", ["PSI"]),
         ]

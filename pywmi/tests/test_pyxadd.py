@@ -29,4 +29,10 @@ def test_manual():
 
 @pytest.mark.parametrize("e", get_examples())
 def test_pyxadd_automated(e):
-    inspect_density(PyXaddEngine(), e, test_engine=RejectionEngine(e.domain, e.support, e.weight, sample_count=TEST_SAMPLE_COUNT))
+    inspect_density(
+        PyXaddEngine(),
+        e,
+        test_engine=RejectionEngine(
+            e.domain, e.support, e.weight, sample_count=TEST_SAMPLE_COUNT
+        ),
+    )
