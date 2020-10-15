@@ -84,9 +84,15 @@ class SmtWalker(ABC):
         if formula.is_constant():
             return self.walk_constant(formula.constant_value(), formula.constant_type())
         if formula.is_iff():
-            return self.walk_and([smt.Implies(formula.arg(0), formula.arg(1)),
-                                  smt.Implies(formula.arg(1), formula.arg(0))])
-        raise RuntimeError("Cannot walk {} (of type {})".format(formula, formula.node_type()))
+            return self.walk_and(
+                [
+                    smt.Implies(formula.arg(0), formula.arg(1)),
+                    smt.Implies(formula.arg(1), formula.arg(0)),
+                ]
+            )
+        raise RuntimeError(
+            "Cannot walk {} (of type {})".format(formula, formula.node_type())
+        )
 
 
 class CachedSmtWalker(SmtWalker, ABC):
@@ -124,7 +130,9 @@ class SmtIdentityWalker(SmtWalker):
         return smt.Not(self.walk_smt(argument))
 
     def walk_ite(self, if_arg, then_arg, else_arg):
-        return smt.Ite(self.walk_smt(if_arg), self.walk_smt(then_arg), self.walk_smt(else_arg))
+        return smt.Ite(
+            self.walk_smt(if_arg), self.walk_smt(then_arg), self.walk_smt(else_arg)
+        )
 
     def walk_pow(self, base, exponent):
         return smt.Pow(self.walk_smt(base), self.walk_smt(exponent))
