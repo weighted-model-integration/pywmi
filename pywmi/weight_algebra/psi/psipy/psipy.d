@@ -371,13 +371,13 @@ class PiecewisePolynomial{
    auto lt(PiecewisePolynomial rhs){
       auto ex_lhs = _piecewise_polynomial._expression;
       auto ex_rhs = rhs._piecewise_polynomial._expression;
-      return new PiecewisePolynomial(new PsiExpr(dexpr.dIvr(DIvr.Type.lZ, (ex_rhs-ex_lhs).simplify(one))));
+      return new PiecewisePolynomial(new PsiExpr(dexpr.dIvr(DIvr.Type.lZ, (ex_lhs-ex_rhs).simplify(one))));
    }
 
    auto le(PiecewisePolynomial rhs){
       auto ex_lhs = _piecewise_polynomial._expression;
       auto ex_rhs = rhs._piecewise_polynomial._expression;
-      return new PiecewisePolynomial(new PsiExpr(dexpr.dIvr(DIvr.Type.leZ, (ex_rhs-ex_lhs).simplify(one))));
+      return new PiecewisePolynomial(new PsiExpr(dexpr.dIvr(DIvr.Type.leZ, (ex_lhs-ex_rhs).simplify(one))));
    }
 
    auto gt(PiecewisePolynomial rhs){
