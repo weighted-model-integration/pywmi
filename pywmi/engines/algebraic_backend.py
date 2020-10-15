@@ -180,6 +180,7 @@ class SympyAlgebra(PolynomialIntegrationBackend):
 
 class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
     def __init__(self):
+        self.exact = True
         super().__init__()
         if psi is None:
             raise InstallError(
@@ -198,15 +199,16 @@ class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
     def symbol(self, name):
         return psi.PiecewisePolynomial(psi.S(name))
 
-    def real(self, float_constant):
         assert isinstance(float_constant, (float, int))
-        if int(float_constant) == float_constant:
+        if isinstance(float_constant, int):
+            return psi.PiecewisePolynomial(psi.S("{}".format(int(float_constant))))
+        elif float_constant > 1 and int(float_constant) == float_constant:
             return psi.PiecewisePolynomial((psi.S("{}".format(int(float_constant)))))
-        # return psi.S("{:.64f}".format(float_constant))
-        fraction = Fraction(float_constant).limit_denominator()
-        return psi.PiecewisePolynomial(
-            psi.S("{}/{}".format(fraction.numerator, fraction.denominator))
-        )
+        else:
+            fraction = Fraction.from_float(float_constant)
+            return psi.PiecewisePolynomial(
+                psi.S("{}/{}".format(fraction.numerator, fraction.denominator))
+            )
 
     def less_than(self, a, b):
         return a.lt(b)
@@ -228,6 +230,7 @@ class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
 
 class PsiPolynomialAlgebra(PolynomialIntegrationBackend):
     def __init__(self):
+        self.exact = True
         super().__init__()
         if psi is None:
             raise InstallError(
@@ -249,12 +252,15 @@ class PsiPolynomialAlgebra(PolynomialIntegrationBackend):
 
     def real(self, float_constant):
         assert isinstance(float_constant, (float, int))
-        if int(float_constant) == float_constant:
+        if isinstance(float_constant, int):
             return psi.Polynomial(psi.S("{}".format(int(float_constant))))
-        fraction = Fraction(float_constant).limit_denominator()
-        return psi.Polynomial(
-            psi.S("{}/{}".format(fraction.numerator, fraction.denominator))
-        )
+        elif float_constant > 1 and int(float_constant) == float_constant:
+            return psi.Polynomial((psi.S("{}".format(int(float_constant)))))
+        else:
+            fraction = Fraction.from_float(float_constant)
+            return psi.Polynomial(
+                psi.S("{}/{}".format(fraction.numerator, fraction.denominator))
+            )
 
     def to_float(self, rational_value):
         rational_value = rational_value.simplify()

@@ -36,7 +36,7 @@ def diabetes_example1():
     #                           r0 *\
     #                           smt.Ite(r0 <= 35, -0.001*(r0)*(r0)+0.3, -0.001*(r0)*(r0)+0.3)
     weight_function_smaller = (
-        smt.Real(0.000001) * r0 * r0 * r0
+        smt.Real(0.00000001) * r0 * r0 * r0
     )  # * smt.Real(1000)  #<--- add this changes the result from 0.0 to 102
     density = Density(
         domain, support_smaller & domain.get_bounds(), weight_function_smaller
