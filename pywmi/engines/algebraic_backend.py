@@ -169,9 +169,8 @@ class SympyAlgebra(PolynomialIntegrationBackend):
 
 
 class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
-    def __init__(self, integrate_poly=True):
+    def __init__(self):
         super().__init__()
-        self.integrate_poly = integrate_poly
         if psi is None:
             raise InstallError(
                 "PiecewisePolynomialAlgebra requires the psi library to be installed"
@@ -218,9 +217,8 @@ class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
 
 
 class PsiPolynomialAlgebra(PolynomialIntegrationBackend):
-    def __init__(self, integrate_poly=True):
+    def __init__(self):
         super().__init__()
-        self.integrate_poly = integrate_poly
         if psi is None:
             raise InstallError(
                 "PsiPolynomialAlgebra requires the psi library to be installed"
