@@ -1,7 +1,8 @@
 import pytest
 
+from pywmi import RejectionEngine
 from pywmi.errors import InstallError
-from .examples import inspect_manual, inspect_density, get_examples
+from .examples import inspect_manual, inspect_density, get_examples, TEST_SAMPLE_COUNT
 from pywmi.engines.pyxadd.engine import PyXaddEngine
 
 try:
@@ -13,7 +14,6 @@ except InstallError:
 REL_ERROR = 0.000001
 
 
-@pytest.mark.skipif(psi is None, reason="Psi backend is not installed")
 def test_pyxadd_debug():
     import logging
 
@@ -23,12 +23,10 @@ def test_pyxadd_debug():
     inspect_density(PyXaddEngine(), get_examples()[3])
 
 
-@pytest.mark.skipif(psi is None, reason="Psi backend is not installed")
 def test_manual():
     inspect_manual(PyXaddEngine(), REL_ERROR)
 
 
-@pytest.mark.skipif(psi is None, reason="Psi backend is not installed")
 @pytest.mark.parametrize("e", get_examples())
-def test_pa(e):
-    inspect_density(PyXaddEngine(), e)
+def test_pyxadd_automated(e):
+    inspect_density(PyXaddEngine(), e, test_engine=RejectionEngine(e.domain, e.support, e.weight, sample_count=TEST_SAMPLE_COUNT))

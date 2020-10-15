@@ -1,5 +1,6 @@
+from abc import ABC
 from fractions import Fraction
-from typing import TypeVar, Any
+from typing import Any, Dict, Tuple, List
 
 import pysmt.shortcuts as smt
 from pysmt.fnode import FNode
@@ -17,7 +18,7 @@ except InstallError:
 E = Any
 
 
-class AlgebraBackend:
+class AlgebraBackend(ABC):
     def zero(self) -> E:
         return self.real(0)
 
@@ -85,13 +86,26 @@ class AlgebraBackend:
         return LinearInequality.from_smt(condition).to_expression(self)
 
 
-class IntegrationBackend:
-    def __init__(self, exact=True, symbolic_backend=None):
+class PolynomialIntegrationBackend(AlgebraBackend, ABC):
+    def integrate_poly(self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]):
+        raise NotImplementedError()
+
+
+class IntegrationBackend(PolynomialIntegrationBackend, ABC):
+    def __init__(self, exact=True):
         self.exact = exact
-        self._eval_bounds_cache = None
 
     def integrate(self, domain: Domain, expression, variables=None):
         raise NotImplementedError()
+
+    def integrate_poly(self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]):
+        symbols = [self.symbol(v) for v in variables]
+        for var, sym in zip(variables, symbols):
+            expression = self.times(self.greater_than_equal(sym, bounds[var][0]), expression)
+            expression = self.times(self.less_than_equal(sym, bounds[var][1]), expression)
+
+        result = self.integrate(None, expression, variables)
+        return self.get_flat_expression(result)
 
 
 class PySmtAlgebra(AlgebraBackend):
@@ -114,7 +128,10 @@ class PySmtAlgebra(AlgebraBackend):
         return float(real_value.constant_value)
 
 
-class SympyAlgebra(AlgebraBackend):
+class SympyAlgebra(PolynomialIntegrationBackend):
+    def __init__(self):
+        IntegrationBackend.__init__(self, exact=True)
+
     def times(self, a, b):
         return a * b
 
@@ -131,10 +148,27 @@ class SympyAlgebra(AlgebraBackend):
         return float_constant
 
     def to_float(self, real_value):
+        if isinstance(real_value, sympy.Poly):
+            real_value = sympy.simplify(real_value)
         return float(real_value)
 
+    def integrate_poly(self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]):
+        symbols = [self.symbol(v) for v in variables]
+        result = expression
+        for var, sym in zip(variables, symbols):
+            lb, ub = bounds[var]
+            result = self.integrate_single(result, sym, lb, ub)
+        return result
 
-class PsiAlgebra(AlgebraBackend, IntegrationBackend):
+    @staticmethod
+    def integrate_single(expression, symbol, lb, ub):
+        integrated = sympy.poly(expression, symbol).integrate()
+        upper = integrated.subs(symbol, ub)
+        lower = integrated.subs(symbol, lb)
+        return upper - lower
+
+
+class PsiAlgebra(IntegrationBackend):
     def __init__(self, integrate_poly=True):
         super().__init__()
         self.integrate_poly = integrate_poly
@@ -173,7 +207,7 @@ class PsiAlgebra(AlgebraBackend, IntegrationBackend):
         return float(string_value)
 
 
-class PsiPolynomialAlgebra(AlgebraBackend, IntegrationBackend):
+class PsiPolynomialAlgebra(PolynomialIntegrationBackend):
     def __init__(self, integrate_poly=True):
         super().__init__()
         self.integrate_poly = integrate_poly
@@ -190,7 +224,7 @@ class PsiPolynomialAlgebra(AlgebraBackend, IntegrationBackend):
         return a + b
 
     def negate(self, a):
-        return psi.Polynomial(S.psi.S(-1)) * a
+        return psi.Polynomial(psi.S(-1)) * a
 
     def symbol(self, name):
         return psi.Polynomial(psi.S(name))
@@ -222,10 +256,22 @@ class PsiPolynomialAlgebra(AlgebraBackend, IntegrationBackend):
                 den = den[:250]
             return float(num) / float(den)
 
+    def integrate_poly(self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]):
+        symbols = [self.symbol(v) for v in variables]
+        result = expression
+        for var, sym in zip(variables, symbols):
+            lb, ub = bounds[var]
+            if self._eval_bounds_cache:
+                result = result.integrate(
+                    sym, lb, ub, self._eval_bounds_cache
+                )
+            else:
+                result = result.integrate(sym, lb, ub)
+        return result
 
-class StringAlgebra(AlgebraBackend, IntegrationBackend):
+
+class StringAlgebra(IntegrationBackend):
     def __init__(self):
-        AlgebraBackend.__init__(self)
         IntegrationBackend.__init__(self, True)
 
     def times(self, a, b):
@@ -275,9 +321,8 @@ class StringAlgebra(AlgebraBackend, IntegrationBackend):
         return result
 
 
-class XaddAlgebra(AlgebraBackend, IntegrationBackend):
+class XaddAlgebra(IntegrationBackend):
     def __init__(self):
-        AlgebraBackend.__init__(self)
         IntegrationBackend.__init__(self, True)
 
     def times(self, a, b):

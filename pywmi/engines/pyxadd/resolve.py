@@ -78,17 +78,11 @@ class ResolveIntegrator(object):
     ) -> Expression:
         logger.debug("%s integrate %s, %s <= %s <= %s", prefix, expression, lb, var, ub)
         algebra = self.pool.algebra
-        sym = algebra.symbol(var.symbol_name())
         lb = Polynomial.from_smt(lb).to_expression(algebra)
         ub = Polynomial.from_smt(ub).to_expression(algebra)
 
-        if self.pool.algebra._eval_bounds_cache:
-            result = expression.integrate(
-                sym, lb, ub, self.pool.algebra._eval_bounds_cache
-            )
-        else:
-            result = expression.integrate(sym, lb, ub)
-
+        var_name = var.symbol_name()
+        result = algebra.integrate_poly(expression, [var_name], {var_name: (lb, ub)})
         logger.debug("%s \t          = %s", prefix, result)
         return result
 

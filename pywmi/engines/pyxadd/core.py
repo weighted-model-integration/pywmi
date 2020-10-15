@@ -7,7 +7,7 @@ import graphviz
 from pysmt.fnode import FNode
 from pysmt.shortcuts import Real
 
-from pywmi.engines.algebraic_backend import AlgebraBackend, IntegrationBackend
+from pywmi.engines.algebraic_backend import PolynomialIntegrationBackend
 from .decision import Decision
 from .operation import Operation, Summation, Multiplication, LogicalOr, LogicalAnd
 
@@ -19,7 +19,7 @@ def check_node_id(node_id, name="Node id"):
 
 
 Assignment = Dict[str, Any]
-Algebra = Union[AlgebraBackend, IntegrationBackend]  # Actually Intersection
+Algebra = PolynomialIntegrationBackend
 Expression = Any
 
 

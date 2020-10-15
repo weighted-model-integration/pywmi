@@ -3,13 +3,14 @@ from typing import Optional, List
 from pysmt.shortcuts import Symbol, Real, Bool, Times, Plus, And
 from pysmt.typing import REAL, BOOL
 
-from pywmi.engines.algebraic_backend import PsiPolynomialAlgebra
+from pywmi.engines.algebraic_backend import PsiPolynomialAlgebra, SympyAlgebra
 from .resolve import ResolveIntegrator
 from .operation import Summation, Multiplication, LogicalAnd, LogicalOr
 from pywmi.engine import Engine
 from pywmi.smt_walk import CachedSmtWalker
 from .core import Pool
 from .decision import Decision
+from ...install import check_installation_psi
 from ...smt_math import LinearInequality, Polynomial
 
 
@@ -130,9 +131,15 @@ class PyXaddEngine(Engine):
         weight=None,
         pool: Optional[Pool] = None,
         reduce_strategy=None,
+        algebra=None
     ):
         super().__init__(domain, support, weight, True)
-        self.pool = pool or Pool(algebra=PsiPolynomialAlgebra())
+        if pool is None and algebra is None:
+            if check_installation_psi():
+                algebra = PsiPolynomialAlgebra()
+            else:
+                algebra = SympyAlgebra()
+        self.pool = pool or Pool(algebra=algebra)
         self.reduce_strategy = reduce_strategy
 
     def compute_volume(self, add_bounds=True):

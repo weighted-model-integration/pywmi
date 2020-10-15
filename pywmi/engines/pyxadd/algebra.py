@@ -11,7 +11,7 @@ from pywmi.engines.algebraic_backend import (
 from pysmt.fnode import FNode
 
 
-class PyXaddAlgebra(AlgebraBackend, IntegrationBackend):
+class PyXaddAlgebra(IntegrationBackend):
     FULL_REDUCE = (True, ResolveIntegrator.FULL_REDUCE)
     ONLY_INTEGRATION_REDUCE = (False, ResolveIntegrator.FULL_REDUCE)
     ONLY_INIT_INTEGRATION_REDUCE = (False, ResolveIntegrator.NO_SUM_PRODUCT_REDUCE)
