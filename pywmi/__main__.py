@@ -164,7 +164,7 @@ def get_engine(description, domain, support, weight):
 
         # TODO figure out this
         # return XsddEngine(domain, support, weight, factorized=True,algebra=PyXaddAlgebra(), ordered=True)
-        return XsddEngine(domain, support, weight, backend, **options)
+        return XsddEngine(domain, support, weight, convex_backend=backend, **options)
 
 
 def get_volume(engines, queries=None, print_status=None):
