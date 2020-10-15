@@ -2,10 +2,13 @@ import argparse
 import os
 import shutil
 import urllib.request
+from traceback import print_exc
 
 import tabulate
 from pysmt.exceptions import NoSolverAvailableError
 from pysmt.shortcuts import Solver
+
+from pywmi.errors import InstallError
 
 
 def check_installation_pysdd():
@@ -18,9 +21,9 @@ def check_installation_pysdd():
 
 def check_installation_psi():
     try:
-        import psipy
+        from pywmi.weight_algebra.psi import psi
         return True
-    except ImportError:
+    except InstallError:
         return False
 
 

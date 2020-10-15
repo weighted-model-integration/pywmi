@@ -70,7 +70,7 @@ python setup.py install
 Finally, you need install psipy (Python bindings for the PSI library).  Navigate to your pywmi home folder, then run:
 
 ```
-cd pywmi/pywmi/weight_algebra/psi/psipy
+cd pywmi/weight_algebra/psi/psipy
 python build_psi.py
 cd ..
 python setup.py install 

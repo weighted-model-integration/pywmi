@@ -76,10 +76,7 @@ def inspect_density(engine_or_factory, density, test_unweighted=True, test_weigh
         engine_factory = engine_or_factory
 
     if test_engine is None:
-        try:
-            test_engine = XaddEngine(density.domain, density.support, density.weight)
-        except InstallError:
-            test_engine = RejectionEngine(density.domain, density.support, density.weight, TEST_SAMPLE_COUNT)
+        test_engine = get_test_engine_factory(density.domain, density.support, density.weight)
 
     engine = engine_factory(density.domain, density.support, density.weight)
     trivial_weight = Real(1.0)
