@@ -251,10 +251,14 @@ def leftlinear(literals: LiteralInfo):
 
 def bami(literals: LiteralInfo) -> Vtree:
     """
-    Create a vtree by using a balanced min-fill approach, improving the balance of the integration order in the vtree.
+    Create a vtree by using a balanced min-fill approach that considers the interactions between continuous variables
+    and the balance of the integration order in the vtree.
     :param literals: The context to create a vtree for.
     :return: A vtree based on a balanced min-fill ordering.
     """
+    if len(literals.abstractions) == 0:
+        return balanced(literals)
+
     logic2cont, cont2logic = _conversion_tables(literals)
     primal = create_interaction_graph_from_literals(
         cont2logic.keys(), logic2cont.values(), True, False
