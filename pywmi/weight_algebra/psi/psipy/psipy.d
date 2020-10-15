@@ -196,7 +196,12 @@ class Polynomial{
       }
    }
 
-
+   auto is_zero(){
+      return _polynomial._expression==zero;
+   }
+   auto is_one(){
+      return _polynomial._expression==one;
+   }
 
    override string toString(){
       return _polynomial.toString();
@@ -323,6 +328,14 @@ class PiecewisePolynomial{
    this(PsiExpr expression){
       // TODO check wheter is actually is a piecewise polynomial
       _piecewise_polynomial = expression.filter_open_iverson();
+   }
+
+
+   auto is_zero(){
+      return _piecewise_polynomial._expression==zero;
+   }
+   auto is_one(){
+      return _piecewise_polynomial._expression==one;
    }
 
    override string toString(){
@@ -565,6 +578,9 @@ extern(C) void PydMain() {
 
       Repr!(Polynomial.toString),
 
+      Property!(Polynomial.is_zero),
+      Property!(Polynomial.is_one),
+
       Def!(Polynomial.simplify),
       Def!(Polynomial.to_float),
 
@@ -596,6 +612,9 @@ extern(C) void PydMain() {
       Init!(PsiExpr),
 
       Repr!(PiecewisePolynomial.toString),
+
+      Property!(PiecewisePolynomial.is_zero),
+      Property!(PiecewisePolynomial.is_one),
 
       Def!(PiecewisePolynomial.simplify),
       Def!(PiecewisePolynomial.to_PsiExpr),

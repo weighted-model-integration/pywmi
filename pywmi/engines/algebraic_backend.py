@@ -25,6 +25,12 @@ class AlgebraBackend(ABC):
     def one(self) -> E:
         return self.real(1)
 
+    def is_one(self, expression):
+        raise NotImplementedError
+
+    def is_zero(self, expression):
+        raise NotImplementedError
+
     def times(self, a: E, b: E) -> E:
         if a == self.zero() or b == self.zero():
             return self.zero()
@@ -140,6 +146,12 @@ class SympyAlgebra(PolynomialIntegrationBackend):
     def __init__(self):
         IntegrationBackend.__init__(self, exact=True)
 
+    def is_one(self, expression):
+        expression.equal(1)
+
+    def is_zero(self, expression):
+        return expression.equals(0)
+
     def times(self, a, b):
         return a * b
 
@@ -180,12 +192,17 @@ class SympyAlgebra(PolynomialIntegrationBackend):
 
 class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
     def __init__(self):
-        self.exact = True
-        super().__init__()
+        IntegrationBackend.__init__(self, exact=True)
         if psi is None:
             raise InstallError(
                 "PiecewisePolynomialAlgebra requires the psi library to be installed"
             )
+
+    def is_one(self, expression):
+        return expression.is_one
+
+    def is_zero(self, expression):
+        return expression.is_zero
 
     def times(self, a, b):
         return a * b
@@ -229,13 +246,18 @@ class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
 
 class PsiPolynomialAlgebra(PolynomialIntegrationBackend):
     def __init__(self):
-        self.exact = True
-        super().__init__()
+        IntegrationBackend.__init__(self, exact=True)
         if psi is None:
             raise InstallError(
                 "PsiPolynomialAlgebra requires the psi library to be installed"
             )
         self._eval_bounds_cache = psi.EvalBoundsCache()
+
+    def is_one(self, expression):
+        return expression.is_one
+
+    def is_zero(self, expression):
+        return expression.is_zero
 
     def times(self, a, b):
         return a * b

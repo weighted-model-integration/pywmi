@@ -25,5 +25,4 @@ elif len(include_dirs) > 1:
         "You have multiple libraries installed (multiple psilibrary files in the psi/build directory)"
     )
 else:
-    print(include_dirs)
     raise InstallError()
