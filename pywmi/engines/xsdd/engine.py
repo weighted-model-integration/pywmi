@@ -22,7 +22,7 @@ from pywmi.engines.pyxadd.decision import Decision
 from pywmi.engines.algebraic_backend import (
     AlgebraBackend,
     IntegrationBackend,
-    PiecewisePolynomialAlgebra,
+    PsiPiecewisePolynomialAlgebra,
 )
 from pywmi.engines.convex_integrator import ConvexIntegrationBackend
 from pywmi.engines.xsdd.vtrees.vtree import balanced, bami
@@ -139,7 +139,7 @@ class BaseXsddEngine(Engine):
             ) from e
 
         self.algebra = (
-            algebra or PiecewisePolynomialAlgebra()
+            algebra or PsiPiecewisePolynomialAlgebra()
         )  # Algebra used to solve SMT theory
         self.find_conflicts = find_conflicts
         self.ordered = ordered
@@ -270,7 +270,7 @@ class XsddEngine(BaseXsddEngine):
         **kwargs,
     ):
 
-        algebra = algebra or PiecewisePolynomialAlgebra()
+        algebra = algebra or PsiPiecewisePolynomialAlgebra()
         super().__init__(
             domain,
             support,

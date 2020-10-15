@@ -1,11 +1,15 @@
 # noinspection PyUnresolvedReferences
 from .domain import Domain, Density
+
 # noinspection PyUnresolvedReferences
 from .parse import nested_to_smt, smt_to_nested, combined_nested_to_wmi
+
 # noinspection PyUnresolvedReferences
 from .smt_check import evaluate, evaluate_assignment
+
 # noinspection PyUnresolvedReferences
 from .smt_walk import SmtWalker
+
 # noinspection PyUnresolvedReferences
 from .engines import *
 

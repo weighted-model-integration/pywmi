@@ -14,6 +14,7 @@ from pywmi.errors import InstallError
 def check_installation_pysdd():
     try:
         import pysdd
+
         return True
     except ImportError:
         return False
@@ -22,6 +23,7 @@ def check_installation_pysdd():
 def check_installation_psi():
     try:
         from pywmi.weight_algebra.psi import psi
+
         return True
     except InstallError:
         return False
@@ -69,16 +71,27 @@ def install_xadd(upgrade=False, remove=False):
     else:
         print("Downloading JAR file to {}".format(file_name))
         url = "https://www.dropbox.com/s/e33axb83ftghrfb/xadd.jar?dl=1"
-        with urllib.request.urlopen(url) as response, open(file_name, 'wb') as out_file:
+        with urllib.request.urlopen(url) as response, open(file_name, "wb") as out_file:
             shutil.copyfileobj(response, out_file)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Installation utility for install external requirements")
-    parser.add_argument("solver", nargs='?', help="Specify the solver to install, options are: [xadd]")
-    parser.add_argument("-f", "--force", action="store_true", help="Reinstall solver if it already exists")
+    parser = argparse.ArgumentParser(
+        description="Installation utility for install external requirements"
+    )
+    parser.add_argument(
+        "solver", nargs="?", help="Specify the solver to install, options are: [xadd]"
+    )
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Reinstall solver if it already exists",
+    )
     parser.add_argument("-r", "--remove", action="store_true", help="Remove solver")
-    parser.add_argument("-l", "--list", action="store_true", help="List available solvers")
+    parser.add_argument(
+        "-l", "--list", action="store_true", help="List available solvers"
+    )
 
     args = parser.parse_args()
     if args.solver is None and args.list:
@@ -96,12 +109,30 @@ def main():
             "Gurobi": check_installation_gurobi(),
         }
 
-        print(tabulate.tabulate(
-            [["{} ({})".format(solver, "v" if all(components[c] for c in dependencies) else "x")] + [
-                ("v" if components[component] else "x") if component in dependencies else "-" for
-                component in components] for solver, dependencies in solvers],
-            headers=["Solver \\ Component"] + ["{} ({})".format(c, "v" if r else "x") for c, r in components.items()]
-        ))
+        print(
+            tabulate.tabulate(
+                [
+                    [
+                        "{} ({})".format(
+                            solver,
+                            "v" if all(components[c] for c in dependencies) else "x",
+                        )
+                    ]
+                    + [
+                        ("v" if components[component] else "x")
+                        if component in dependencies
+                        else "-"
+                        for component in components
+                    ]
+                    for solver, dependencies in solvers
+                ],
+                headers=["Solver \\ Component"]
+                + [
+                    "{} ({})".format(c, "v" if r else "x")
+                    for c, r in components.items()
+                ],
+            )
+        )
     elif args.solver == "xadd":
         install_xadd(args.force, args.remove)
     else:

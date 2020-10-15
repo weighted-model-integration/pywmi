@@ -134,7 +134,7 @@ class SympyAlgebra(AlgebraBackend):
         return float(real_value)
 
 
-class PiecewisePolynomialAlgebra(AlgebraBackend, IntegrationBackend):
+class PsiPiecewisePolynomialAlgebra(AlgebraBackend, IntegrationBackend):
     def __init__(self, integrate_poly=True):
         super().__init__()
         self.integrate_poly = integrate_poly
