@@ -11,6 +11,7 @@ from pywmi.engines.algebraic_backend import (
     AlgebraBackend,
     IntegrationBackend,
     PsiPiecewisePolynomialAlgebra,
+    SympyAlgebra,
 )
 from pywmi.multimap import multimap
 
@@ -19,6 +20,8 @@ from .engine import BaseXsddEngine, IntegratorAndAlgebra
 from .literals import LiteralInfo, extract_and_replace_literals
 from .smt_to_sdd import compile_to_sdd
 from .draw import sdd_to_dot_file
+from ...install import check_installation_psi
+from ..pyxadd.algebra import PyXaddAlgebra
 
 logger = logging.getLogger(__name__)
 
@@ -213,7 +216,12 @@ class FactorizedXsddEngine(BaseXsddEngine):
         algebra: Optional[IntegratorAndAlgebra] = None,
         **kwargs
     ):
-        algebra = algebra or PsiPiecewisePolynomialAlgebra()
+        if algebra is None:
+            if check_installation_psi():
+                algebra = PsiPiecewisePolynomialAlgebra()
+            else:
+                algebra = PyXaddAlgebra(symbolic_backend=SympyAlgebra())
+
         super().__init__(
             domain, support, weight, algebra.exact, algebra=algebra, **kwargs
         )

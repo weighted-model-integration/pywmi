@@ -23,6 +23,7 @@ from pywmi.engines.algebraic_backend import (
     AlgebraBackend,
     IntegrationBackend,
     PsiPiecewisePolynomialAlgebra,
+    SympyAlgebra,
 )
 from pywmi.engines.convex_integrator import ConvexIntegrationBackend
 from pywmi.engines.xsdd.vtrees.vtree import balanced, bami
@@ -33,7 +34,7 @@ from .piecewise import split_up_function
 from .smt_to_sdd import compile_to_sdd
 from .draw import sdd_to_dot_file
 from pywmi.engines.xsdd.vtrees.vtree import Vtree
-
+from ...install import check_installation_psi
 
 IntegratorAndAlgebra = Union[AlgebraBackend, IntegrationBackend]
 logger = logging.getLogger(__name__)
@@ -270,7 +271,12 @@ class XsddEngine(BaseXsddEngine):
         **kwargs,
     ):
 
-        algebra = algebra or PsiPiecewisePolynomialAlgebra()
+        if algebra is None:
+            if check_installation_psi():
+                algebra = PsiPiecewisePolynomialAlgebra()
+            else:
+                algebra = PyXaddAlgebra(symbolic_backend=SympyAlgebra())
+
         super().__init__(
             domain,
             support,
