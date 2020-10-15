@@ -18,8 +18,8 @@ please install an SMT solver through the pysmt-install tool that comes as part o
 
 ### PyXADD engine
 pywmi includes a native Python implementation of XADDs (a sublibrary called pyxadd).  The PyXaddEngine uses pyxadd to
-perform WMI inference.  To use the PyXaddEngine, you need to install an SMT solver (see instructions above) and the
-symbolic computation library PSI (see instructions below).
+perform WMI inference.  To use the PyXaddEngine, you need to install an SMT solver (see instructions above) and
+**optionally** the symbolic computation library PSI (see instructions below).
 
 ### XADD engine
 The XADD engine performs WMI using XADDs as described in [Kolb et al., 2018](https://www.ijcai.org/proceedings/2018/698).
