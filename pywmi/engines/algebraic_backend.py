@@ -9,12 +9,10 @@ import sympy
 from pywmi.errors import InstallError
 from pywmi import Domain
 
-# try:
 try:
     from ..weight_algebra.psi import psi
 except InstallError:
     psi = None
-
 
 E = Any
 
@@ -183,7 +181,6 @@ class PsiPolynomialAlgebra(AlgebraBackend, IntegrationBackend):
             raise InstallError(
                 "PsiPolynomialAlgebra requires the psi library to be installed"
             )
-            print(psi)
         self._eval_bounds_cache = psi.EvalBoundsCache()
 
     def times(self, a, b):
