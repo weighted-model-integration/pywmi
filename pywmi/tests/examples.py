@@ -57,13 +57,15 @@ def get_examples(exclude_boolean=False, exclude_continuous=False):
     return [e() for e, b, c in examples if (not exclude_boolean or not b) and (not exclude_continuous or not c)]
 
 
-def get_test_engine_factory():
+def get_test_engine_factory(domain, formula, weight_function, allow_rejection=True):
     if check_installation_pyxadd():
-        return lambda d, f, w: PyXaddEngine(d, f, w)
+        return PyXaddEngine(domain, formula, weight_function)
     elif check_installation_pa():
-        return lambda d, f, w: PredicateAbstractionEngine(d, f, w)
+        return PredicateAbstractionEngine(domain, formula, weight_function)
+    elif allow_rejection:
+        return RejectionEngine(domain, formula, weight_function, TEST_SAMPLE_COUNT)
     else:
-        return lambda d, f, w: RejectionEngine(d, f, w, TEST_SAMPLE_COUNT)
+        raise InstallError()
 
 
 def inspect_density(engine_or_factory, density, test_unweighted=True, test_weighted=True, test_volume=True,

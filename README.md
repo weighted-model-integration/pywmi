@@ -16,9 +16,6 @@ please install an SMT solver through the pysmt-install tool that comes as part o
     pysmt-install --msat  # example to install mathsat, more solvers are available
 
 
-
-
-
 ### PyXADD engine
 pywmi includes a native Python implementation of XADDs (a sublibrary called pyxadd).  The PyXaddEngine uses pyxadd to
 perform WMI inference.  To use the PyXaddEngine, you need to install an SMT solver (see instructions above) and the
@@ -53,18 +50,24 @@ The solver works exclusively with problems having a dependency (aka primal) grap
 
 Make sure you have activate your Python virtual environment.
 
+First you need to install the D language runtime (PSI is written in D).
+
+[MacOS] On Mac you might need to install `gnupg` to verify the installation, e.g., through `brew install gnupg` --
+be aware that this might install a lot of requirements.
+(The alternative way to install the D runtime `brew install dmd` is currently broken)
 ```
 curl -fsS https://dlang.org/install.sh | bash -s dmd -p PATH/TO/WHERE/YOU/WANT/DLAN/
 source PATH/TO/WHERE/YOU/WANT/DLANG/dmd-2.0**.*/activate
 ```
 
-
+Next, you need to install Python bindings for D (make sure that you have activated your Python virtual environment).
 ```
-git clone git@github.com:ariovistus/pyd.git
+git clone https://github.com/ariovistus/pyd.git
 cd pyd
 python setup.py install
 ```
 
+Finally, you need install psipy (Python bindings for the PSI library).  Navigate to your pywmi home folder, then run:
 
 ```
 cd pywmi/pywmi/weight_algebra/psi/psipy

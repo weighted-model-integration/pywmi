@@ -2,13 +2,10 @@ import argparse
 import os
 import shutil
 import urllib.request
-import zipfile
 
 import tabulate
 from pysmt.exceptions import NoSolverAvailableError
 from pysmt.shortcuts import Solver
-
-from pywmi.temp import TemporaryFile
 
 
 def check_installation_pysdd():
