@@ -106,6 +106,12 @@ class Vtree(ABC):
             yield l.var
 
     def to_pysdd(self, varnums):
+        """
+        Convert this Vtree into a Vtree from PySDD.
+        If len(varnums) == 0, a vtree with one variable is returned instead
+        """
+        if len(varnums) == 0:
+            return PysddVtree.new_with_var_order(1, [1], "balanced")
         # After skimming the documention of the PySDD library, there doesn't
         # seem to be an easy way to manually 'build' a vtree.
         # However, there is a save/load mechanism, so we'll use that instead.
