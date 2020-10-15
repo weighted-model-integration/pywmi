@@ -199,11 +199,10 @@ class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
     def symbol(self, name):
         return psi.PiecewisePolynomial(psi.S(name))
 
+    def real(self, float_constant):
         assert isinstance(float_constant, (float, int))
         if isinstance(float_constant, int):
             return psi.PiecewisePolynomial(psi.S("{}".format(int(float_constant))))
-        elif float_constant > 1 and int(float_constant) == float_constant:
-            return psi.PiecewisePolynomial((psi.S("{}".format(int(float_constant)))))
         else:
             fraction = Fraction.from_float(float_constant)
             return psi.PiecewisePolynomial(
@@ -254,8 +253,6 @@ class PsiPolynomialAlgebra(PolynomialIntegrationBackend):
         assert isinstance(float_constant, (float, int))
         if isinstance(float_constant, int):
             return psi.Polynomial(psi.S("{}".format(int(float_constant))))
-        elif float_constant > 1 and int(float_constant) == float_constant:
-            return psi.Polynomial((psi.S("{}".format(int(float_constant)))))
         else:
             fraction = Fraction.from_float(float_constant)
             return psi.Polynomial(
