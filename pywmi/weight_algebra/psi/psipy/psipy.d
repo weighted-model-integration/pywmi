@@ -332,12 +332,12 @@ class PiecewisePolynomial{
 
    auto simplify(){
       auto expression = _piecewise_polynomial.simplify();
-      return  new Polynomial(expression , true);
+      return  new PiecewisePolynomial(expression);
    }
 
    auto filter_iverson(){
       auto filtered = _filter_iverson_epxr(_piecewise_polynomial._expression);
-      return new Polynomial(new PsiExpr(filtered), true);
+      return new PiecewisePolynomial(new PsiExpr(filtered));
    }
 
    auto to_PsiExpr(){
@@ -356,15 +356,56 @@ class PiecewisePolynomial{
    }
 
 
-   auto integrate(PsiExpr variable, PsiExpr bounds){
-      auto v = variable._expression.toString().dVar;
-      auto b = _filter_open_iverson(bounds._expression);
-      auto result =  dInt(v, _piecewise_polynomial._expression*b);
-
-      return new PiecewisePolynomial(new PsiExpr(result));
+   auto eq(PiecewisePolynomial rhs){
+      auto ex_lhs = _piecewise_polynomial._expression;
+      auto ex_rhs = rhs._piecewise_polynomial._expression;
+      return new PiecewisePolynomial(new PsiExpr( dexpr.dIvr(DIvr.Type.eqZ, (ex_rhs-ex_lhs).simplify(one))));
+   }
+   auto ne(PiecewisePolynomial rhs){
+      auto ex_lhs = _piecewise_polynomial._expression;
+      auto ex_rhs = rhs._piecewise_polynomial._expression;
+      return new PiecewisePolynomial(new PsiExpr(dexpr.dIvr(DIvr.Type.neqZ, (ex_rhs-ex_lhs).simplify(one))));
    }
 
 
+   auto lt(PiecewisePolynomial rhs){
+      auto ex_lhs = _piecewise_polynomial._expression;
+      auto ex_rhs = rhs._piecewise_polynomial._expression;
+      return new PiecewisePolynomial(new PsiExpr(dexpr.dIvr(DIvr.Type.lZ, (ex_rhs-ex_lhs).simplify(one))));
+   }
+
+   auto le(PiecewisePolynomial rhs){
+      auto ex_lhs = _piecewise_polynomial._expression;
+      auto ex_rhs = rhs._piecewise_polynomial._expression;
+      return new PiecewisePolynomial(new PsiExpr(dexpr.dIvr(DIvr.Type.leZ, (ex_rhs-ex_lhs).simplify(one))));
+   }
+
+   auto gt(PiecewisePolynomial rhs){
+      auto ex_lhs = _piecewise_polynomial._expression;
+      auto ex_rhs = rhs._piecewise_polynomial._expression;
+      return new PiecewisePolynomial(new PsiExpr(dexpr.dIvr(DIvr.Type.lZ, (ex_rhs-ex_lhs).simplify(one))));
+   }
+
+   auto ge(PiecewisePolynomial rhs){
+      auto ex_lhs = _piecewise_polynomial._expression;
+      auto ex_rhs = rhs._piecewise_polynomial._expression;
+      return new PiecewisePolynomial(new PsiExpr(dexpr.dIvr(DIvr.Type.leZ, (ex_rhs-ex_lhs).simplify(one))));
+   }
+
+   auto variables(){
+      PsiExpr[] variables;
+      foreach(v;_piecewise_polynomial._expression.freeVars){
+         variables ~= new PsiExpr(v);
+      }
+      return variables;
+   }
+
+   auto integrate(PiecewisePolynomial variable){
+      auto v = variable._piecewise_polynomial._expression.toString().dVar;
+      auto result =  dInt(v, _piecewise_polynomial._expression);
+      result  = _filter_open_iverson(result.simplify(one));
+      return new PiecewisePolynomial(new PsiExpr(result));
+   }
 }
 
 
@@ -563,9 +604,17 @@ extern(C) void PydMain() {
       OpBinary!("-"),
       OpBinary!("*"),
 
+      Def!(PiecewisePolynomial.eq),
+      Def!(PiecewisePolynomial.ne),
+
+      Def!(PiecewisePolynomial.lt),
+      Def!(PiecewisePolynomial.le),
+      Def!(PiecewisePolynomial.gt),
+      Def!(PiecewisePolynomial.ge),
+
       Def!(PiecewisePolynomial.integrate),
 
-      Def!(PiecewisePolynomial.filter_iverson),
+      Property!(PiecewisePolynomial.variables),
 
 
    )();
