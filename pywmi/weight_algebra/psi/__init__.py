@@ -4,12 +4,27 @@ import pathlib
 
 from ...errors import InstallError
 
+
+def get_system():
+    system = sys.platform
+    if system.lower().startswith("java"):
+        system = "java"
+    if system.startswith("linux"):
+        system = "linux"
+    elif system.startswith("win"):
+        system = "windows"
+    elif system.startswith("darwin"):
+        system = "darwin"
+    return system
+
+
 file_path = pathlib.Path(__file__).parent.absolute()
+system = get_system()
 
 include_dirs = [
     x[0]
     for x in os.walk(os.path.join(file_path, "build"))
-    if "psilibrary" in x[0] and not x[0].endswith("psipy")
+    if "psilibrary" in x[0] and not x[0].endswith("psipy") and system in x[0]
 ]
 
 print(file_path)

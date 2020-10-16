@@ -1,6 +1,11 @@
-build
-*.pyc
+build/*
+!build
+!build/psilibrary*/
+build/psilibrary*/*
+!build/psilibrary*/*.so
+
 psipy/linux
-install.sh
-*.gpg
-/dmd*
+psipy/darwin
+
+*.pyc
+__pycache__
