@@ -34,7 +34,11 @@ if len(include_dirs) == 1:
     if lib_dir not in sys.path:
         sys.path.append(lib_dir)
 
-    import psipy as psi
+    try:
+        import psipy as psi
+    except ImportError:
+        raise InstallError()
+
 elif len(include_dirs) > 1:
     raise RuntimeError(
         "You have multiple libraries installed (multiple psilibrary files in the psi/build directory)"
