@@ -3,7 +3,6 @@ from __future__ import print_function
 from typing import TYPE_CHECKING, Union
 
 import pysmt.shortcuts as smt
-from pysmt.typing import BOOL
 
 if TYPE_CHECKING:
     from .core import TerminalNode, InternalNode
@@ -293,13 +292,17 @@ class SmtReduce(Reducer):
         if fast:
             self.consistent = set()
         with smt.Solver(name="msat") as solver:
-            result_id = self._reduce(node_id, self.pool.get_node(node_id), solver, fast).node_id
+            result_id = self._reduce(
+                node_id, self.pool.get_node(node_id), solver, fast
+            ).node_id
             if fast:
                 self.consistent = None
             self.reduce_cache[key] = result_id
             return result_id
 
-    def _reduce(self, root_id, node: Union['TerminalNode', 'InternalNode'], solver, fast):
+    def _reduce(
+        self, root_id, node: Union["TerminalNode", "InternalNode"], solver, fast
+    ):
         if node.is_terminal():
             # Reached end of the path, path is consistent
             return node
@@ -310,10 +313,13 @@ class SmtReduce(Reducer):
             pool = self.pool
             node_test = node.decision.test
             if not node.decision.is_bool():
+
                 def reduce_branch(true):
                     solver.push()
                     solver.add_assertion(node_test if true else ~node_test)
-                    child_node = pool.get_node(node.child_true if true else node.child_false)
+                    child_node = pool.get_node(
+                        node.child_true if true else node.child_false
+                    )
                     reduced_node = self._reduce(root_id, child_node, solver, fast)
                     solver.pop()
                     return reduced_node
@@ -329,12 +335,24 @@ class SmtReduce(Reducer):
                     result_node = reduce_branch(True)
                 else:
                     # Test possible in both ways, pursue both branches
-                    node_id = pool.internal(node.decision, reduce_branch(True).node_id, reduce_branch(False).node_id)
+                    node_id = pool.internal(
+                        node.decision,
+                        reduce_branch(True).node_id,
+                        reduce_branch(False).node_id,
+                    )
                     result_node = pool.get_node(node_id)
             else:
-                result_node = pool.get_node(pool.internal(node.decision,
-                                            self._reduce(root_id, pool.get_node(node.child_true), solver, fast).node_id,
-                                            self._reduce(root_id, pool.get_node(node.child_false), solver, fast).node_id))
+                result_node = pool.get_node(
+                    pool.internal(
+                        node.decision,
+                        self._reduce(
+                            root_id, pool.get_node(node.child_true), solver, fast
+                        ).node_id,
+                        self._reduce(
+                            root_id, pool.get_node(node.child_false), solver, fast
+                        ).node_id,
+                    )
+                )
 
             if fast:
                 self.consistent.add(result_node.node_id)
