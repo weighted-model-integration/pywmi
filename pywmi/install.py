@@ -62,6 +62,10 @@ def check_installation_pa():
     return check_installation_latte() and check_installation_smt_solver()
 
 
+def check_installation_xadd():
+    return check_installation_xadd_jar() and check_installation_gurobi()
+
+
 def install_xadd(upgrade=False, remove=False):
     file_name = os.path.join(os.path.dirname(__file__), "engines", "xadd.jar")
     if remove:
