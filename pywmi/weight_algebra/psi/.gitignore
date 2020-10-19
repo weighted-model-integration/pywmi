@@ -3,6 +3,8 @@ build/*
 !build/psilibrary*/
 build/psilibrary*/*
 !build/psilibrary*/*.so
+!build/psilibrary*/__init__.py
+
 
 psipy/linux
 psipy/darwin
