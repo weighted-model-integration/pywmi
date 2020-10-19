@@ -297,6 +297,7 @@ class XsddEngine(BaseXsddEngine):
             **kwargs,
         )
 
+    ### this should be replace by the actual weight algebra (also used for integration)
     def get_weight_algebra(self):
         return PolynomialAlgebra()
 

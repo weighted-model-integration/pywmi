@@ -93,10 +93,17 @@ class AlgebraBackend(ABC):
 
 
 class PolynomialIntegrationBackend(AlgebraBackend, ABC):
+    def __init__(self, exact=True):
+        self.exact = exact
+
     def integrate_poly(
         self, expression, variables: List[str], bounds: Dict[str, Tuple[E, E]]
     ):
         raise NotImplementedError()
+
+    @staticmethod
+    def factor_list(weight):
+        raise NotImplementedError
 
 
 class IntegrationBackend(PolynomialIntegrationBackend, ABC):
@@ -144,7 +151,7 @@ class PySmtAlgebra(AlgebraBackend):
 
 class SympyAlgebra(PolynomialIntegrationBackend):
     def __init__(self):
-        IntegrationBackend.__init__(self, exact=True)
+        PolynomialIntegrationBackend.__init__(self, exact=True)
 
     def is_one(self, expression):
         expression.equal(1)
@@ -165,7 +172,12 @@ class SympyAlgebra(PolynomialIntegrationBackend):
         return sympy.S(name)
 
     def real(self, float_constant):
-        return float_constant
+        assert isinstance(float_constant, (float, int, Fraction))
+        if isinstance(float_constant, (Fraction, int)):
+            return sympy.sympify(float_constant)
+        else:
+            fraction = Fraction.from_float(float_constant)
+            return sympy.sympify(fraction)
 
     def to_float(self, real_value):
         if isinstance(real_value, sympy.Poly):
@@ -188,6 +200,26 @@ class SympyAlgebra(PolynomialIntegrationBackend):
         upper = integrated.subs(symbol, ub)
         lower = integrated.subs(symbol, lb)
         return upper - lower
+
+    def get_variables(self, expression):
+        return set([str(v) for v in expression.free_symbols])
+
+    @staticmethod
+    def factorize_list(weight):
+        import sympy
+
+        if not weight.free_symbols:
+            return weight, []
+        else:
+            weight = weight.as_poly()
+            weight = sympy.factor_list(weight)
+
+            constant = weight[0]
+            factor_list = []
+            for f in weight[1]:
+                factor_list.append(f[0] ** f[1])
+
+            return constant, factor_list
 
 
 class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
@@ -216,9 +248,17 @@ class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
     def symbol(self, name):
         return psi.PiecewisePolynomial(psi.S(name))
 
+    def symbolic_weight(self, weight):
+        if isinstance(weight, psi.Polynomial):
+            return psi.PiecewisePolynomial(weight.to_PsiExpr())
+        else:
+            raise NotImplementedError
+
     def real(self, float_constant):
-        assert isinstance(float_constant, (float, int))
-        if isinstance(float_constant, int):
+        assert isinstance(float_constant, (float, int, Fraction))
+        if isinstance(float_constant, Fraction):
+            return psi.PiecewisePolynomial(psi.S("{}".format(float_constant)))
+        elif isinstance(float_constant, int):
             return psi.PiecewisePolynomial(psi.S("{}".format(int(float_constant))))
         else:
             fraction = Fraction.from_float(float_constant)
@@ -243,10 +283,13 @@ class PsiPiecewisePolynomialAlgebra(IntegrationBackend):
             expression = expression.integrate(var)
         return expression
 
+    def get_weight_algebra(self):
+        return PsiPolynomialAlgebra()
+
 
 class PsiPolynomialAlgebra(PolynomialIntegrationBackend):
     def __init__(self):
-        IntegrationBackend.__init__(self, exact=True)
+        PolynomialIntegrationBackend.__init__(self, exact=True)
         if psi is None:
             raise InstallError(
                 "PsiPolynomialAlgebra requires the psi library to be installed"
@@ -272,8 +315,10 @@ class PsiPolynomialAlgebra(PolynomialIntegrationBackend):
         return psi.Polynomial(psi.S(name))
 
     def real(self, float_constant):
-        assert isinstance(float_constant, (float, int))
-        if isinstance(float_constant, int):
+        assert isinstance(float_constant, (float, int, Fraction))
+        if isinstance(float_constant, Fraction):
+            return psi.Polynomial(psi.S("{}".format(float_constant)))
+        elif isinstance(float_constant, int):
             return psi.Polynomial(psi.S("{}".format(int(float_constant))))
         else:
             fraction = Fraction.from_float(float_constant)
@@ -311,6 +356,57 @@ class PsiPolynomialAlgebra(PolynomialIntegrationBackend):
             else:
                 result = result.integrate(sym, lb, ub)
         return result
+
+    def get_variables(self, expression):
+        return set([str(v) for v in expression.variables])
+
+    @staticmethod
+    def factorize_list(weight):
+        # TODO do this without sympy (lot of work)
+        import sympy
+
+        if not weight.variables:
+            return weight, []
+        else:
+            weight = weight.simplify()
+            weight = psi.toSympyString(weight)
+            weight = weight.strip(",pZ,0,'+')").strip("limit(")
+
+            weight = sympy.sympify(weight).as_poly()
+            weight = sympy.factor_list(weight)
+
+            def sympy2psi(expr):
+                if type(expr) == sympy.Poly:
+                    expr = expr.as_expr()
+
+                if expr.is_constant() or expr.is_symbol:
+                    return psi.S(str(expr))
+
+                elif expr.is_Pow:
+                    b = sympy2psi(expr.args[0])
+                    e = sympy2psi(expr.args[1])
+                    return b ** e
+                elif expr.is_Add:
+                    args = [sympy2psi(a) for a in expr.args]
+                    result = psi.S(0)
+                    for a in args:
+                        result = result + a
+                    return result.simplify()
+                elif expr.is_Mul:
+                    args = [sympy2psi(a) for a in expr.args]
+                    result = psi.S(1)
+                    for a in args:
+                        result = result * a
+                    return result.simplify()
+
+            constant = psi.Polynomial(psi.S(str(weight[0])))
+            factor_list = []
+            for f in weight[1]:
+                factor_list.append(
+                    psi.Polynomial(sympy2psi(f[0]) ** psi.S(f[1])).simplify()
+                )
+
+            return constant, factor_list
 
 
 class StringAlgebra(IntegrationBackend):

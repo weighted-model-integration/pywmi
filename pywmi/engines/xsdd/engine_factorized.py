@@ -1,19 +1,29 @@
 from typing import Dict, Tuple, Set, Union, List, Optional, Any
 import logging
+import copy
 from collections import defaultdict
-from pywmi.engines.xsdd.smt_to_sdd import extract_labels_and_weight
+from functools import reduce
+import operator
+
 
 import pysmt.shortcuts as smt
 
 from pywmi import Domain
-from pywmi.smt_math import PolynomialAlgebra, Polynomial, LinearInequality
+from pywmi.smt_math import (
+    PolynomialAlgebra,
+    Polynomial,
+    LinearInequality,
+)
 from pywmi.engines.algebraic_backend import (
     AlgebraBackend,
     IntegrationBackend,
     PsiPiecewisePolynomialAlgebra,
+    PsiPolynomialAlgebra,
     SympyAlgebra,
 )
 from pywmi.multimap import multimap
+from pywmi.engines.xsdd.smt_to_sdd import extract_labels_and_weight
+
 
 from .semiring import amc, Semiring, SddWalker, walk
 from .engine import BaseXsddEngine, IntegratorAndAlgebra
@@ -23,45 +33,69 @@ from .draw import sdd_to_dot_file
 from ...install import check_installation_psi
 from ..pyxadd.algebra import PyXaddAlgebra
 
+
 logger = logging.getLogger(__name__)
 
 
 class VariableTagAnalysis(SddWalker):
-    def __init__(self, literal_to_groups):
-        self.literal_to_groups = literal_to_groups
-        self.node_to_groups = dict()
+
+    # TODO check if notde in chache and return cache
+    # TODO keep track of how often node is visited
+    def __init__(self, literal_to_variables):
+        self.literal_to_variables = literal_to_variables
+        self.node_to_variable_heights = dict()
 
     def walk_true(self, node):
-        groups = set()
-        self.node_to_groups[node.id] = groups
-        return True, groups
+        variable_heights = {}
+        self.node_to_variable_heights[node.id] = variable_heights
+        return True, variable_heights
 
     def walk_false(self, node):
-        groups = set()
-        self.node_to_groups[node.id] = groups
-        return False, groups
+        variable_heights = {}
+        self.node_to_variable_heights[node.id] = variable_heights
+        return False, variable_heights
 
     def walk_and(self, prime_result, sub_result, prime_node, sub_node):
-        prime_feasible, prime_groups = prime_result
-        sub_feasible, sub_groups = sub_result
+        prime_feasible, prime_variable_heights = prime_result
+        sub_feasible, sub_variable_heights = sub_result
+
         feasible = prime_feasible and sub_feasible
-        groups = (prime_groups | sub_groups) if feasible else set()
-        self.node_to_groups[(prime_node.id, sub_node.id)] = groups
-        return feasible, groups
+
+        variable_heights = self._aggregate_heights(
+            prime_variable_heights, sub_variable_heights
+        )
+        variable_heights = {k: v + 1 for k, v in variable_heights.items()}
+
+        self.node_to_variable_heights[(prime_node.id, sub_node.id)] = variable_heights
+
+        return feasible, variable_heights
 
     def walk_or(self, child_results, node):
         feasible = any(t[0] for t in child_results)
-        groups = set()
+        variable_heights = {}
         if feasible:
-            for _, child_groups in child_results:
-                groups |= child_groups
-        self.node_to_groups[node.id] = groups
-        return feasible, groups
+            for _, child_variable_heights in child_results:
+                variable_heights = self._aggregate_heights(
+                    variable_heights, child_variable_heights
+                )
+        self.node_to_variable_heights[node.id] = variable_heights
+
+        return feasible, variable_heights
 
     def walk_literal(self, l, node):
-        groups = set(self.literal_to_groups.get(l, []))
-        self.node_to_groups[node.id] = groups
-        return True, groups
+        variables = self.literal_to_variables.get(l, set())
+        variable_heights = {v: 1 for v in variables}
+        self.node_to_variable_heights[node.id] = variable_heights
+        return True, variable_heights
+
+    def _aggregate_heights(self, a: Dict, b: Dict):
+        result = copy.deepcopy(a)
+        for k, v in b.items():
+            if k in result:
+                result[k] = max(result[k], b[k])
+            else:
+                result[k] = b[k]
+        return result
 
 
 class BooleanFinder(Semiring):
@@ -102,28 +136,32 @@ class FactorizedIntegrator:
         self,
         domain: Domain,
         literals: LiteralInfo,
-        groups: Dict[int, Tuple[Set[str], Polynomial]],
-        node_to_groups: Dict,
+        node_to_variable_heights: Dict,
         labels: Dict[str, Any],
         algebra: Union[AlgebraBackend, IntegrationBackend],
     ):
         self.domain = domain
         self.literals = literals
-        self.groups = groups
-        self.node_to_groups = node_to_groups
+        self.node_to_variable_heights = node_to_variable_heights
         self.labels = labels
         self.algebra = algebra
         self.hits = 0
         self.misses = 0
 
-    def recursive(self, node, tags=None, cache=None, order=None):
+        self.get_variables = self.algebra.get_weight_algebra().get_variables
+
+    def node_to_variables(self, node_id):
+        return set(self.node_to_variable_heights[node_id].keys())
+
+    def recursive(self, weight_list, node, variables, cache=None):
         if cache is None:
             cache = dict()
 
-        if tags is None:
-            tags = self.node_to_groups[node.id]
-
-        key = (node, frozenset(tags))
+        key = (
+            node,
+            tuple(weight_list),
+            frozenset(variables),
+        )
         if key in cache:
             self.hits += 1
             return cache[key]
@@ -143,14 +181,13 @@ class FactorizedIntegrator:
             result = self.algebra.zero()
             for prime, sub in node.elements():
                 result = self.algebra.plus(
-                    result, self.walk_and(prime, sub, tags, cache, order)
+                    result, self.walk_and(weight_list, prime, sub, variables, cache),
                 )
         else:
-            expression = self.walk_literal(node)
-            logger.debug("node LIT(%s)", node.id)
-            result = self.integrate(expression, tags)
+            result = self.walk_literal(weight_list, node, variables)
 
         cache[key] = result
+
         return result
 
     def walk_true(self):
@@ -159,24 +196,82 @@ class FactorizedIntegrator:
     def walk_false(self):
         return self.algebra.zero()
 
-    def walk_and(self, prime, sub, tags, cache, order):
+    def walk_and(self, weight_list, prime, sub, variables, cache):
         if prime.is_false() or sub.is_false():
             return self.algebra.zero()
-        tags_prime = self.node_to_groups[prime.id] & tags
-        tags_sub = self.node_to_groups[sub.id] & tags
-        tags_shared = tags_prime & tags_sub
-        if order and len(tags_shared) > 0:
-            first_index = min(order.index(tag) for tag in tags_shared)
-            tags_shared |= tags & set(order[first_index:])
-        prime_result = self.recursive(prime, tags_prime - tags_shared, cache, order)
-        sub_result = self.recursive(sub, tags_sub - tags_shared, cache, order)
-        logger.debug("node AND(%s, %s)", prime.id, sub.id)
-        return self.integrate(
-            self.algebra.times(prime_result, sub_result),
-            [e for e in order if e in tags_shared] if order else tags_shared,
+
+        variables_prime_up = self.node_to_variables(prime.id) & variables
+        variables_sub_up = self.node_to_variables(sub.id) & variables
+        variables_shared_up = variables_prime_up & variables_sub_up
+
+        variables_prime_weight = set()
+        variables_sub_weight = set()
+
+        groups = self.get_variable_groups(weight_list, exclude=variables_shared_up)
+        for g in groups:
+            height_prime = self.group_to_height(prime.id, g, aggregate=sum)
+            height_sub = self.group_to_height(sub.id, g, aggregate=sum)
+            if height_prime > height_sub:
+                variables_prime_weight |= g
+            else:
+                variables_sub_weight |= g
+
+        variables_prime_to_sub = variables_prime_up & variables_sub_weight
+        variables_sub_to_prime = variables_sub_up & variables_prime_weight
+
+        weight_here_up = []
+        weight_here_weight = []
+        weight_sub_down = []
+        weight_prime_down = []
+
+        for w in weight_list:
+            w_var = self.get_variables(w) & variables
+            if w_var <= variables_shared_up:
+                weight_here_up.append(w)
+            elif w_var <= variables_prime_to_sub:
+                weight_here_weight.append(w)
+            elif w_var <= variables_sub_to_prime:
+                weight_here_weight.append(w)
+            elif w_var <= variables_prime_up | variables_sub_to_prime:
+                weight_prime_down.append(w)
+            elif w_var <= variables_sub_up | variables_prime_to_sub:
+                weight_sub_down.append(w)
+            else:
+                raise TypeError
+
+        variables_prime_down = variables_prime_up - (
+            variables_shared_up | variables_prime_to_sub
+        )
+        variables_sub_down = variables_sub_up - (
+            variables_shared_up | variables_sub_to_prime
         )
 
-    def walk_literal(self, node):
+        prime_result = self.recursive(
+            weight_prime_down, prime, variables_prime_down, cache,
+        )
+        sub_result = self.recursive(weight_sub_down, sub, variables_sub_down, cache,)
+        result = self.algebra.times(prime_result, sub_result)
+
+        variables_weight_here_weight = variables_prime_to_sub | variables_sub_to_prime
+
+        if variables_weight_here_weight:
+            w = reduce(operator.mul, weight_here_weight)
+            w = self.algebra.symbolic_weight(w)
+            result = self.algebra.times(result, w)
+            result = self.algebra.integrate(
+                self.domain, result, variables_weight_here_weight
+            )
+
+        if variables_shared_up:
+            if weight_here_up:
+                w = reduce(operator.mul, weight_here_up)
+                w = self.algebra.symbolic_weight(w)
+                result = self.algebra.times(result, w)
+
+            result = self.algebra.integrate(self.domain, result, variables_shared_up)
+        return result
+
+    def walk_literal(self, weight_list, node, variables):
         literal = node.literal
         var = self.literals.inv_numbered[abs(literal)]  # var as abstracted in SDD
         abstraction = self.literals[var]
@@ -193,18 +288,39 @@ class FactorizedIntegrator:
             # expr = LinearInequality.from_smt(f).scale_to_integer().to_expression(self.algebra)
             expr = self.algebra.parse_condition(abstraction)
 
-        return expr
+        weight = self.algebra.one()
+        for w in weight_list:
+            weight = self.algebra.times(weight, self.algebra.symbolic_weight(w))
+        expr = self.algebra.times(weight, expr)
 
-    def integrate(self, expr, tags):
-        # type: (Any, Iterable[int]) -> Any
-        result = expr
-        for group_id in tags:
-            variables, poly = self.groups[group_id]
-            group_expr = self.algebra.times(result, poly.to_expression(self.algebra))
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug("%s: %s", variables, str(group_expr))
-            result = self.algebra.integrate(self.domain, group_expr, variables)
-        return result
+        if variables:
+            return self.algebra.integrate(self.domain, expr, variables)
+        else:
+            return expr
+
+    def get_variable_groups(self, weight_list, exclude=set()):
+        weight_algebra = self.algebra.get_weight_algebra()
+        groups = [
+            self.get_variables(w) - exclude
+            for w in weight_list
+            if self.get_variables(w) - exclude
+        ]
+        return self._get_variable_groups(groups)
+
+    def _get_variable_groups(self, groups):
+        for i, v in enumerate(groups):
+            for j, k in enumerate(groups[i + 1 :], i + 1):
+                if v & k:
+                    groups[i] = v.union(groups.pop(j))
+                    return self._get_variable_groups(groups)
+        return groups
+
+    def group_to_height(self, node, group, aggregate=sum):
+        heights = [self.node_to_variable_heights[node].get(str(v), 0) for v in group]
+        if heights:
+            return aggregate(heights)
+        else:
+            return 0
 
 
 class FactorizedXsddEngine(BaseXsddEngine):
@@ -221,7 +337,6 @@ class FactorizedXsddEngine(BaseXsddEngine):
                 algebra = PsiPiecewisePolynomialAlgebra()
             else:
                 algebra = PyXaddAlgebra(symbolic_backend=SympyAlgebra())
-
         super().__init__(
             domain, support, weight, algebra.exact, algebra=algebra, **kwargs
         )
@@ -230,7 +345,7 @@ class FactorizedXsddEngine(BaseXsddEngine):
         return super().copy(domain, support, weight, self.algebra.exact, **kwargs)
 
     def get_weight_algebra(self):
-        return PolynomialAlgebra()
+        return self.algebra.get_weight_algebra()
 
     def get_labels_and_weight(self):
         return extract_labels_and_weight(self.weight)
@@ -238,24 +353,15 @@ class FactorizedXsddEngine(BaseXsddEngine):
     def compute_volume_from_pieces(
         self, base_support, piecewise_function, labeling_dict
     ):
-        # Prepare the support for each piece (not compiled yet)
-        term_supports = multimap()
-        for piece_weight, piece_support in piecewise_function.pieces.items():
-            logger.debug(
-                "piece with weight %s and support %s", piece_weight, piece_support
-            )
-            for term in piece_weight.get_terms():
-                term_supports[term].add(piece_support)
-
-        terms_dict = {
-            term: smt.Or(*supports) & base_support
-            for term, supports in term_supports.items()
+        weights_dict = {
+            pice_weight: piece_support & base_support
+            for pice_weight, piece_support in piecewise_function.pieces.items()
         }
 
         volume = self.algebra.zero()
 
-        for i, (term, support) in enumerate(terms_dict.items()):
-            logger.debug("----- Term %s -----", term)
+        for i, (weight, support) in enumerate(weights_dict.items()):
+            logger.debug("----- Term %s -----", weight)
 
             repl_env, logic_support, literals = extract_and_replace_literals(support)
             literals.labels = labeling_dict
@@ -263,139 +369,113 @@ class FactorizedXsddEngine(BaseXsddEngine):
             vtree = self.get_vtree(support, literals)
             support_sdd = self.get_sdd(logic_support, literals, vtree)
 
-            # TODO
-            # if logger.getEffectiveLevel() == logging.DEBUG:
-            #    filename = f"sdd_{i}.dot"
-            #    sdd_to_dot_file(support_sdd, literals, filename, node_to_groups)
-            #    logger.debug(f"saved SDD of piece {i} to {filename}")
-
-            subvolume = self.compute_volume_for_piece(term, literals, support_sdd)
-
+            subvolume = self.compute_volume_for_piece(weight, literals, support_sdd)
             volume = self.algebra.plus(volume, subvolume)
         return volume
 
-    def compute_volume_for_piece(self, term, literals: LiteralInfo, support_sdd):
-        variable_groups = self.get_variable_groups_poly(term, self.domain.real_vars)
+    def compute_volume_for_piece(self, weight, literals: LiteralInfo, support_sdd):
 
-        if self.ordered:
-            sort_key = (
-                lambda t: max(self.domain.real_vars.index(v) for v in t[1][0])
-                if len(t[1][0]) > 0
-                else -1
-            )
-            group_order = [
-                t[0]
-                for t in sorted(enumerate(variable_groups), key=sort_key, reverse=False)
-            ]
-            logger.debug("variable groups %s", variable_groups)
-            logger.debug("group order %s", group_order)
-            logger.debug("real variables %s", self.domain.real_vars)
-        else:
-            group_order = None
-
-        def get_group(_v):
-            for i, (_vars, _node) in enumerate(variable_groups):
-                if _v in _vars:
-                    return i
-            raise ValueError(
-                "Variable {} not found in any group ({})".format(_v, variable_groups)
-            )
-
-        literal_to_groups = dict()
+        literal_to_variables = dict()
         # From here, we will use numbered literals instead of the normal named ones
         for inequality, literal in literals.abstractions.items():
             lit_num = literals.numbered[literal]
             inequality_variables = LinearInequality.from_smt(inequality).variables
-            inequality_groups = [get_group(v) for v in inequality_variables]
-            literal_to_groups[lit_num] = inequality_groups
-            literal_to_groups[-lit_num] = inequality_groups
+            literal_to_variables[lit_num] = inequality_variables
+            literal_to_variables[-lit_num] = inequality_variables
 
         for var, (true_label, false_label) in literals.labels.items():
             lit_num = literals.numbered[literals.booleans[var]]
-            true_inequality_groups = [
-                get_group(v) for v in map(str, true_label.get_free_variables())
-            ]
-            false_inequality_groups = [
-                get_group(v) for v in map(str, false_label.get_free_variables())
-            ]
-            literal_to_groups[lit_num] = true_inequality_groups
-            literal_to_groups[-lit_num] = false_inequality_groups
+            true_inequality_variables = set(
+                [v for v in map(str, true_label.get_free_variables())]
+            )
+            false_inequality_variables = set(
+                [v for v in map(str, false_label.get_free_variables())]
+            )
+            literal_to_variables[lit_num] = true_inequality_variables
+            literal_to_variables[-lit_num] = false_inequality_variables
 
-        # for var, (true_label, false_label) in labels.items():
-        #    true_inequality_groups = [get_group(v) for v in map(str, true_label.get_free_variables())]
-        #    false_inequality_groups = [get_group(v) for v in map(str, false_label.get_free_variables())]
-        #    literal_to_groups[var_to_lit[var]] = true_inequality_groups
-        #    literal_to_groups[-var_to_lit[var]] = false_inequality_groups
+        tag_analysis = VariableTagAnalysis(literal_to_variables)
 
-        tag_analysis = VariableTagAnalysis(literal_to_groups)
         walk(tag_analysis, support_sdd)
-        node_to_groups = tag_analysis.node_to_groups
+        node_to_variable_heights = tag_analysis.node_to_variable_heights
 
-        group_to_vars_poly = {i: g for i, g in enumerate(variable_groups)}
-        # all_groups = frozenset(i for i, e in group_to_vars_poly.items() if len(e[0]) > 0)
+        variables = set(self.domain.real_vars)
 
-        constant_group_indices = [
-            i for i, e in group_to_vars_poly.items() if len(e[0]) == 0
-        ]
+        weight_algebra = self.get_weight_algebra()
+        constant, weight_list = weight_algebra.factorize_list(weight)
+
         integrator = FactorizedIntegrator(
             self.domain,
             literals,
-            group_to_vars_poly,
-            node_to_groups,
+            node_to_variable_heights,
             literals.labels,
             self.algebra,
         )
-        logger.debug("group order %s", group_order)
-        expression = integrator.recursive(support_sdd, order=group_order)
-        # expression = integrator.integrate(expression, node_to_groups[support.id])
+
+        expression = integrator.recursive(weight_list, support_sdd, variables)
         logger.debug("hits %s misses %s", integrator.hits, integrator.misses)
+
         bool_vars = amc(BooleanFinder(literals), support_sdd)
         missing_variable_count = len(self.domain.bool_vars) - len(bool_vars)
         bool_worlds = self.algebra.power(self.algebra.real(2), missing_variable_count)
         result_with_booleans = self.algebra.times(expression, bool_worlds)
-        if len(constant_group_indices) == 1:
-            constant_poly = group_to_vars_poly[constant_group_indices[0]][1]
-            constant = constant_poly.to_expression(self.algebra)
-        elif len(constant_group_indices) == 0:
-            constant = self.algebra.one()
-        else:
-            raise ValueError(
-                "Multiple constant groups: {}".format(constant_group_indices)
-            )
+
+        # node = self.algebra.pool.get_node(result_with_booleans)
+        constant = self.algebra.symbolic_weight(constant)
         return self.algebra.times(constant, result_with_booleans)
 
-    @classmethod
-    def get_variable_groups_poly(
-        cls, weight: Polynomial, real_vars: List[str]
-    ) -> List[Tuple[Set[str], Polynomial]]:
+    def factorize_list(self, weight):
+        # TODO do this without sympy (lot of work)
+        from pywmi.errors import InstallError
 
-        if isinstance(weight, Polynomial):
-            if len(real_vars) > 0:
-                result = []
-                found_vars = weight.variables
-                for v in real_vars:
-                    if v not in found_vars:
-                        result.append(({v}, Polynomial.from_constant(1)))
-                return result + cls.get_variable_groups_poly(weight, [])
+        try:
+            from ...weight_algebra.psi import psi
+        except InstallError:
+            psi = None
+        import sympy
 
-            if len(weight.poly_dict) > 1:
-                return [(weight.variables, weight)]
-            elif len(weight.poly_dict) == 0:
-                return [(set(), Polynomial.from_constant(0))]
-            else:
-                result = defaultdict(lambda: Polynomial.from_constant(1))
-                for name, value in weight.poly_dict.items():
-                    if len(name) == 0:
-                        result[frozenset()] *= Polynomial.from_constant(value)
-                    else:
-                        for v in name:
-                            result[frozenset((v,))] *= Polynomial.from_smt(
-                                smt.Symbol(v, smt.REAL)
-                            )
-                        result[frozenset()] *= Polynomial.from_constant(value)
-                return list(result.items())
+        if not weight.variables:
+            return weight, []
         else:
-            raise NotImplementedError
+            weight = weight.simplify()
+            weight = psi.toSympyString(weight)
+            weight = weight.strip(",pZ,0,'+')").strip("limit(")
+
+            weight = sympy.sympify(weight).as_poly()
+            weight = sympy.factor_list(weight)
+
+            def sympy2psi(expr):
+                if type(expr) == sympy.Poly:
+                    expr = expr.as_expr()
+
+                if expr.is_constant() or expr.is_symbol:
+                    return psi.S(str(expr))
+
+                elif expr.is_Pow:
+                    b = sympy2psi(expr.args[0])
+                    e = sympy2psi(expr.args[1])
+                    return b ** e
+                elif expr.is_Add:
+                    args = [sympy2psi(a) for a in expr.args]
+                    result = psi.S(0)
+                    for a in args:
+                        result = result + a
+                    return result.simplify()
+                elif expr.is_Mul:
+                    args = [sympy2psi(a) for a in expr.args]
+                    result = psi.S(1)
+                    for a in args:
+                        result = result * a
+                    return result.simplify()
+
+            constant = psi.Polynomial(psi.S(str(weight[0])))
+            factor_list = []
+            for f in weight[1]:
+                factor_list.append(
+                    psi.Polynomial(sympy2psi(f[0]) ** psi.S(f[1])).simplify()
+                )
+
+            return constant, factor_list
 
     def __str__(self):
         return "FXSDD" + super().__str__()

@@ -29,6 +29,9 @@ class PyXaddAlgebra(IntegrationBackend):
     def symbol(self, name: str) -> int:
         return self.pool.terminal(self.symbolic_backend.symbol(name))
 
+    def symbolic_weight(self, symbolic_weight) -> int:
+        return self.pool.terminal(symbolic_weight)
+
     def real(self, float_constant: float) -> int:
         return self.pool.terminal(self.symbolic_backend.real(float_constant))
 
@@ -78,3 +81,7 @@ class PyXaddAlgebra(IntegrationBackend):
 
     def parse_condition(self, condition: FNode):
         return self.pool.bool_test(Decision(condition))
+
+    def get_weight_algebra(self):
+        return self.pool.algebra
+

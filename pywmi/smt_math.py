@@ -6,7 +6,7 @@ from pysmt.exceptions import InternalSolverError
 from pysmt.shortcuts import Plus, Symbol, Real, Times, Solver
 from pysmt.typing import REAL, BOOL
 
-from pywmi.engines.algebraic_backend import AlgebraBackend
+from pywmi.engines.algebraic_backend import AlgebraBackend, PsiPolynomialAlgebra
 from pywmi import SmtWalker
 from functools import reduce, partial
 
