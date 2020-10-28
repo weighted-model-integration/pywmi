@@ -9,7 +9,11 @@ import pysmt.shortcuts as smt
 
 class SddToDot(SddWalker):
     def __init__(
-        self, literals: LiteralInfo, node_annotations=None, edge_annotations=None
+        self,
+        literals: LiteralInfo,
+        node_annotations=None,
+        edge_annotations=None,
+        skip_false=False,
     ):
         self.literals = literals
         # self.reverse_abstractions = {v: k for k, v in abstractions.items()}
@@ -18,6 +22,7 @@ class SddToDot(SddWalker):
         self.node_annotations = node_annotations or dict()
         self.edge_annotations = edge_annotations or dict()
         self.seen = set()
+        self.skip_false = skip_false
 
     def get_id(self, key):
         # assert key not in self.seen
@@ -43,10 +48,13 @@ class SddToDot(SddWalker):
         label = "false"
         if node.id in self.node_annotations:
             label += ": {}".format(self.node_annotations[node.id])
-
+        if self.skip_false:
+            nodes = set()  # Using nodes = {} to denote value = false
+        else:
+            nodes = {'{} [label="{}",color=black];'.format(vertex_id, label)}
         return (
             vertex_id,
-            {'{} [label="{}",color=black];'.format(vertex_id, label)},
+            nodes,
             set(),
             node.id,
         )
@@ -60,20 +68,32 @@ class SddToDot(SddWalker):
 
         label_prime = self.edge_annotations.get((key, prime_result[3]), "")
         label_sub = self.edge_annotations.get((key, sub_result[3]), "")
-
+        if self.skip_false and (len(prime_result[1]) == 0 or len(sub_result[1]) == 0):
+            # This means we skipping false and the result of AND was false.
+            nodes = set()
+            edges = set()
+        else:
+            nodes = (
+                prime_result[1]
+                | sub_result[1]
+                | {'{} [label="{}",color=black];'.format(vertex_id, label)}
+            )
+            edges = (
+                prime_result[2]
+                | sub_result[2]
+                | {
+                    '{} -> {} [label="{}"];'.format(
+                        vertex_id, prime_result[0], label_prime
+                    ),
+                    '{} -> {} [label="{}"];'.format(
+                        vertex_id, sub_result[0], label_sub
+                    ),
+                }
+            )
         return (
             vertex_id,
-            prime_result[1]
-            | sub_result[1]
-            | {'{} [label="{}",color=black];'.format(vertex_id, label)},
-            prime_result[2]
-            | sub_result[2]
-            | {
-                '{} -> {} [label="{}"];'.format(
-                    vertex_id, prime_result[0], label_prime
-                ),
-                '{} -> {} [label="{}"];'.format(vertex_id, sub_result[0], label_sub),
-            },
+            nodes,
+            edges,
             key,
         )
 
@@ -89,10 +109,11 @@ class SddToDot(SddWalker):
             edges |= child_result[2]
         nodes.add('{} [label="{}",color=black];'.format(vertex_id, label))
         for child_result in child_results:
-            label = self.edge_annotations.get((node.id, child_result[3]), "")
-            edges.add(
-                '{} -> {} [label="{}"];'.format(vertex_id, child_result[0], label)
-            )
+            if not self.skip_false or len(child_result[1]) > 0:
+                label = self.edge_annotations.get((node.id, child_result[3]), "")
+                edges.add(
+                    '{} -> {} [label="{}"];'.format(vertex_id, child_result[0], label)
+                )
         return vertex_id, nodes, edges, node.id
 
     def walk_literal(self, l, node):
@@ -133,9 +154,15 @@ class SddToDot(SddWalker):
 
 
 def sdd_to_dot(
-    diagram, literals: LiteralInfo, node_annotations=None, edge_annotations=None
+    diagram,
+    literals: LiteralInfo,
+    node_annotations=None,
+    edge_annotations=None,
+    draw_false=True,
 ):
-    walker = SddToDot(literals, node_annotations, edge_annotations)
+    walker = SddToDot(
+        literals, node_annotations, edge_annotations, skip_false=not draw_false
+    )
     _, nodes, edges, _node_id = walk(walker, diagram)
     return "digraph G {{\n{}\n{}\n}}".format("\n".join(nodes), "\n".join(edges))
 
@@ -146,6 +173,7 @@ def sdd_to_png_file(
     filename,
     node_annotations=None,
     edge_annotations=None,
+    draw_false=True,
 ):
     if not filename.endswith(".png"):
         filename = filename + ".png"
@@ -153,7 +181,13 @@ def sdd_to_png_file(
     with TemporaryFile() as f:
         with open(f, "w") as ref:
             print(
-                sdd_to_dot(diagram, literals, node_annotations, edge_annotations),
+                sdd_to_dot(
+                    diagram,
+                    literals,
+                    node_annotations,
+                    edge_annotations,
+                    draw_false=draw_false,
+                ),
                 file=ref,
             )
         subprocess.call(["dot", "-Tpng", f, "-o", filename])
@@ -165,10 +199,18 @@ def sdd_to_dot_file(
     filename,
     node_annotations=None,
     edge_annotations=None,
+    draw_false=True,
 ):
     if not filename.endswith(".dot"):
         filename = filename + ".dot"
     with open(filename, "w") as ref:
         print(
-            sdd_to_dot(diagram, literals, node_annotations, edge_annotations), file=ref
+            sdd_to_dot(
+                diagram,
+                literals,
+                node_annotations,
+                edge_annotations,
+                draw_false=draw_false,
+            ),
+            file=ref,
         )
