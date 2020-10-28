@@ -10,7 +10,10 @@ from pywmi.engines.xsdd.vtrees.vtree import bami, balanced
 def diabetes_example1():
     domain = Domain.make(["f0", "d0"], ["r0"], [(10, 45)])
 
-    f0, d0, = domain.get_bool_symbols()
+    (
+        f0,
+        d0,
+    ) = domain.get_bool_symbols()
     (r0,) = domain.get_real_symbols()
 
     support = (

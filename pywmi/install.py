@@ -49,12 +49,21 @@ def check_installation_latte():
     return True
 
 
+def check_installation_xadd_jar():
+    file_name = os.path.join(os.path.dirname(__file__), "engines", "xadd.jar")
+    return os.path.exists(file_name)
+
+
 def check_installation_pyxadd():
     return check_installation_psi() and check_installation_smt_solver()
 
 
 def check_installation_pa():
     return check_installation_latte() and check_installation_smt_solver()
+
+
+def check_installation_xadd():
+    return check_installation_xadd_jar() and check_installation_gurobi()
 
 
 def install_xadd(upgrade=False, remove=False):
@@ -98,7 +107,7 @@ def main():
         solvers = [
             ("pa", ["Latte", "SMT Solver"]),
             ("pyxadd", ["SMT Solver"]),
-            ("XADD", ["Gurobi", "SMT Solver"]),
+            ("XADD", ["Gurobi", "SMT Solver", "XADD JAR"]),
             ("XSDD", ["PSI"]),
         ]
 
@@ -107,6 +116,7 @@ def main():
             "Latte": check_installation_latte(),
             "SMT Solver": check_installation_smt_solver(),
             "Gurobi": check_installation_gurobi(),
+            "XADD JAR": check_installation_xadd_jar(),
         }
 
         print(

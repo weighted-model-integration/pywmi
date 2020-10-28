@@ -11,7 +11,7 @@ def get_system():
         system = "linux"
     elif system.startswith("win"):
         system = "windows"
-    elif system.startswith("mac"):
+    elif system.startswith("darwin"):
         system = "darwin"
     return system
 

@@ -11,6 +11,7 @@ from pysmt.shortcuts import Real, TRUE
 from pywmi import Density
 from pywmi.engine import Engine
 from pywmi.errors import InstallError
+from pywmi.install import check_installation_xadd_jar, check_installation_gurobi
 from pywmi.temp import TemporaryFile
 
 logger = logging.getLogger(__name__)
@@ -21,46 +22,71 @@ class XaddEngine(Engine):
 
     def __init__(self, domain, support, weight, mode=None, timeout=None):
         super().__init__(domain, support, weight)
-        if not os.path.exists(XaddEngine.path()):
-            raise InstallError("The XADD engine requires the XADD library JAR file which is currently not installed.")
+        if not check_installation_xadd_jar():
+            raise InstallError(
+                "The XADD engine requires the XADD library JAR file which is currently not installed."
+            )
+        if not check_installation_gurobi():
+            raise InstallError(
+                "The XADD engine requires Gurobi which is currently not installed."
+            )
         self.mode = mode
         self.timeout = timeout
 
     @staticmethod
     def path():
-        return os.environ.get("XADD_PATH", os.path.join(os.path.dirname(__file__), "xadd.jar"))
+        return os.environ.get(
+            "XADD_PATH", os.path.join(os.path.dirname(__file__), "xadd.jar")
+        )
 
     def call_wmi(self, queries=None, timeout=None):
         # type: (Optional[List[FNode]], Optional[int]) -> Optional[List[Optional[float]]]
 
         if not os.path.exists(XaddEngine.path()):
-            raise RuntimeError("The XADD engine requires the XADD library JAR file which is currently not installed.")
+            raise RuntimeError(
+                "The XADD engine requires the XADD library JAR file which is currently not installed."
+            )
 
         timeout = timeout if timeout else self.timeout
 
         with self.temp_file(queries) as f:
             try:
-                cmd_args = ["java", "-jar", XaddEngine.path(), "inference", f] + ([self.mode] if self.mode else [])
+                cmd_args = ["java", "-jar", XaddEngine.path(), "inference", f] + (
+                    [self.mode] if self.mode else []
+                )
                 logger.info("> {}".format(" ".join(cmd_args)))
-                output = subprocess.check_output(cmd_args, timeout=timeout).decode(sys.stdout.encoding)  # type: str
+                output = subprocess.check_output(cmd_args, timeout=timeout).decode(
+                    sys.stdout.encoding
+                )  # type: str
                 # print(output.replace("Academic license - for non-commercial use only\n", ""))
-                results = [(float(match[0]) if queries is not None else float(match[1]))
-                           for match in XaddEngine.pattern.findall(output)]
+                results = [
+                    (float(match[0]) if queries is not None else float(match[1]))
+                    for match in XaddEngine.pattern.findall(output)
+                ]
                 # print(output)
                 return results
             except subprocess.CalledProcessError as e:
-                logger.warning(e.output.decode(sys.stdout.encoding)
-                               .replace("Academic license - for non-commercial use only\n", ""))
+                logger.warning(
+                    e.output.decode(sys.stdout.encoding).replace(
+                        "Academic license - for non-commercial use only\n", ""
+                    )
+                )
             except subprocess.TimeoutExpired:
                 logger.warning("Timeout")
             except ValueError:
-                logger.warning(output.replace("Academic license - for non-commercial use only\n", ""))
+                logger.warning(
+                    output.replace(
+                        "Academic license - for non-commercial use only\n", ""
+                    )
+                )
                 raise
         return None
 
     def compute_volume(self, timeout=None, add_bounds=True):
         if add_bounds:
-            return self.with_constraint(self.domain.get_bounds()).compute_volume(timeout, False)
+            return self.with_constraint(self.domain.get_bounds()).compute_volume(
+                timeout, False
+            )
         if timeout is None:
             timeout = self.timeout
         result = self.call_wmi(timeout=timeout)
@@ -79,7 +105,9 @@ class XaddEngine(Engine):
         # type: (FNode, bool, bool) -> Optional[FNode]
 
         if not os.path.exists(XaddEngine.path()):
-            raise RuntimeError("The XADD engine requires the XADD library JAR file which is currently not installed.")
+            raise RuntimeError(
+                "The XADD engine requires the XADD library JAR file which is currently not installed."
+            )
 
         if conjoin_old_support:
             new_support = self.support & new_support
@@ -91,9 +119,20 @@ class XaddEngine(Engine):
                     Density(self.domain, TRUE(), Real(1.0)).to_file(f3)
 
                     try:
-                        cmd_args = ["java", "-jar", XaddEngine.path(), "normalize", f, f2, "-p" if paths else "-t", f3]
+                        cmd_args = [
+                            "java",
+                            "-jar",
+                            XaddEngine.path(),
+                            "normalize",
+                            f,
+                            f2,
+                            "-p" if paths else "-t",
+                            f3,
+                        ]
                         logger.info("> {}".format(" ".join(cmd_args)))
-                        output = subprocess.check_output(cmd_args, timeout=self.timeout).decode(sys.stdout.encoding)
+                        output = subprocess.check_output(
+                            cmd_args, timeout=self.timeout
+                        ).decode(sys.stdout.encoding)
                         # print(output.replace("Academic license - for non-commercial use only\n", ""))
                         return XaddEngine.import_normalized(f3)
                     except subprocess.CalledProcessError as e:
@@ -109,6 +148,7 @@ class XaddEngine(Engine):
     @staticmethod
     def import_normalized(filename):
         from pywmi import nested_to_smt
+
         with open(filename) as f:
             return nested_to_smt(f.readlines()[0])
 

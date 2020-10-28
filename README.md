@@ -1,4 +1,24 @@
 # pywmi [![Build Status](https://travis-ci.org/weighted-model-integration/pywmi.svg?branch=master)](https://travis-ci.org/weighted-model-integration/pywmi)
+
+This is the `pywmi` package. It offers a unified and high-level API to a variety of weighted model integration solvers.
+
+If you use the `pywmi` library in your own research please cite us as follows:
+
+```
+@inproceedings{kolb2019pywmi,
+  title     = {The pywmi Framework and Toolbox for Probabilistic Inference using Weighted Model Integration},
+  author    = {Kolb, Samuel and Morettin, Paolo  and Zuidberg Dos Martires, Pedro and Sommavilla, Francesco and Passerini, Andrea and Sebastiani, Roberto and De Raedt, Luc},
+  booktitle = {Proceedings of the Twenty-Eighth International Joint Conference on
+               Artificial Intelligence, {IJCAI-19}},
+  publisher = {International Joint Conferences on Artificial Intelligence Organization},             
+  pages     = {6530--6532},
+  year      = {2019},
+}
+```
+
+<br/><br/>
+
+
 ## Installation
 
     pip install pywmi
@@ -9,19 +29,24 @@ components they depend on and wether or not they are installed run:
 
     pywmi-install --list
 
-### SMT solvers
+<br/><br/>
+
+### <ins>SMT solvers</ins>
 pywmi relies upon pysmt to interface with SMT solvers. If you want to benefit from functionality relying on SMT solvers
 please install an SMT solver through the pysmt-install tool that comes as part of your pywmi installation.
 
     pysmt-install --msat  # example to install mathsat, more solvers are available
 
+<br/><br/>
 
-### PyXADD engine
+### <ins>PyXADD engine</ins>
 pywmi includes a native Python implementation of XADDs (a sublibrary called pyxadd).  The PyXaddEngine uses pyxadd to
 perform WMI inference.  To use the PyXaddEngine, you need to install an SMT solver (see instructions above) and
 **optionally** the symbolic computation library PSI (see instructions below).
 
-### XADD engine
+<br/><br/>
+
+### <ins>XADD engine</ins>
 The XADD engine performs WMI using XADDs as described in [Kolb et al., 2018](https://www.ijcai.org/proceedings/2018/698).
 To use this engine you need [Java](https://www.oracle.com/technetwork/java/javase/downloads/index.html), [Gurobi](https://www.gurobi.com) and the xadd library JAR file.
 The pywmi-install tool that comes with your pywmi installation can automatically download and install the JAR file,
@@ -30,13 +55,16 @@ however, you need to install Java and Gurobi manually. Once you did that, just c
     pywmi-install xadd
     pywmi-install xadd --force  # To download a new version
 
+<br/><br/>
 
-### Predicate abstraction engine
+### <ins>Predicate abstraction engine</ins>
 The predicate abstraction engine (short PA engine) uses MathSAT and Latte to solve WMI using predicate abstraction, as 
-described in [Morettin et al., 2017](https://www.ijcai.org/proceedings/2017/0100.pdf).
+described in [Morettin et al., 2017](https://www.ijcai.org/proceedings/2017/0100.pdf) and [Morettin et al., 2019](https://www.sciencedirect.com/science/article/abs/pii/S0004370219301213).
 In order to use the PA engine, you need to install the MathSAT SMT solver (see instructions above) and Latte (see instructions below).
 
-### MPWMI engine
+<br/><br/>
+
+### <ins>MPWMI engine</ins>
 The MPWMI engine performs WMI using the message-passing scheme described in [Zeng et al., 2020](https://arxiv.org/pdf/2003.00126.pdf).
 The solver works exclusively with problems having a dependency (aka primal) graph with treewidth 1 and per-literal weights, i.e.:
 
@@ -46,21 +74,37 @@ The solver works exclusively with problems having a dependency (aka primal) grap
 1. `git clone https://github.com/UCLA-StarAI/mpwmi`
 2. `pip install -e mpwmi/`
 
-### PSI support
+  
+  <br/><br/>
 
-Make sure you have activate your Python virtual environment.
+### <ins>PSI support</ins>
 
-First you need to install the D language runtime (PSI is written in D).
+By default `pywmi`  uses [Sympy](https://www.sympy.org/en/index.html) as a symbolic computer algebra backend. For an enhanced performance `pywmi` does also provide support to using the PSi[PSI](https://psisolver.org/) solver.
 
-[MacOS] On Mac you might need to install `gnupg` to verify the installation, e.g., through `brew install gnupg` --
+**Installation**
+
+Make sure you have your Python virtual environment active.
+
+1. You need to install the D language runtime -- [PSI](https://psisolver.org/) is written in D (https://dlang.org/).  
+  
+   On **Mac** you might need to install `gnupg` to verify the installation, e.g., through `brew install gnupg` --
 be aware that this might install a lot of requirements.
-(The alternative way to install the D runtime `brew install dmd` is currently broken)
-```
-curl -fsS https://dlang.org/install.sh | bash -s dmd -p PATH/TO/WHERE/YOU/WANT/DLAN/
-source PATH/TO/WHERE/YOU/WANT/DLANG/dmd-2.0**.*/activate
-```
+The alternative way to install the D runtime through `brew install dmd` is currently broken.
 
-Next, you need to install Python bindings for D (make sure that you have activated your Python virtual environment).
+       curl -fsS https://dlang.org/install.sh | bash -s dmd -p PATH/TO/WHERE/YOU/WANT/DLANG/
+
+2. Now, make sure that the D runtime is in your path.  
+    * Either you use the follwong command  
+
+          source PATH/TO/WHERE/YOU/WANT/DLANG/dmd-2.0**.*/activate
+
+    * Or by adding the following lines to your .bashr file, for instance:
+        
+            #export PATH=$HOME/software/dlang/dmd-2.0**.*/linux/bin64:$PATH
+            #export LD_LIBRARY_PATH=$HOME/software/dlang/dmd-2.0**.*/linux/lib64:$LD_LIBRARY_PATH
+
+
+<!-- 2. Next, you need to install Python bindings for D (make sure that you have activated your Python virtual environment).
 ```
 git clone https://github.com/ariovistus/pyd.git
 cd pyd
@@ -74,11 +118,12 @@ cd pywmi/weight_algebra/psi/psipy
 python build_psi.py
 cd ..
 python setup.py install 
-```
+``` -->
 
 
+<br/><br/>
 
-### Latte
+### <ins>Latte<ins/>
 The Latte integration backend as well as the predicate abstraction solver require
 [Latte](https://www.math.ucdavis.edu/~latte/software.php) to be installed. You can find the latest releases on their
 [GitHub releases page](https://github.com/latte-int/latte/releases). You'll probably want the bundle: latte-integrale.
@@ -91,6 +136,10 @@ The Latte integration backend as well as the predicate abstraction solver requir
 5. `make`
 
 Then, include the binaries folder to your `PATH` variable.
+
+<br/><br/>
+
+<br/><br/>
 
 ## Usage
 ### Calling pywmi

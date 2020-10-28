@@ -327,9 +327,9 @@ class Pool:
             return self._ordering.test_smaller_eg(test_id1, test1, test_id2, test2)
 
     def _transform_invert(self, terminal_node, diagram):
-        if terminal_node.expression == self.algebra.one():
+        if self.algebra.is_one(terminal_node.expression):
             return diagram.pool.zero_id
-        elif terminal_node.expression == self.algebra.zero():
+        elif self.algebra.is_zero(terminal_node.expression):
             return diagram.pool.one_id
         else:
             raise RuntimeError(
