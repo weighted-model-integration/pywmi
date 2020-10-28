@@ -14,7 +14,12 @@ class SddToDot(SddWalker):
         node_annotations=None,
         edge_annotations=None,
         skip_false=False,
+        skip_false_or=False,
     ):
+        """
+        :param skip_false: If True, nodes with the value of False are not drawn.
+        :param skip_false_or: If True and skip_false True, OR-nodes with only one child are replaced with their child.
+        """
         self.literals = literals
         # self.reverse_abstractions = {v: k for k, v in abstractions.items()}
         # self.lit_to_var = {v: k for k, v in var_to_lit.items()}
@@ -23,6 +28,7 @@ class SddToDot(SddWalker):
         self.edge_annotations = edge_annotations or dict()
         self.seen = set()
         self.skip_false = skip_false
+        self.skip_false_or = skip_false_or
 
     def get_id(self, key):
         # assert key not in self.seen
@@ -102,11 +108,20 @@ class SddToDot(SddWalker):
         nodes = set()
         edges = set()
         label = "[{}] OR".format(node.id)
-        if node.id in self.node_annotations:
-            label += ": {}".format(self.node_annotations[node.id])
+
+        if self.skip_false and self.skip_false_or:
+            # If skipping false nodes, remove false nodes + consider edge cases
+            child_results = [child for child in child_results if len(child[1]) > 0]
+            if len(child_results) == 0:
+                return vertex_id, set(), set(), node.id
+            elif len(child_results) == 1:
+                return child_results[0]
+
         for child_result in child_results:
             nodes |= child_result[1]
             edges |= child_result[2]
+        if node.id in self.node_annotations:
+            label += ": {}".format(self.node_annotations[node.id])
         nodes.add('{} [label="{}",color=black];'.format(vertex_id, label))
         for child_result in child_results:
             if not self.skip_false or len(child_result[1]) > 0:
@@ -159,9 +174,10 @@ def sdd_to_dot(
     node_annotations=None,
     edge_annotations=None,
     draw_false=True,
+    draw_single_or=False,
 ):
     walker = SddToDot(
-        literals, node_annotations, edge_annotations, skip_false=not draw_false
+        literals, node_annotations, edge_annotations, skip_false=not draw_false, skip_false_or=not draw_single_or
     )
     _, nodes, edges, _node_id = walk(walker, diagram)
     return "digraph G {{\n{}\n{}\n}}".format("\n".join(nodes), "\n".join(edges))
@@ -174,6 +190,7 @@ def sdd_to_png_file(
     node_annotations=None,
     edge_annotations=None,
     draw_false=True,
+    draw_single_or=False,
 ):
     if not filename.endswith(".png"):
         filename = filename + ".png"
@@ -187,6 +204,7 @@ def sdd_to_png_file(
                     node_annotations,
                     edge_annotations,
                     draw_false=draw_false,
+                    draw_single_or=draw_single_or,
                 ),
                 file=ref,
             )
@@ -200,6 +218,7 @@ def sdd_to_dot_file(
     node_annotations=None,
     edge_annotations=None,
     draw_false=True,
+    draw_single_or=False,
 ):
     if not filename.endswith(".dot"):
         filename = filename + ".dot"
@@ -211,6 +230,7 @@ def sdd_to_dot_file(
                 node_annotations,
                 edge_annotations,
                 draw_false=draw_false,
+                draw_single_or=draw_single_or
             ),
             file=ref,
         )
