@@ -28,9 +28,9 @@ def diabetes_example1():
         (f0 & ~(r0 <= 35) & ~d0) | (f0 & (r0 <= 35) & ~d0)
     ) & domain.get_bounds()
 
-    # weight_function = smt.Ite(f0, smt.Real(0.0001), smt.Real(0.00001)) * \
-    #                   smt.Ite(d0, (r0/10)-1, 8-(r0/10)) * \
-    #                   smt.Ite(r0 <= 35, -0.001*(r0-27)*(r0-27)+0.3, -0.001*(r0-27)*(r0-27)+0.3)
+    weight_function = smt.Ite(f0, smt.Real(0.0001), smt.Real(0.00001)) * \
+                      smt.Ite(d0, (r0/10)-1, 8-(r0/10)) * \
+                      smt.Ite(r0 <= 35, -0.001*(r0-27)*(r0-27)+0.3, -0.001*(r0-27)*(r0-27)+0.3)
     #
     # weight_function_smaller = smt.Ite(f0, smt.Real(0.0001), smt.Real(0.00001)) * \
     #                           r0 *\
@@ -39,7 +39,7 @@ def diabetes_example1():
         smt.Real(0.00000001) * r0 * r0 * r0
     )  # * smt.Real(1000)  #<--- add this changes the result from 0.0 to 102
     density = Density(
-        domain, support_smaller & domain.get_bounds(), weight_function_smaller
+        domain, support & domain.get_bounds(), weight_function
     )  # weight_function)
     query = d0
 
