@@ -42,6 +42,7 @@ class InverseDictDelegate(dict):
 
 
 class LiteralInfo:
+    """ Note: this assumes booleans are strings, unlike abstractions. """
     def __init__(self, abstractions, booleans, labels=None):
         self.literals = OrderedDict()
         # TODO: right now, some part of the code does lookups literal -> boolean/abstraction
@@ -78,6 +79,24 @@ class LiteralInfo:
         if not self._numbered_cache_ok:
             self._numbered_cache = {lit: num+1 for num, lit in enumerate(self.literals)}
             self._inv_numbered_cache = {num+1: lit for num, lit in enumerate(self.literals)}
+
+    def number_to_lit(self, number):
+        """ Convert number (1,2,3,..) to literal (b0, b1, .., a0, a1, ...) """
+        return self.inv_numbered[abs(number)]
+
+    def number_to_val(self, number):
+        """ Convert number (1,2,3,..) to value (variable or formula)"""
+        var = self.inv_numbered[abs(number)]
+        return self.literals[var]
+
+    def is_number_boolean(self, number):
+        """ Whether number (1,2,3,..) represents a boolean literal """
+        lit = self.inv_numbered[abs(number)]
+        return self.is_lit_boolean(lit)
+
+    def is_lit_boolean(self, lit):
+        """ Whether the literal (a0, a1,..., b1, b2, ...) represents a boolean variable rather than a formula """
+        return isinstance(lit, str)  # Boolean vars are str
 
     def __getitem__(self, key):
         return self.literals[key]
