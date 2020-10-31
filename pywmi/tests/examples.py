@@ -47,12 +47,41 @@ def ex2_b0_r2():
     return Density(domain, support, weight, [x <= y / 2])
 
 
+def ex_jonathan():
+    domain = Domain.make(["f0", "d0"], ["r0"], [(10, 45)])
+    f0, d0 = domain.get_bool_symbols()
+    r0, = domain.get_real_symbols()
+    support = (
+        (f0 & (((d0 | ~d0) & ~(r0 <= 35)) | ((r0 <= 35) & (~d0))))
+        | (~f0 & (d0 & (r0 <= 35)))
+    ) & domain.get_bounds()
+
+    weight_function = Ite(f0, Real(0.0001), Real(0.00001)) * \
+                      Ite(d0, (r0/10)-1, 8-(r0/10)) * \
+                      Ite(r0 <= 35, -0.001*(r0-27)*(r0-27)+0.3, -0.001*(r0-27)*(r0-27)+0.3)
+    return Density(domain, support, weight_function, queries=[d0])
+
+
+def ex_jonathan_smaller():
+    domain = Domain.make(["f0", "d0"], ["r0"], [(10, 45)])
+    f0, d0 = domain.get_bool_symbols()
+    r0, = domain.get_real_symbols()
+    support = (
+        (f0 & ~(r0 <= 35) & ~d0) | (f0 & (r0 <= 35) & ~d0)
+    ) & domain.get_bounds()
+
+    weight_function = Real(0.00000001) * r0 * r0 * r0
+    return Density(domain, support, weight_function, queries=[d0])
+
+
 def get_examples(exclude_boolean=False, exclude_continuous=False):
     examples = [
         (sanity_b1_r0, True, False),
         (sanity_b0_r1, False, True),
         (ex1_b2_r2, True, True),
-        (ex2_b0_r2, False, True)
+        (ex2_b0_r2, False, True),
+        (ex_jonathan, True, True),
+        (ex_jonathan_smaller, True, True)
     ]
     return [e() for e, b, c in examples if (not exclude_boolean or not b) and (not exclude_continuous or not c)]
 
