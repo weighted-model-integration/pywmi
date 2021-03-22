@@ -1,4 +1,4 @@
-# pywmi [![Build Status](https://travis-ci.org/weighted-model-integration/pywmi.svg?branch=master)](https://travis-ci.org/weighted-model-integration/pywmi)
+# pywmi
 
 This is the `pywmi` package. It offers a unified and high-level API to a variety of weighted model integration solvers.
 
