@@ -27,7 +27,7 @@ include_dirs = [
     if "psilibrary" in x[0] and not x[0].endswith("psipy") and system in x[0]
 ]
 
-print(file_path)
+# print(file_path)
 if len(include_dirs) == 1:
     lib_dir = os.path.join(file_path, include_dirs[0])
 
