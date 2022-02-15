@@ -194,6 +194,7 @@ class BaseXsddEngine(Engine):
             base_support = smt.And(*self.collect_conflicts()) & base_support
 
         labeling_dict, weight_function = self.get_labels_and_weight()
+
         # piecewise_function contains a dict of weight -> support pairs
         piecewise_function = split_up_function(
             weight_function, descr_algebra, get_env()
@@ -212,6 +213,7 @@ class BaseXsddEngine(Engine):
         volume = self.compute_volume_from_pieces(
             base_support, piecewise_function, labeling_dict
         )
+
         return self.algebra.to_float(volume)
 
     def get_weight_algebra(self):
@@ -292,7 +294,7 @@ class XsddEngine(BaseXsddEngine):
             domain,
             support,
             weight,
-            self.backend.exact,
+            self.algebra.exact,
             convex_backend=self.backend,
             **kwargs,
         )
@@ -329,6 +331,7 @@ class XsddEngine(BaseXsddEngine):
                     semiring_algebra.real(2), missing_variable_count
                 )
                 vol = semiring_algebra.times(vol, bool_worlds)
+
                 volume = semiring_algebra.plus(volume, vol)
 
             else:

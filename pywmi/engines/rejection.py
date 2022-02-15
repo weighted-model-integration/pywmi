@@ -18,7 +18,9 @@ def sample(n_boolean_vars, bounds, n):
 
     for d in range(len(bounds)):
         a, b = bounds[d]
-        samples[:, n_boolean_vars + d] = a[0] + samples[:, n_boolean_vars + d] * (b[0] - a[0])
+        samples[:, n_boolean_vars + d] = a[0] + samples[:, n_boolean_vars + d] * (
+            b[0] - a[0]
+        )
 
     return samples
 
@@ -32,15 +34,25 @@ class RejectionEngine(Engine):
 
     def compute_volume(self, sample_count=None, add_bounds=False, ohe_variables=None):
         sample_count = sample_count if sample_count is not None else self.sample_count
-        samples = uniform(self.domain, sample_count, rand_gen=self.rand_gen, ohe_variables=ohe_variables)
+        samples = uniform(
+            self.domain,
+            sample_count,
+            rand_gen=self.rand_gen,
+            ohe_variables=ohe_variables,
+        )
         labels = evaluate(self.domain, self.support, samples)
 
         if ohe_variables is None:
-            bound_volume = self.domain.get_volume() if len(self.domain.real_vars) > 0 else 2 ** len(self.domain.bool_vars)
+            bound_volume = (
+                self.domain.get_volume()
+                if len(self.domain.real_vars) > 0
+                else 2 ** len(self.domain.bool_vars)
+            )
         else:
             ohevars = {x for ohe in ohe_variables for x in ohe}
-            bound_volume = 2 ** len([v for v in self.domain.bool_vars
-                                     if v not in ohevars])
+            bound_volume = 2 ** len(
+                [v for v in self.domain.bool_vars if v not in ohevars]
+            )
             for ohe in ohe_variables:
                 bound_volume *= len(ohe)
 
@@ -61,7 +73,9 @@ class RejectionEngine(Engine):
             return approx_volume
 
     def copy(self, domain, support, weight):
-        return RejectionEngine(domain, support, weight, self.sample_count, seed=self.seed)
+        return RejectionEngine(
+            domain, support, weight, self.sample_count, seed=self.seed
+        )
 
     def __str__(self):
         return "rej" + (":n{}".format(self.sample_count))
@@ -78,7 +92,9 @@ class RejectionEngine(Engine):
             total = sum(sample_weights)
             for query in queries:
                 if total > 0:
-                    query_labels = numpy.logical_and(evaluate(self.domain, query, positive_samples), labels[labels])
+                    query_labels = numpy.logical_and(
+                        evaluate(self.domain, query, positive_samples), labels[labels]
+                    )
                     results.append(sum(sample_weights[query_labels]) / total)
                 else:
                     results.append(None)
@@ -86,7 +102,9 @@ class RejectionEngine(Engine):
             total = positive_samples.shape[0]
             for query in queries:
                 if total > 0:
-                    query_labels = numpy.logical_and(evaluate(self.domain, query, positive_samples), labels[labels])
+                    query_labels = numpy.logical_and(
+                        evaluate(self.domain, query, positive_samples), labels[labels]
+                    )
                     results.append(sum(query_labels) / total)
                 else:
                     results.append(None)
@@ -102,7 +120,9 @@ class RejectionIntegrator(ConvexIntegrationBackend):
         self.seed = seed
         self.rand_gen = numpy.random.RandomState(self.seed)
 
-    def integrate(self, domain, convex_bounds: List[LinearInequality], polynomial: Polynomial):
+    def integrate(
+        self, domain, convex_bounds: List[LinearInequality], polynomial: Polynomial
+    ):
         formula = smt.And(*[i.to_smt() for i in convex_bounds])
 
         if self.bounding_box > 0:
@@ -137,17 +157,25 @@ class RejectionIntegrator(ConvexIntegrationBackend):
                 except ValueError:
                     return 0
 
-                lb_ub_bounds = {domain.variables[j]: (lbs[j], ubs[j]) for j in range(len(domain.variables))}
+                lb_ub_bounds = {
+                    domain.variables[j]: (lbs[j], ubs[j])
+                    for j in range(len(domain.variables))
+                }
             else:
-                raise ValueError("Illegal bounding box value {}".format(self.bounding_box))
+                raise ValueError(
+                    "Illegal bounding box value {}".format(self.bounding_box)
+                )
             domain = Domain(domain.variables, domain.var_types, lb_ub_bounds)
 
-        engine = RejectionEngine(domain, formula, polynomial.to_smt(), self.sample_count, seed=self.seed)
+        engine = RejectionEngine(
+            domain, formula, polynomial.to_smt(), self.sample_count, seed=self.seed
+        )
         result = engine.compute_volume()
         if self.bounding_box:
             result = result
         return result
 
     def __str__(self):
-        return "ref_int.{}".format(self.sample_count)\
-               + (".{}".format(self.bounding_box) if self.bounding_box > 0 else "")
+        return "ref_int.{}".format(self.sample_count) + (
+            ".{}".format(self.bounding_box) if self.bounding_box > 0 else ""
+        )

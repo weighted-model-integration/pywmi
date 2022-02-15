@@ -2,7 +2,7 @@ from typing import Tuple, Dict, Optional, Any
 from functools import reduce
 
 from pysmt.fnode import FNode
-from pysmt.shortcuts import Symbol, TRUE, FALSE, simplify, Times
+from pysmt.shortcuts import Symbol, TRUE, FALSE, simplify, Times, Plus
 from pysmt.typing import REAL, BOOL
 from pysmt.environment import Environment, get_env
 
@@ -33,6 +33,7 @@ class SddConversionWalker(CachedSmtWalker):
     This does not yet support arithmetic operations, these should be abstracted and replaced with booleans
     (cf extract_and_replace_literals(...) in pywmi/engines/xsdd/literals.py)
     """
+
     def __init__(self, manager: SddManager, varnums: Dict[int, Any]):
         super().__init__()
         self.manager = manager
@@ -123,7 +124,9 @@ class PySmtConversion(Semiring):
         # )
 
 
-def compile_to_sdd(formula: FNode, literals: LiteralInfo, vtree: Optional[Vtree]) -> SddNode:
+def compile_to_sdd(
+    formula: FNode, literals: LiteralInfo, vtree: Optional[Vtree]
+) -> SddNode:
     """
     Compile a formula into an SDD.
     :param formula: The formula to represent as sdd. This formula must be a purely (abstracted) boolean formula
@@ -154,7 +157,7 @@ def recover_formula(
     # TODO: provide a similar recover procedure in literals.py to re-insert abstractions etc
     result = amc(PySmtConversion(literals), sdd_node)
     return env.simplifier.simplify(result) if simplify_result else result
-    #return env.formula_manager.simplify(result) if simplify_result else result
+    # return env.formula_manager.simplify(result) if simplify_result else result
 
 
 # TODO: labels are not used currently. See TODO in engine.py

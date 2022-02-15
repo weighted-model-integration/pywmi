@@ -270,7 +270,6 @@ class FactorizedXsddEngine(BaseXsddEngine):
             #    logger.debug(f"saved SDD of piece {i} to {filename}")
 
             subvolume = self.compute_volume_for_piece(term, literals, support_sdd)
-
             volume = self.algebra.plus(volume, subvolume)
         return volume
 
