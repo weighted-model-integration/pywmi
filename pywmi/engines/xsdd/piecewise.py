@@ -40,6 +40,12 @@ class PiecewiseFunction:
             return self
         else:
             new_pieces = {}
+
+            #####
+            #####
+            # Commented stuff is wrong
+            #####
+            #####
             # for (expr1, sup1), (expr2, sup2) in product(
             #     self.pieces.items(), other.pieces.items()
             # ):
@@ -48,9 +54,6 @@ class PiecewiseFunction:
             #         (expr2, simplify(And(Not(sup1), sup2))),
             #         (self.algebra.plus(expr1, expr2), simplify(And(sup1, sup2))),
             #     ]
-            #     print("possibilities")
-            #     print(possibilities)
-
             #     for e, c in possibilities:
             #         # TODO check if c is satisfiable at all?
             #         # used to be done by actually compiling SDD, currently through smt.simplify
@@ -59,6 +62,8 @@ class PiecewiseFunction:
             #             new_pieces[e] = simplify(
             #                 Or(new_pieces.get(e, self.fm.FALSE()), c)
             #             )
+            #             new_pieces[e] = simplify(Or(new_pieces.get(e, self.fm.FALSE()), c))
+
             for e, c in list(self.pieces.items()) + list(other.pieces.items()):
                 if not c.is_false() and e != self.algebra.zero():
                     if e in new_pieces:
@@ -72,7 +77,6 @@ class PiecewiseFunction:
                     else:
                         new_pieces[e] = c
 
-                    # new_pieces[e] = simplify(Or(new_pieces.get(e, self.fm.FALSE()), c))
             return PiecewiseFunction(new_pieces, self.algebra, self.env)
 
     def __mul__(self, other):
