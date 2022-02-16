@@ -64,39 +64,6 @@ class VariableTagAnalysis(SddWalker):
         return True, groups
 
 
-class BooleanFinder(Semiring):
-    def __init__(self, literals: LiteralInfo):
-        self.inv_boolean_varnums = {
-            num: lit
-            for num, lit in literals.inv_numbered.items()
-            if isinstance(literals[lit], str)
-        }
-
-    def times_neutral(self):
-        return set()
-
-    def plus_neutral(self):
-        return set()
-
-    def times(self, a, b, index=None):
-        return a | b
-
-    def plus(self, a, b, index=None):
-        return a | b
-
-    def negate(self, a):
-        raise NotImplementedError()
-
-    def weight(self, a):
-        if abs(a) in self.inv_boolean_varnums:
-            return {self.inv_boolean_varnums[abs(a)]}
-        else:
-            return set()
-
-    def positive_weight(self, a):
-        raise NotImplementedError()
-
-
 class FactorizedIntegrator:
     def __init__(
         self,
@@ -140,41 +107,64 @@ class FactorizedIntegrator:
             return result
 
         if node.is_decision():
-            result = self.algebra.zero()
+            result = self.walk_false()
             for prime, sub in node.elements():
-                result = self.algebra.plus(
-                    result, self.walk_and(prime, sub, tags, cache, order)
-                )
+                wa = self.walk_and(prime, sub, tags, cache, order)
+                result = self.plus(result, wa)
         else:
-            expression = self.walk_literal(node)
+            expression, variables = self.walk_literal(node)
             logger.debug("node LIT(%s)", node.id)
-            result = self.integrate(expression, tags)
+            result = (self.integrate(expression, tags), variables)
 
         cache[key] = result
         return result
 
+    def plus(self, a, b):
+        var_count_diff = len(a[1]) - len(b[1])
+        if not var_count_diff:
+            return self.algebra.plus(a[0], b[0]), a[1] | b[1]
+        else:
+            missing_a = len(b[1] - a[1])
+            missing_b = len(a[1] - b[1])
+            bool_worlds_a = self.algebra.power(self.algebra.real(2), missing_a)
+            bool_worlds_b = self.algebra.power(self.algebra.real(2), missing_b)
+
+            w_a = self.algebra.times(a[0], bool_worlds_a)
+            w_b = self.algebra.times(b[0], bool_worlds_b)
+
+            return self.algebra.plus(w_a, w_b), a[1] | b[1]
+
+        return
+
     def walk_true(self):
-        return self.algebra.one()
+        return self.algebra.one(), set()
 
     def walk_false(self):
-        return self.algebra.zero()
+        return self.algebra.zero(), set()
 
     def walk_and(self, prime, sub, tags, cache, order):
+
         if prime.is_false() or sub.is_false():
-            return self.algebra.zero()
+            return self.algebra.zero(), set()
         tags_prime = self.node_to_groups[prime.id] & tags
         tags_sub = self.node_to_groups[sub.id] & tags
         tags_shared = tags_prime & tags_sub
         if order and len(tags_shared) > 0:
             first_index = min(order.index(tag) for tag in tags_shared)
             tags_shared |= tags & set(order[first_index:])
-        prime_result = self.recursive(prime, tags_prime - tags_shared, cache, order)
-        sub_result = self.recursive(sub, tags_sub - tags_shared, cache, order)
+        prime_result, variables_prime = self.recursive(
+            prime, tags_prime - tags_shared, cache, order
+        )
+        sub_result, variables_sub = self.recursive(
+            sub, tags_sub - tags_shared, cache, order
+        )
         logger.debug("node AND(%s, %s)", prime.id, sub.id)
-        return self.integrate(
+        result = self.integrate(
             self.algebra.times(prime_result, sub_result),
             [e for e in order if e in tags_shared] if order else tags_shared,
         )
+
+        return result, variables_prime | variables_sub
 
     def walk_literal(self, node):
         literal = node.literal
@@ -185,15 +175,15 @@ class FactorizedIntegrator:
                 expr = Polynomial.from_smt(
                     self.labels[abstraction][0 if (literal > 0) else 1]
                 ).to_expression(self.algebra)
+                return expr, set()
             else:
-                expr = self.algebra.one()
+                return self.algebra.one(), {abstraction}
         else:
             if literal < 0:
                 abstraction = ~abstraction
             # expr = LinearInequality.from_smt(f).scale_to_integer().to_expression(self.algebra)
             expr = self.algebra.parse_condition(abstraction)
-
-        return expr
+            return expr, set()
 
     def integrate(self, expr, tags):
         # type: (Any, Iterable[int]) -> Any
@@ -345,11 +335,10 @@ class FactorizedXsddEngine(BaseXsddEngine):
             self.algebra,
         )
         logger.debug("group order %s", group_order)
-        expression = integrator.recursive(support_sdd, order=group_order)
+        expression, variables = integrator.recursive(support_sdd, order=group_order)
         # expression = integrator.integrate(expression, node_to_groups[support.id])
         logger.debug("hits %s misses %s", integrator.hits, integrator.misses)
-        bool_vars = amc(BooleanFinder(literals), support_sdd)
-        missing_variable_count = len(self.domain.bool_vars) - len(bool_vars)
+        missing_variable_count = len(self.domain.bool_vars) - len(variables)
         bool_worlds = self.algebra.power(self.algebra.real(2), missing_variable_count)
         result_with_booleans = self.algebra.times(expression, bool_worlds)
         if len(constant_group_indices) == 1:

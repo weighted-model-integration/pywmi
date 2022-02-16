@@ -92,7 +92,19 @@ class NonConvexWMISemiring(Semiring):
         return self.algebra.times(a[0], b[0]), a[1] | b[1]
 
     def plus(self, a, b, index=None):
-        return self.algebra.plus(a[0], b[0]), a[1] | b[1]
+        var_count_diff = len(a[1]) - len(b[1])
+        if not var_count_diff:
+            return self.algebra.plus(a[0], b[0]), a[1] | b[1]
+        else:
+            missing_a = len(b[1] - a[1])
+            missing_b = len(a[1] - b[1])
+            bool_worlds_a = self.algebra.power(self.algebra.real(2), missing_a)
+            bool_worlds_b = self.algebra.power(self.algebra.real(2), missing_b)
+
+            w_a = self.algebra.times(a[0], bool_worlds_a)
+            w_b = self.algebra.times(b[0], bool_worlds_b)
+
+            return self.algebra.plus(w_a, w_b), a[1] | b[1]
 
     def negate(self, a):
         raise NotImplementedError()
@@ -180,6 +192,10 @@ class BaseXsddEngine(Engine):
         return dict(), self.weight
 
     def compute_volume(self, add_bounds=True):
+        # print(self.weight)
+        # print(self.support)
+        # print(self.domain)
+
         if add_bounds:
             return self.with_constraint(self.domain.get_bounds()).compute_volume(False)
 
