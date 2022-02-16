@@ -67,7 +67,7 @@ class PiecewiseFunction:
             for e, c in list(self.pieces.items()) + list(other.pieces.items()):
                 if not c.is_false() and e != self.algebra.zero():
                     if e in new_pieces:
-                        old_c = new_pieces.get(e, self.fm.FALSE())
+                        old_c = new_pieces[e]
                         new_c1 = simplify(And(Or(old_c, c), Not(And(old_c, c))))
                         new_c2 = simplify(And(old_c, c))
                         if not new_c1.is_false():
