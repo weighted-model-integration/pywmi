@@ -58,9 +58,9 @@ class Domain(Exportable):
         for v, (lb, ub) in self.var_domains.items():
             symbol = self.get_symbol(v, formula_manager)
             if lb is not None:
-                bounds.append(symbol >= lb)
+                bounds.append(smt.LE(smt.Real(float(lb)), symbol))
             if ub is not None:
-                bounds.append(symbol <= ub)
+                bounds.append(smt.LE(symbol, smt.Real(float(ub))))
         return fm.And(*bounds)
 
     def domain_size(self, variable):
