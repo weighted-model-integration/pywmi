@@ -104,7 +104,7 @@ The alternative way to install the D runtime through `brew install dmd` is curre
             #export LD_LIBRARY_PATH=$HOME/software/dlang/dmd-2.0**.*/linux/lib64:$LD_LIBRARY_PATH
 
 
-3. Next, you need to install Python bindings for D (make sure that you have activated your Python virtual environment).
+3. Next, you need to install Python bindings for PSI (make sure that you have activated your Python virtual environment).
 
 ```
 cd pywmi/pywmi/weight_algebra/psi
