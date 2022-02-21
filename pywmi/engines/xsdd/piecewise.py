@@ -70,9 +70,13 @@ class PiecewiseFunction:
                         old_c = new_pieces[e]
                         new_c1 = simplify(And(Or(old_c, c), Not(And(old_c, c))))
                         new_c2 = simplify(And(old_c, c))
-                        if not new_c1.is_false():
+                        if new_c1.is_false():
+                            new_pieces.pop(e, None)
+                        else:
                             new_pieces[e] = new_c1
-                        if not new_c2.is_false():
+                        if new_c2.is_false():
+                            new_pieces.pop(e, None)
+                        else:
                             new_pieces[self.algebra.times(2, e)] = new_c2
                     else:
                         new_pieces[e] = c
