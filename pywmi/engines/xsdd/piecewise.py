@@ -66,26 +66,39 @@ class PiecewiseFunction:
 
             for e, c in list(self.pieces.items()) + list(other.pieces.items()):
                 if not c.is_false() and e != self.algebra.zero():
-                    if e in new_pieces:
-                        old_c = new_pieces[e]
-                        new_c1 = simplify(And(Or(old_c, c), Not(And(old_c, c))))
-                        new_c2 = simplify(And(old_c, c))
-                        if new_c1.is_false():
-                            new_pieces.pop(e, None)
-                        else:
-                            new_pieces[e] = new_c1
-                        if new_c2.is_false():
-                            new_pieces.pop(e, None)
-                        else:
-                            new_pieces[self.algebra.times(2, e)] = new_c2
-                    else:
-                        new_pieces[e] = c
+                    new_pieces = self._addpiece2pieces(new_pieces, e, c)
 
             return PiecewiseFunction(new_pieces, self.algebra, self.env)
 
+    def _addpiece2pieces(self, pieces, e, c):
+        And, Or, Not, simplify = self.shortcuts()
+
+        if c.is_false():
+            return pieces
+        elif e in pieces:
+            old_c = pieces[e]
+            new_c1 = simplify(And(Or(old_c, c), Not(And(old_c, c))))
+            new_c2 = simplify(And(old_c, c))
+
+            if new_c1.is_false():
+                pieces.pop(e, None)
+            else:
+                pieces[e] = new_c1
+            if new_c2.is_false():
+                pieces.pop(self.algebra.times(2, e), None)
+            else:
+                assert self.algebra.times(2, e) not in pieces
+                # FIXME when 2*e in keys of new_pieces
+                "what if 2 e is already in keys"
+                pieces[self.algebra.times(2, e)] = new_c2
+        else:
+            pieces[e] = simplify(c)
+
+        return pieces
+
     def __mul__(self, other):
         self.assert_related(other)
-        And, Or, Not, simplify = self.shortcuts()
+        And, _, _, simplify = self.shortcuts()
 
         new_pieces = {}
         for (expr1, sup1), (expr2, sup2) in product(
@@ -96,7 +109,7 @@ class PiecewiseFunction:
             one = self.algebra.one()
 
             # TODO check if sup is satisfiable
-            if expr1 != zero and expr2 != zero:
+            if expr1 != zero and expr2 != zero and not sup.is_false():
                 if expr1 == one:
                     e = expr2
                 elif expr2 == one:
@@ -104,9 +117,8 @@ class PiecewiseFunction:
                 else:
                     e = self.algebra.times(expr1, expr2)
                 if e != zero:
-                    new_pieces[e] = simplify(
-                        Or(new_pieces.get(e, self.fm.FALSE()), sup)
-                    )
+                    new_pieces = self._addpiece2pieces(new_pieces, e, sup)
+
         return PiecewiseFunction(new_pieces, self.algebra, self.env)
 
     def __neg__(self):
@@ -257,3 +269,54 @@ class PiecewiseFunctionConverter(CachedSmtWalker):
 def split_up_function(function, algebra, env):
     pw_converter = PiecewiseFunctionConverter(algebra, env)
     return pw_converter.walk_smt(function)
+
+
+# (ite
+#     (const bool 1)
+#     (const real 1.0)
+#     (+
+#         (ite
+#             (|
+#                 (var bool A_0)
+#                 (var bool A_1)
+#             )
+#             (const real 0.0)
+#             (const real 0.0)
+#         )
+#         (const real 1.0)
+#     )
+# )"
+
+
+# gives error
+# {
+#     "domain": {
+#         "variables": [
+#             "A_0",
+#             "A_1",
+#             "x_0",
+#             "x_1"
+#         ],
+#         "var_types": {
+#             "A_0": "bool",
+#             "A_1": "bool",
+#             "x_0": "real",
+#             "x_1": "real"
+#         },
+#         "var_domains": {
+#             "x_0": [
+#                 0,
+#                 1
+#             ],
+#             "x_1": [
+#                 0,
+#                 1
+#             ]
+#         }
+#     },
+#     "queries": [
+#         "(const bool True)"
+#     ],
+#     "formula": "(< (var real x_0) (const real 0.5) )",
+#     "weights": "(ite (const bool 1) (const real 1.0) (+ (ite (| (< (* (const real 1.0) (var real x_1)) (const real 2.0)) (var bool A_0) (var bool A_1)) (* (* (const real -1.0) (^ (var real x_0) (const real 2.0)) (^ (var real x_1) (const real 2.0))) (* (const real -1.0) (^ (var real x_0) (const real 2.0)) (^ (var real x_1) (const real 2.0)))) (* (* (const real -1.0) (^ (var real x_0) (const real 0.0))) (* (const real -1.0) (^ (var real x_0) (const real 0.0))))) (const real 1.0)))"
+# }
