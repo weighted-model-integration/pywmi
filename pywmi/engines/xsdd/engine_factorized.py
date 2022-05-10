@@ -175,10 +175,12 @@ class FactorizedIntegrator:
                 expr = Polynomial.from_smt(
                     self.labels[abstraction][0 if (literal > 0) else 1]
                 ).to_expression(self.algebra)
-                return expr, set()
+                bool_vars = {abstraction} if abstraction in self.literals.booleans else set()
+                return expr, bool_vars
             else:
                 return self.algebra.one(), {abstraction}
         else:
+            #TODO: Can abstraction be a boolean? Do we need to pass expr, {abstraction} then?
             if literal < 0:
                 abstraction = ~abstraction
             # expr = LinearInequality.from_smt(f).scale_to_integer().to_expression(self.algebra)

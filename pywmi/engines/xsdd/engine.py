@@ -98,6 +98,7 @@ class NonConvexWMISemiring(Semiring):
         else:
             missing_a = len(b[1] - a[1])
             missing_b = len(a[1] - b[1])
+            # TODO: always 2 ? is weight of boolean variables always (1,1)?
             bool_worlds_a = self.algebra.power(self.algebra.real(2), missing_a)
             bool_worlds_b = self.algebra.power(self.algebra.real(2), missing_b)
 
