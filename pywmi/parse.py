@@ -59,7 +59,7 @@ def combined_nested_to_wmi(string):
 
 
 class SmtParser(object):
-    operators = ["ite", "^", "~", "&", "|", "*", "+", "-", "<=", "<", ">", ">=", "->", "=", "const", "var"]
+    operators = ["ite", "^", "~", "&", "|", "*", "+", "-", "exp", "<=", "<", ">", ">=", "->", "=", "const", "var"]
 
     def __init__(self):
         self.vars = dict()
@@ -99,6 +99,8 @@ class SmtParser(object):
             return smt.Plus(*convert_children())
         elif node.name == "-":
             return smt.Minus(*convert_children(2))
+        elif node.name == "exp":
+            return smt.Exp(*convert_children(1))
         elif node.name == "<=":
             return smt.LE(*convert_children(2))
         elif node.name == ">=":
@@ -172,6 +174,8 @@ def smt_to_nested(expression):
         return convert_children("+")
     if expression.is_minus():
         return convert_children("-")
+    if expression.is_exp():
+        return convert_children("exp")
     if expression.is_ite():
         return convert_children("ite")
     if expression.node_type() == POW:
