@@ -15,7 +15,8 @@ VERSION = "0.7.0"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    "pysmt",
+    "pysmt @ git+ssh://git@github.com/masinag/pysmt@nrat#egg=pysmt"
+    #"pysmt",
     "numpy",
     "future",
     "matplotlib",
